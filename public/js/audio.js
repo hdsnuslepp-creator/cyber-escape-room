@@ -131,6 +131,14 @@ const AudioFX = (() => {
     setEnabled(!enabled);
   }
 
+  function isEnabled() {
+    return enabled;
+  }
+
+  function getVolume() {
+    return volume;
+  }
+
   function updateUI() {
     document.querySelectorAll('[data-sound-toggle]').forEach((btn) => {
       btn.textContent = enabled && volume > 0 ? '🔊 Sound On' : '🔇 Sound Off';

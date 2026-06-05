@@ -87,32 +87,36 @@
     ).join('') + '<div class="progress-step" data-room="quiz" title="Quiz"></div>';
   }
 
+  function bind(el, event, handler) {
+    if (el) el.addEventListener(event, handler);
+  }
+
   function bindGlobalEvents() {
-    document.getElementById('btnStart').addEventListener('click', startGame);
-    document.getElementById('btnRestart').addEventListener('click', () => location.reload());
-    document.getElementById('btnRetry').addEventListener('click', () => location.reload());
-    document.getElementById('btnPrint').addEventListener('click', () => window.print());
+    bind(document.getElementById('btnStart'), 'click', startGame);
+    bind(document.getElementById('btnRestart'), 'click', () => location.reload());
+    bind(document.getElementById('btnRetry'), 'click', () => location.reload());
+    bind(document.getElementById('btnPrint'), 'click', () => window.print());
 
     document.querySelectorAll('[data-hint-room]').forEach((btn) => {
       btn.addEventListener('click', () => useHint(btn.dataset.hintRoom));
     });
 
-    document.getElementById('btn-phishing').addEventListener('click', submitPhishing);
-    document.getElementById('btn-password').addEventListener('click', submitPassword);
-    document.getElementById('btn-cipher').addEventListener('click', submitCipher);
-    document.getElementById('btn-sql').addEventListener('click', submitSql);
-    document.getElementById('btn-logs').addEventListener('click', submitLogs);
-    document.getElementById('btn-social').addEventListener('click', submitSocial);
-    document.getElementById('btn-mfa').addEventListener('click', submitMfa);
-    document.getElementById('btn-ransomware').addEventListener('click', submitRansomware);
-    document.getElementById('btn-quiz').addEventListener('click', submitQuiz);
+    bind(document.getElementById('btn-phishing'), 'click', submitPhishing);
+    bind(document.getElementById('btn-password'), 'click', submitPassword);
+    bind(document.getElementById('btn-cipher'), 'click', submitCipher);
+    bind(document.getElementById('btn-sql'), 'click', submitSql);
+    bind(document.getElementById('btn-logs'), 'click', submitLogs);
+    bind(document.getElementById('btn-social'), 'click', submitSocial);
+    bind(document.getElementById('btn-mfa'), 'click', submitMfa);
+    bind(document.getElementById('btn-ransomware'), 'click', submitRansomware);
+    bind(document.getElementById('btn-quiz'), 'click', submitQuiz);
 
-    document.getElementById('cipherAnswer').addEventListener('keydown', (e) => {
+    bind(document.getElementById('cipherAnswer'), 'keydown', (e) => {
       if (e.key.length === 1) AudioFX.type();
       if (e.key === 'Enter') submitCipher();
     });
 
-    document.getElementById('studentName').addEventListener('keydown', (e) => {
+    bind(document.getElementById('studentName'), 'keydown', (e) => {
       if (e.key.length === 1) AudioFX.type();
       if (e.key === 'Enter') startGame();
     });
@@ -678,5 +682,9 @@
     return d.innerHTML;
   }
 
-  init();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
