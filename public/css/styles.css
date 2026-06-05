@@ -167,6 +167,8 @@ body::before {
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  position: relative;
+  z-index: 1002;
 }
 
 .audio-bar .volume-control {
@@ -216,24 +218,50 @@ body::before {
 }
 
 .volume-slider {
+  --volume: 70%;
   flex: 1;
-  height: 4px;
+  height: 14px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--border);
-  border-radius: 2px;
+  background: transparent;
   outline: none;
   cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--volume),
+    var(--border) var(--volume),
+    var(--border) 100%
+  );
 }
 
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
+  margin-top: -5px;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 8px var(--accent-glow);
   cursor: pointer;
+}
+
+.volume-slider::-moz-range-track {
+  height: 4px;
+  border: none;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--volume),
+    var(--border) var(--volume),
+    var(--border) 100%
+  );
 }
 
 .volume-slider::-moz-range-thumb {

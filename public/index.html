@@ -3,39 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cyber Escape Room Platform</title>
+  <title>Cyber Escape Room</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/pixel-theme.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="crt-screen">
   <div class="scanlines" aria-hidden="true"></div>
+  <div class="crt-vignette" aria-hidden="true"></div>
 
   <div class="app">
     <div class="audio-bar" id="audioBar">
-      <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
-      <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">🎵 Music On</button>
+      <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">SOUND: ON</button>
+      <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">MUSIC: ON</button>
       <label class="volume-control">
         <span class="volume-control__label">Volume</span>
-        <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
+        <input type="range" class="volume-slider" data-sound-volume min="0" max="100" step="1" value="70" aria-label="Volume">
         <span class="volume-control__value" data-sound-volume-label>70%</span>
       </label>
     </div>
 
-    <header class="header" id="gameHeader" hidden>
+    <header class="header header--intro" id="gameHeader">
       <div class="header__top">
         <div class="header__brand">
-          <span class="header__icon">🔒</span>
-          <h1>Cyber Escape Room</h1>
+          <span class="header__icon" aria-hidden="true">🔒</span>
+          <div class="header__titles">
+            <h1>CYBER ESCAPE ROOM</h1>
+            <p class="header__subtitle">SECURE TRAINING PLATFORM</p>
+          </div>
         </div>
         <div class="hud">
-          <div class="hud__item"><span class="hud__label">Time</span><span class="hud__value" id="hudTime">00:00</span></div>
-          <div class="hud__item"><span class="hud__label">Score</span><span class="hud__value hud__value--score" id="hudScore">1000</span></div>
-          <div class="hud__item"><span class="hud__label">Lives</span><span class="hud__value hud__value--lives" id="hudLives">❤❤❤</span></div>
+          <div class="hud__item"><span class="hud__label">TIME</span><span class="hud__value" id="hudTime">00:00</span></div>
+          <div class="hud__item"><span class="hud__label">SCORE</span><span class="hud__value hud__value--score" id="hudScore">1000</span></div>
+          <div class="hud__item"><span class="hud__label">LIVES</span><span class="hud__value hud__value--lives" id="hudLives">♥♥♥</span></div>
         </div>
       </div>
-      <div class="header__progress" id="progressBar" aria-label="Room progress"></div>
+      <div class="header__progress header__progress--idle" id="progressBar" aria-label="Room progress"></div>
     </header>
 
     <main id="gameContainer">
@@ -47,34 +52,35 @@
             <span class="terminal-window__title">SECURE_TRAINING_ROOM.exe</span>
           </div>
           <div class="terminal-window__body">
-            <p class="terminal-line"><span class="prompt">&gt;</span> Initializing cybersecurity training platform...</p>
-            <p class="terminal-line"><span class="prompt">&gt;</span> <span class="blink">ACCESS DENIED — 8 ROOMS LOCKED</span></p>
-            <p class="terminal-line terminal-line--dim">Complete 8 security challenges to escape.</p>
-            <p class="terminal-line terminal-line--dim">Earn achievements, climb the leaderboard, beat the timer!</p>
-            <div class="input-group">
-              <label for="studentName">Enter your name</label>
-              <input type="text" id="studentName" class="input" placeholder="Student name..." maxlength="60" autocomplete="name">
-            </div>
-            <button type="button" class="btn btn--primary" id="btnStart">Begin Escape</button>
-            <div class="leaderboard-panel">
-              <h3>🏆 Leaderboard</h3>
-              <div id="introLeaderboard"></div>
+            <div id="bootSequence" class="boot-sequence" aria-live="polite"></div>
+            <div id="introActions" class="intro-actions" hidden>
+              <div class="input-group input-group--pixel">
+                <label for="studentName">&gt; ENTER AGENT CODENAME</label>
+                <input type="text" id="studentName" class="input input--pixel" placeholder="agent_codename..." maxlength="60" autocomplete="name">
+              </div>
+              <button type="button" class="btn btn--primary btn--pixel" id="btnStart">[ INITIALIZE BREACH ]</button>
+              <div class="leaderboard-panel leaderboard-panel--pixel">
+                <h3>TOP OPERATIVES</h3>
+                <div id="introLeaderboard"></div>
+              </div>
             </div>
           </div>
         </div>
       </section>
       <!-- Room 1: Phishing -->
       <section class="screen" data-screen="phishing">
-        <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="phishing">Room 1 / 8</span>
-            <h2>Phishing Detection</h2>
-            <p class="level-desc">Click <strong>3 suspicious parts</strong> of this email.</p>
+        <div class="room-shell room-theme room-theme--win98">
+          <p class="room-theme__tag">[ SYSTEM: MAIL CLIENT '98 ]</p>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="phishing">Room 1 / 8</span>
+              <h2>Phishing Detection</h2>
+              <p class="level-desc">Click <strong>3 suspicious parts</strong> of this email.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="phishing">? HINT</button>
           </div>
-          <button class="btn btn--hint" data-hint-room="phishing">💡 Hint</button>
-        </div>
-        <div class="tutor-panel" id="tutor-phishing" hidden></div>
-        <div class="email-client">
+          <div class="tutor-panel" id="tutor-phishing" hidden></div>
+          <div class="email-client">
           <div class="email-client__toolbar"><span>Inbox</span><span class="email-client__count">1 unread</span></div>
           <div class="email-message">
             <div class="email-message__row">
@@ -95,151 +101,173 @@
           </div>
         </div>
         <div class="flag-counter">Red flags: <strong id="flagCount">0</strong> / 3</div>
-        <div class="feedback" id="feedback-phishing" hidden></div>
-        <button class="btn btn--primary" id="btn-phishing" disabled>Unlock Room</button>
+          <div class="feedback" id="feedback-phishing" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-phishing" disabled>UNLOCK ROOM</button>
+        </div>
       </section>
 
       <!-- Room 2: Password -->
       <section class="screen" data-screen="password">
-        <div class="room-toolbar">
+        <div class="room-shell room-theme room-theme--dos">
+          <p class="room-theme__tag">[ SYSTEM: MS-DOS TERMINAL ]</p>
+          <div class="room-toolbar">
           <div class="level-header">
             <span class="level-badge room-badge" data-room="password">Room 2 / 8</span>
             <h2>Password Security</h2>
             <p class="level-desc">Choose the strongest password.</p>
           </div>
-          <button class="btn btn--hint" data-hint-room="password">💡 Hint</button>
+          <button class="btn btn--hint" data-hint-room="password">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-password" hidden></div>
+          <div class="password-grid" id="passwordOptions"></div>
+          <div class="feedback" id="feedback-password" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-password" disabled>SUBMIT</button>
         </div>
-        <div class="tutor-panel" id="tutor-password" hidden></div>
-        <div class="password-grid" id="passwordOptions"></div>
-        <div class="feedback" id="feedback-password" hidden></div>
-        <button class="btn btn--primary" id="btn-password" disabled>Submit</button>
       </section>
 
       <!-- Room 3: Cipher -->
       <section class="screen" data-screen="cipher">
-        <div class="room-toolbar">
+        <div class="room-shell room-theme room-theme--military">
+          <p class="room-theme__tag">[ SYSTEM: ENCRYPTED MILITARY CONSOLE ]</p>
+          <div class="room-toolbar">
           <div class="level-header">
             <span class="level-badge room-badge" data-room="cipher">Room 3 / 8</span>
             <h2>Encryption Challenge</h2>
             <p class="level-desc">Decode the Caesar cipher to get the door code (shift each letter back by 3).</p>
           </div>
-          <button class="btn btn--hint" data-hint-room="cipher">💡 Hint</button>
+          <button class="btn btn--hint" data-hint-room="cipher">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-cipher" hidden></div>
+          <div class="cipher-box">
+            <label class="cipher-label">Encrypted</label>
+            <code class="cipher-text">WRS VHFRHW</code>
+          </div>
+          <div class="input-group input-group--pixel">
+            <label for="cipherAnswer">&gt; DOOR CODE</label>
+            <input type="text" id="cipherAnswer" class="input input--pixel" placeholder="enter decoded code..." autocomplete="off">
+          </div>
+          <div class="feedback" id="feedback-cipher" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-cipher">UNLOCK DOOR</button>
         </div>
-        <div class="tutor-panel" id="tutor-cipher" hidden></div>
-        <div class="cipher-box">
-          <label class="cipher-label">Encrypted</label>
-          <code class="cipher-text">WRS VHFRHW</code>
-        </div>
-        <div class="input-group">
-          <label for="cipherAnswer">Door code</label>
-          <input type="text" id="cipherAnswer" class="input" placeholder="Enter decoded code..." autocomplete="off">
-        </div>
-        <div class="feedback" id="feedback-cipher" hidden></div>
-        <button class="btn btn--primary" id="btn-cipher">Unlock Door</button>
       </section>
 
       <!-- Room 4: SQL Injection -->
       <section class="screen" data-screen="sql">
-        <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="sql">Room 4 / 8</span>
-            <h2>SQL Injection Fix</h2>
-            <p class="level-desc">Pick the fix that prevents SQL injection.</p>
+        <div class="room-shell room-theme room-theme--server">
+          <p class="room-theme__tag">[ SYSTEM: SERVER RACK MONITOR ]</p>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="sql">Room 4 / 8</span>
+              <h2>SQL Injection Fix</h2>
+              <p class="level-desc">Pick the fix that prevents SQL injection.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="sql">? HINT</button>
           </div>
-          <button class="btn btn--hint" data-hint-room="sql">💡 Hint</button>
-        </div>
-        <div class="tutor-panel" id="tutor-sql" hidden></div>
-        <div class="code-block">
-          <p class="code-block__label">Vulnerable login query</p>
-          <pre><code>SELECT * FROM users
+          <div class="tutor-panel" id="tutor-sql" hidden></div>
+          <div class="code-block">
+            <p class="code-block__label">Vulnerable login query</p>
+            <pre><code>SELECT * FROM users
 WHERE username = '" + username + "'
 AND password = '" + password + "'"</code></pre>
+          </div>
+          <p class="level-desc">Attacker input: <code class="inline-code">admin' --</code></p>
+          <div class="option-grid" id="sqlOptions"></div>
+          <div class="feedback" id="feedback-sql" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-sql" disabled>APPLY FIX</button>
         </div>
-        <p class="level-desc">Attacker input: <code class="inline-code">admin' --</code></p>
-        <div class="option-grid" id="sqlOptions"></div>
-        <div class="feedback" id="feedback-sql" hidden></div>
-        <button class="btn btn--primary" id="btn-sql" disabled>Apply Fix</button>
       </section>
 
       <!-- Room 5: Logs -->
       <section class="screen" data-screen="logs">
-        <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="logs">Room 5 / 8</span>
-            <h2>Log Analysis</h2>
-            <p class="level-desc">Find the IP conducting suspicious login attempts.</p>
+        <div class="room-shell room-theme room-theme--bank">
+          <p class="room-theme__tag">[ SYSTEM: SECURE BANK PORTAL ]</p>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="logs">Room 5 / 8</span>
+              <h2>Log Analysis</h2>
+              <p class="level-desc">Find the IP conducting suspicious login attempts.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="logs">? HINT</button>
           </div>
-          <button class="btn btn--hint" data-hint-room="logs">💡 Hint</button>
+          <div class="tutor-panel" id="tutor-logs" hidden></div>
+          <div class="log-table-wrap">
+            <table class="log-table"><thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Location</th></tr></thead>
+            <tbody id="logTableBody"></tbody></table>
+          </div>
+          <div class="ip-options" id="ipOptions"></div>
+          <div class="feedback" id="feedback-logs" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-logs" disabled>SUBMIT</button>
         </div>
-        <div class="tutor-panel" id="tutor-logs" hidden></div>
-        <div class="log-table-wrap">
-          <table class="log-table"><thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Location</th></tr></thead>
-          <tbody id="logTableBody"></tbody></table>
-        </div>
-        <div class="ip-options" id="ipOptions"></div>
-        <div class="feedback" id="feedback-logs" hidden></div>
-        <button class="btn btn--primary" id="btn-logs" disabled>Submit</button>
       </section>
 
       <!-- Room 6: Social Engineering -->
       <section class="screen" data-screen="social">
-        <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="social">Room 6 / 8</span>
-            <h2>Social Engineering Scenario</h2>
-            <p class="level-desc">Choose the safest response.</p>
+        <div class="room-shell room-theme room-theme--soc">
+          <p class="room-theme__tag">[ SYSTEM: SOC DASHBOARD ]</p>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="social">Room 6 / 8</span>
+              <h2>Social Engineering Scenario</h2>
+              <p class="level-desc">Choose the safest response.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="social">? HINT</button>
           </div>
-          <button class="btn btn--hint" data-hint-room="social">💡 Hint</button>
+          <div class="tutor-panel" id="tutor-social" hidden></div>
+          <div class="scenario-box">
+            <p>📞 Incoming call: "Hi, this is IT Support. We're seeing a breach on your account and need your password <em>right now</em> to lock it down. You have 30 seconds."</p>
+          </div>
+          <div class="option-grid" id="socialOptions"></div>
+          <div class="feedback" id="feedback-social" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-social" disabled>CONFIRM RESPONSE</button>
         </div>
-        <div class="tutor-panel" id="tutor-social" hidden></div>
-        <div class="scenario-box">
-          <p>📞 Incoming call: "Hi, this is IT Support. We're seeing a breach on your account and need your password <em>right now</em> to lock it down. You have 30 seconds."</p>
-        </div>
-        <div class="option-grid" id="socialOptions"></div>
-        <div class="feedback" id="feedback-social" hidden></div>
-        <button class="btn btn--primary" id="btn-social" disabled>Confirm Response</button>
       </section>
 
       <!-- Room 7: MFA -->
       <section class="screen" data-screen="mfa">
-        <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="mfa">Room 7 / 8</span>
-            <h2>MFA Security</h2>
-            <p class="level-desc">Choose the safest response to this MFA request.</p>
+        <div class="room-shell room-theme room-theme--hacker">
+          <p class="room-theme__tag">[ SYSTEM: HACKER TERMINAL ]</p>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="mfa">Room 7 / 8</span>
+              <h2>MFA Security</h2>
+              <p class="level-desc">Choose the safest response to this MFA request.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="mfa">? HINT</button>
           </div>
-          <button class="btn btn--hint" data-hint-room="mfa">💡 Hint</button>
+          <div class="tutor-panel" id="tutor-mfa" hidden></div>
+          <div class="scenario-box scenario-box--sms">
+            <p>📱 SMS from unknown number:</p>
+            <p class="sms-bubble">"Your verification code is <strong>847291</strong>. An IT agent is on the line — read this code aloud to confirm your identity."</p>
+          </div>
+          <div class="option-grid" id="mfaOptions"></div>
+          <div class="feedback" id="feedback-mfa" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-mfa" disabled>SUBMIT</button>
         </div>
-        <div class="tutor-panel" id="tutor-mfa" hidden></div>
-        <div class="scenario-box scenario-box--sms">
-          <p>📱 SMS from unknown number:</p>
-          <p class="sms-bubble">"Your verification code is <strong>847291</strong>. An IT agent is on the line — read this code aloud to confirm your identity."</p>
-        </div>
-        <div class="option-grid" id="mfaOptions"></div>
-        <div class="feedback" id="feedback-mfa" hidden></div>
-        <button class="btn btn--primary" id="btn-mfa" disabled>Submit</button>
       </section>
 
       <!-- Room 8: Ransomware -->
       <section class="screen" data-screen="ransomware">
-        <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="ransomware">Room 8 / 8</span>
-            <h2>Ransomware Response</h2>
-            <p class="level-desc">Your screen shows a ransomware popup. What do you do?</p>
+        <div class="room-shell room-theme room-theme--mainframe">
+          <p class="room-theme__tag">[ SYSTEM: MAINFRAME CORE ]</p>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="ransomware">Room 8 / 8</span>
+              <h2>Ransomware Response</h2>
+              <p class="level-desc">Your screen shows a ransomware popup. What do you do?</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="ransomware">? HINT</button>
           </div>
-          <button class="btn btn--hint" data-hint-room="ransomware">💡 Hint</button>
+          <div class="tutor-panel" id="tutor-ransomware" hidden></div>
+          <div class="ransomware-popup animate-shake">
+            <div class="ransomware-popup__header">⚠️ YOUR FILES ARE ENCRYPTED</div>
+            <p>All your documents have been locked. Pay <strong>0.5 BTC</strong> within 24 hours or lose everything forever.</p>
+            <p class="ransomware-popup__timer">Time remaining: 23:59:41</p>
+            <button type="button" class="ransomware-popup__fake-btn" disabled>Pay Now</button>
+          </div>
+          <div class="option-grid" id="ransomwareOptions"></div>
+          <div class="feedback" id="feedback-ransomware" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-ransomware" disabled>CONFIRM ACTION</button>
         </div>
-        <div class="tutor-panel" id="tutor-ransomware" hidden></div>
-        <div class="ransomware-popup animate-shake">
-          <div class="ransomware-popup__header">⚠️ YOUR FILES ARE ENCRYPTED</div>
-          <p>All your documents have been locked. Pay <strong>0.5 BTC</strong> within 24 hours or lose everything forever.</p>
-          <p class="ransomware-popup__timer">Time remaining: 23:59:41</p>
-          <button type="button" class="ransomware-popup__fake-btn" disabled>Pay Now</button>
-        </div>
-        <div class="option-grid" id="ransomwareOptions"></div>
-        <div class="feedback" id="feedback-ransomware" hidden></div>
-        <button class="btn btn--primary" id="btn-ransomware" disabled>Confirm Action</button>
       </section>
 
       <!-- Quiz -->
@@ -251,7 +279,7 @@ AND password = '" + password + "'"</code></pre>
         </div>
         <div id="quizContainer"></div>
         <div class="feedback" id="feedback-quiz" hidden></div>
-        <button class="btn btn--primary" id="btn-quiz" disabled>Submit Quiz</button>
+        <button class="btn btn--primary btn--pixel" id="btn-quiz" disabled>SUBMIT QUIZ</button>
       </section>
 
       <!-- Certificate -->
@@ -265,7 +293,7 @@ AND password = '" + password + "'"</code></pre>
             <div class="certificate__stats" id="certStats"></div>
             <div class="achievements-list" id="certAchievements"></div>
             <div class="leaderboard-panel leaderboard-panel--cert">
-              <h3>🏆 Leaderboard</h3>
+              <h3>TOP OPERATIVES</h3>
               <div id="certLeaderboard"></div>
             </div>
             <p class="certificate__date" id="certDate"></p>
@@ -285,8 +313,9 @@ AND password = '" + password + "'"</code></pre>
       </section>
     </main>
 
-    <footer class="footer">
-      <a href="teacher.html">Teacher Dashboard</a>
+    <footer class="footer footer--pixel">
+      <a href="teacher.html" class="footer__link">[ TEACHER DASHBOARD ]</a>
+      <p class="footer__tagline">STAY SECURE. THINK SECURE. BE SECURE.</p>
     </footer>
   </div>
 

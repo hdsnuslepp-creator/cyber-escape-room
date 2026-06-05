@@ -1,17 +1,15 @@
 /**
- * Cyber Escape Room — Sound effects + background music (Vinyl Hearth.mp3)
+ * Cyber Escape Room — SFX (Web Audio) + background music (HTML Audio)
  */
 const AudioFX = (() => {
   const MUSIC_SRC = new URL('audio/vinyl-hearth.mp3', window.location.href).href;
 
   let ctx = null;
+  let masterGain = null;
   let enabled = localStorage.getItem('cer_sound') !== 'off';
   let musicOn = localStorage.getItem('cer_music') !== 'off';
   let volume = clampVolume(parseInt(localStorage.getItem('cer_volume') || '70', 10));
-  let masterGain = null;
-  let musicGain = null;
   let musicEl = null;
-  let musicConnected = false;
   let previewTimer = null;
 
   function clampVolume(v) {
@@ -23,12 +21,15 @@ const AudioFX = (() => {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       masterGain = ctx.createGain();
       masterGain.connect(ctx.destination);
-      musicGain = ctx.createGain();
-      musicGain.connect(masterGain);
       applyMasterGain();
-      applyMusicGain();
     }
     return ctx;
+  }
+
+  function resume() {
+    try {
+      getCtx().resume();
+    } catch { /* ignore */ }
   }
 
   function initMusicElement() {
@@ -36,18 +37,12 @@ const AudioFX = (() => {
     musicEl = new Audio(MUSIC_SRC);
     musicEl.loop = true;
     musicEl.preload = 'auto';
+    musicEl.volume = musicVolume();
   }
 
-  function connectMusicToWebAudio() {
-    if (musicConnected || !musicEl) return;
-    try {
-      const ac = getCtx();
-      const source = ac.createMediaElementSource(musicEl);
-      source.connect(musicGain);
-      musicConnected = true;
-    } catch {
-      /* fallback: use HTML audio volume directly */
-    }
+  function musicVolume() {
+    if (!musicOn || !enabled || volume === 0) return 0;
+    return (volume / 100) * 0.55;
   }
 
   function applyMasterGain() {
@@ -55,65 +50,15 @@ const AudioFX = (() => {
     masterGain.gain.value = enabled && volume > 0 ? volume / 100 : 0;
   }
 
-  function applyMusicGain() {
-    if (!musicGain) return;
-    const level = musicOn && enabled && volume > 0 ? 0.55 : 0;
-    musicGain.gain.value = level;
-    if (!musicConnected && musicEl) {
-      musicEl.volume = level;
-    }
-  }
-
-  function out(node) {
-    node.connect(masterGain);
-  }
-
-  function setEnabled(on) {
-    enabled = on;
-    localStorage.setItem('cer_sound', on ? 'on' : 'off');
-    applyMasterGain();
-    applyMusicGain();
-    updateUI();
-    if (on && volume > 0) {
-      resume();
-      if (musicOn) startMusic();
-      else click();
-    } else {
-      pauseMusic();
-    }
-  }
-
-  function setVolume(v, preview = false) {
-    volume = clampVolume(v);
-    localStorage.setItem('cer_volume', String(volume));
-    applyMasterGain();
-    applyMusicGain();
-    updateUI();
-    if (musicOn && enabled && volume > 0) {
-      resume();
-      startMusic();
-    }
-    if (preview && enabled && volume > 0) {
-      clearTimeout(previewTimer);
-      previewTimer = setTimeout(() => click(), 80);
-    }
-  }
-
-  function toggleMusic() {
-    musicOn = !musicOn;
-    localStorage.setItem('cer_music', musicOn ? 'on' : 'off');
-    applyMusicGain();
-    updateUI();
-    resume();
-    if (musicOn && enabled && volume > 0) startMusic();
-    else pauseMusic();
+  function applyMusicVolume() {
+    if (!musicEl) return;
+    musicEl.volume = musicVolume();
   }
 
   function startMusic() {
     if (!musicOn || !enabled || volume === 0) return;
     initMusicElement();
-    connectMusicToWebAudio();
-    applyMusicGain();
+    applyMusicVolume();
     musicEl.play().catch(() => { /* needs user gesture */ });
   }
 
@@ -125,6 +70,56 @@ const AudioFX = (() => {
     if (!musicEl) return;
     musicEl.pause();
     musicEl.currentTime = 0;
+  }
+
+  function sfxClick() {
+    tone(1200, 0.04, 'square', 0.05);
+  }
+
+  function setEnabled(on) {
+    enabled = on;
+    localStorage.setItem('cer_sound', on ? 'on' : 'off');
+    applyMasterGain();
+    applyMusicVolume();
+    updateButtons();
+    if (on && volume > 0) {
+      resume();
+      if (musicOn) startMusic();
+      else sfxClick();
+    } else {
+      pauseMusic();
+    }
+  }
+
+  function setVolume(v, preview = false) {
+    volume = clampVolume(v);
+    localStorage.setItem('cer_volume', String(volume));
+    applyMasterGain();
+    applyMusicVolume();
+    updateVolumeUI();
+    updateButtons();
+    if (musicOn && enabled && volume > 0) {
+      resume();
+      startMusic();
+    } else if (volume === 0) {
+      pauseMusic();
+    }
+    if (preview && enabled && volume > 0) {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(() => sfxClick(), 80);
+    }
+  }
+
+  function toggleMusic() {
+    musicOn = !musicOn;
+    localStorage.setItem('cer_music', musicOn ? 'on' : 'off');
+    updateButtons();
+    resume();
+    if (musicOn && enabled && volume > 0) {
+      startMusic();
+    } else {
+      pauseMusic();
+    }
   }
 
   function toggle() {
@@ -139,19 +134,50 @@ const AudioFX = (() => {
     return volume;
   }
 
-  function updateUI() {
+  function sliderPercent(val, min, max) {
+    if (!Number.isFinite(val) || max <= min) return 0;
+    return Math.round(((val - min) / (max - min)) * 100);
+  }
+
+  function paintSlider(slider) {
+    if (!slider) return;
+    const min = parseInt(slider.min, 10) || 0;
+    const max = parseInt(slider.max, 10) || 100;
+    const val = parseInt(slider.value, 10);
+    const pct = sliderPercent(val, min, max);
+    slider.style.setProperty('--volume', pct + '%');
+    slider.setAttribute('aria-valuenow', String(pct));
+    const label = slider.closest('.volume-control')?.querySelector('[data-sound-volume-label]');
+    if (label) label.textContent = pct + '%';
+  }
+
+  function updateVolumeUI() {
+    document.querySelectorAll('[data-sound-volume]').forEach((slider) => {
+      slider.value = String(volume);
+      paintSlider(slider);
+    });
+  }
+
+  function updateButtons() {
     document.querySelectorAll('[data-sound-toggle]').forEach((btn) => {
-      btn.textContent = enabled && volume > 0 ? '🔊 Sound On' : '🔇 Sound Off';
-      btn.setAttribute('aria-pressed', enabled && volume > 0 ? 'true' : 'false');
-      btn.classList.toggle('sound-toggle--off', !enabled || volume === 0);
+      btn.textContent = enabled ? 'SOUND: ON' : 'SOUND: OFF';
+      btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+      btn.classList.toggle('sound-toggle--off', !enabled);
     });
     document.querySelectorAll('[data-music-toggle]').forEach((btn) => {
-      btn.textContent = musicOn ? '🎵 Music On' : '🎵 Music Off';
+      btn.textContent = musicOn ? 'MUSIC: ON' : 'MUSIC: OFF';
       btn.setAttribute('aria-pressed', musicOn ? 'true' : 'false');
       btn.classList.toggle('sound-toggle--off', !musicOn);
     });
-    document.querySelectorAll('[data-sound-volume]').forEach((s) => { s.value = String(volume); });
-    document.querySelectorAll('[data-sound-volume-label]').forEach((l) => { l.textContent = volume + '%'; });
+  }
+
+  function updateUI() {
+    updateButtons();
+    updateVolumeUI();
+  }
+
+  function out(node) {
+    node.connect(masterGain);
   }
 
   function tone(freq, duration, type = 'square', vol = 0.08, when = 0) {
@@ -217,28 +243,46 @@ const AudioFX = (() => {
     } catch { /* ignore */ }
   }
 
+  function bindControls() {
+    document.querySelectorAll('[data-sound-toggle]').forEach((btn) => {
+      if (btn.dataset.audioBound) return;
+      btn.dataset.audioBound = '1';
+      btn.addEventListener('click', () => {
+        resume();
+        toggle();
+      });
+    });
+
+    document.querySelectorAll('[data-music-toggle]').forEach((btn) => {
+      if (btn.dataset.audioBound) return;
+      btn.dataset.audioBound = '1';
+      btn.addEventListener('click', () => {
+        resume();
+        toggleMusic();
+      });
+    });
+
+    document.querySelectorAll('[data-sound-volume]').forEach((slider) => {
+      if (slider.dataset.audioBound) return;
+      slider.dataset.audioBound = '1';
+      paintSlider(slider);
+      slider.addEventListener('input', () => {
+        paintSlider(slider);
+        resume();
+        setVolume(parseInt(slider.value, 10), true);
+      });
+    });
+  }
+
+  function initUI() {
+    bindControls();
+    initMusicElement();
+    updateUI();
+  }
+
   return {
-    resume() {
-      try { getCtx().resume(); } catch { /* ignore */ }
-    },
-
-    initUI() {
-      document.querySelectorAll('[data-sound-toggle]').forEach((btn) => {
-        btn.addEventListener('click', () => { resume(); toggle(); });
-      });
-      document.querySelectorAll('[data-music-toggle]').forEach((btn) => {
-        btn.addEventListener('click', () => { resume(); toggleMusic(); });
-      });
-      document.querySelectorAll('[data-sound-volume]').forEach((slider) => {
-        slider.addEventListener('input', () => {
-          resume();
-          setVolume(parseInt(slider.value, 10), true);
-        });
-      });
-      initMusicElement();
-      updateUI();
-    },
-
+    resume,
+    initUI,
     toggle,
     toggleMusic,
     setEnabled,
@@ -248,7 +292,7 @@ const AudioFX = (() => {
     startMusic,
     stopMusic,
 
-    click: () => tone(1200, 0.04, 'square', 0.05),
+    click: sfxClick,
     type: () => tone(900 + Math.random() * 200, 0.025, 'square', 0.03),
     submit: () => {
       tone(600, 0.06, 'square', 0.06);
@@ -304,3 +348,9 @@ const AudioFX = (() => {
     },
   };
 })();
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => AudioFX.initUI());
+} else {
+  AudioFX.initUI();
+}

@@ -97,7 +97,7 @@ const Achievements = (() => {
     if (!el) return;
     const list = loadLeaderboard();
     if (!list.length) {
-      el.innerHTML = '<p class="leaderboard-empty">No scores yet — be the first!</p>';
+      el.innerHTML = '<p class="leaderboard-empty">&gt; NO OPERATIVES LOGGED — BE FIRST</p>';
       return;
     }
     el.innerHTML = `

@@ -78,7 +78,44 @@
     bindGlobalEvents();
     initRooms();
     updateHud();
-    Achievements.renderLeaderboard('introLeaderboard');
+    runBootSequence();
+  }
+
+  function runBootSequence() {
+    const container = document.getElementById('bootSequence');
+    const actions = document.getElementById('introActions');
+    if (!container || !actions) {
+      if (actions) actions.hidden = false;
+      Achievements.renderLeaderboard('introLeaderboard');
+      return;
+    }
+
+    const lines = [
+      { html: '<span class="prompt">&gt;</span> LOADING SECURE_TRAINING_ROOM.EXE' },
+      { html: '<span class="prompt">&gt;</span> CHECKING FIREWALL... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
+      { html: '<span class="prompt">&gt;</span> CONNECTING TO MAINFRAME... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
+      { html: '<span class="prompt">&gt;</span> 8 ROOMS DETECTED', cls: 'boot-line--ok' },
+      { html: '<span class="prompt">&gt;</span> WARNING: SYSTEM LOCKDOWN ACTIVE', cls: 'boot-line--warn' },
+      { html: '<span class="prompt">&gt;</span> <span class="blink">ACCESS DENIED — BREACH REQUIRED</span>', cls: 'boot-line--danger' },
+    ];
+
+    let i = 0;
+    function showNext() {
+      if (i >= lines.length) {
+        actions.hidden = false;
+        actions.classList.add('intro-actions--show');
+        Achievements.renderLeaderboard('introLeaderboard');
+        return;
+      }
+      const line = lines[i++];
+      const el = document.createElement('p');
+      el.className = 'terminal-line boot-line' + (line.cls ? ' ' + line.cls : '');
+      el.innerHTML = line.html;
+      container.appendChild(el);
+      if (typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
+      setTimeout(showNext, i === 1 ? 300 : 480 + Math.random() * 220);
+    }
+    showNext();
   }
 
   function buildProgressBar() {
@@ -135,7 +172,7 @@
   async function startGame() {
     const name = document.getElementById('studentName').value.trim();
     if (!name) {
-      alert('Please enter your name to begin.');
+      alert('Enter your agent codename to initialize breach.');
       return;
     }
 
@@ -153,7 +190,8 @@
     selectedMfa = null;
     selectedRansomware = null;
 
-    gameHeader.hidden = false;
+    gameHeader.classList.remove('header--intro');
+    progressBar.classList.remove('header__progress--idle');
     initRooms();
 
     GameState.startTimer((_, formatted) => {
@@ -205,7 +243,7 @@
   function updateHud() {
     const s = GameState.getState();
     document.getElementById('hudScore').textContent = s.score;
-    document.getElementById('hudLives').textContent = '❤'.repeat(s.lives) + '🖤'.repeat(GameState.MAX_LIVES - s.lives);
+    document.getElementById('hudLives').textContent = '♥'.repeat(s.lives) + '♡'.repeat(GameState.MAX_LIVES - s.lives);
   }
 
   function showFeedback(id, msg, type) {
