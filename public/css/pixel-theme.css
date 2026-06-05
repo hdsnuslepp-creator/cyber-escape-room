@@ -702,9 +702,104 @@ body::before {
 .room-theme--win98 .phishing-target--found {
   background: #ffe0e6 !important;
   box-shadow: 0 0 0 2px #ff3366 !important;
+  color: #000 !important;
 }
 
-/* Room 2 — DOS */
+/* Win98 — readable text on grey (fix orange/cyan on light bg) */
+.room-theme--win98 .act-banner,
+.room-theme--win98 .chapter-banner {
+  color: #000080;
+  border-color: #000080;
+  background: #ececec;
+  font-size: 0.48rem;
+}
+
+.room-theme--win98 .level-header h2 {
+  font-size: 0.62rem;
+  color: #000080;
+}
+
+.room-theme--win98 .level-desc {
+  color: #111;
+  font-size: 1.1rem;
+  line-height: 1.55;
+}
+
+.room-theme--win98 .level-theme {
+  color: #000080;
+}
+
+.room-theme--win98 .room-theme__tag {
+  color: #000080;
+  background: #dfdfdf;
+  padding: 0.35rem 0.5rem;
+  border: 2px inset #808080;
+  display: inline-block;
+}
+
+.room-theme--win98 .btn--hint {
+  color: #000;
+  background: #dfdfdf;
+  border: 2px outset #808080;
+  font-size: 0.48rem;
+  box-shadow: none;
+}
+
+.room-theme--win98 .btn--hint:hover {
+  background: #fff;
+  color: #000080;
+  border-color: #000080;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
+}
+
+.room-theme--win98 .phishing-target {
+  color: #000 !important;
+  background: #fff;
+}
+
+.room-theme--win98 .email-message__row .phishing-target {
+  display: inline-block;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid #999;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.room-theme--win98 .phishing-target:hover,
+.room-theme--win98 .phishing-target:focus-visible {
+  background: #fff8dc !important;
+  box-shadow: 0 0 0 2px #cc0000 !important;
+  color: #000 !important;
+}
+
+.room-theme--win98 .flag-counter {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.room-theme--win98 .flag-counter strong {
+  color: #cc0000;
+}
+
+.room-theme--win98 .tutor-panel {
+  color: #111;
+  background: #ffffcc;
+  border: 2px inset #808080;
+}
+
+.room-theme--win98 .feedback {
+  color: #111;
+}
+
+.room-theme--win98 .pdf-sandbox .phishing-target {
+  color: #111 !important;
+}
+
+.room-theme--win98 .pdf-sandbox .phishing-target:hover,
+.room-theme--win98 .pdf-sandbox .phishing-target:focus-visible {
+  color: #000 !important;
+}
+
 .room-theme--dos {
   background: #000;
   border-color: #00ff66;
