@@ -1,18 +1,28 @@
 /**
- * Cyber Escape Room — Sound Effects + chill procedural background music
+ * Cyber Escape Room — Sound effects (Web Audio) + background music (Vinyl Hearth.mp3)
  */
 const AudioFX = (() => {
+  const MUSIC_SRC = 'audio/vinyl-hearth.mp3';
+
   let ctx = null;
   let enabled = localStorage.getItem('cer_sound') !== 'off';
   let musicOn = localStorage.getItem('cer_music') !== 'off';
   let volume = clampVolume(parseInt(localStorage.getItem('cer_volume') || '70', 10));
   let masterGain = null;
-  let musicGain = null;
-  let musicNodes = [];
+  let musicEl = null;
   let previewTimer = null;
 
   function clampVolume(v) {
     return Math.min(100, Math.max(0, Number.isFinite(v) ? v : 70));
+  }
+
+  function getMusicEl() {
+    if (!musicEl) {
+      musicEl = new Audio(MUSIC_SRC);
+      musicEl.loop = true;
+      musicEl.preload = 'auto';
+    }
+    return musicEl;
   }
 
   function getCtx() {
@@ -20,10 +30,7 @@ const AudioFX = (() => {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       masterGain = ctx.createGain();
       masterGain.connect(ctx.destination);
-      musicGain = ctx.createGain();
-      musicGain.connect(masterGain);
       applyMasterGain();
-      applyMusicGain();
     }
     return ctx;
   }
@@ -31,11 +38,13 @@ const AudioFX = (() => {
   function applyMasterGain() {
     if (!masterGain) return;
     masterGain.gain.value = enabled && volume > 0 ? volume / 100 : 0;
+    syncMusicVolume();
   }
 
-  function applyMusicGain() {
-    if (!musicGain) return;
-    musicGain.gain.value = musicOn && enabled && volume > 0 ? 0.35 : 0;
+  function syncMusicVolume() {
+    const el = getMusicEl();
+    const shouldPlay = musicOn && enabled && volume > 0;
+    el.volume = shouldPlay ? Math.min(1, (volume / 100) * 0.45) : 0;
   }
 
   function out(node) {
@@ -46,7 +55,6 @@ const AudioFX = (() => {
     enabled = on;
     localStorage.setItem('cer_sound', on ? 'on' : 'off');
     applyMasterGain();
-    applyMusicGain();
     updateUI();
     if (on && volume > 0) {
       resume();
@@ -65,7 +73,6 @@ const AudioFX = (() => {
       localStorage.setItem('cer_sound', 'on');
     }
     applyMasterGain();
-    applyMusicGain();
     updateUI();
     if (preview && enabled && volume > 0) {
       clearTimeout(previewTimer);
@@ -76,7 +83,6 @@ const AudioFX = (() => {
   function toggleMusic() {
     musicOn = !musicOn;
     localStorage.setItem('cer_music', musicOn ? 'on' : 'off');
-    applyMusicGain();
     updateUI();
     if (musicOn && enabled && volume > 0) {
       resume();
@@ -87,57 +93,16 @@ const AudioFX = (() => {
   }
 
   function startMusic() {
-    if (musicNodes.length || !musicOn || !enabled || volume === 0) return;
-    try {
-      const ac = getCtx();
-      const filter = ac.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 800;
-      filter.connect(musicGain);
-
-      const chords = [
-        [130.81, 164.81, 196.0],
-        [146.83, 174.61, 220.0],
-        [123.47, 155.56, 185.0],
-        [138.59, 164.81, 207.65],
-      ];
-      let chordIdx = 0;
-
-      function playChord() {
-        if (!musicOn) return;
-        const freqs = chords[chordIdx % chords.length];
-        chordIdx++;
-        freqs.forEach((f, i) => {
-          const osc = ac.createOscillator();
-          const g = ac.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = f;
-          g.gain.setValueAtTime(0, ac.currentTime);
-          g.gain.linearRampToValueAtTime(0.06 / (i + 1), ac.currentTime + 0.8);
-          g.gain.linearRampToValueAtTime(0, ac.currentTime + 5.5);
-          osc.connect(g);
-          g.connect(filter);
-          osc.start();
-          osc.stop(ac.currentTime + 6);
-        });
-      }
-
-      playChord();
-      const interval = setInterval(() => {
-        if (!musicOn || !enabled) {
-          clearInterval(interval);
-          return;
-        }
-        playChord();
-      }, 5500);
-
-      musicNodes = [{ stop: () => clearInterval(interval) }];
-    } catch { /* ignore */ }
+    if (!musicOn || !enabled || volume === 0) return;
+    const el = getMusicEl();
+    syncMusicVolume();
+    el.play().catch(() => { /* autoplay blocked until user gesture */ });
   }
 
   function stopMusic() {
-    musicNodes.forEach((n) => n.stop && n.stop());
-    musicNodes = [];
+    if (!musicEl) return;
+    musicEl.pause();
+    musicEl.currentTime = 0;
   }
 
   function toggle() {
