@@ -8,12 +8,12 @@ const AudioFX = (() => {
   let masterGain = null;
   let enabled = localStorage.getItem('cer_sound') !== 'off';
   let musicOn = localStorage.getItem('cer_music') !== 'off';
-  let volume = clampVolume(parseInt(localStorage.getItem('cer_volume') || '70', 10));
+  let volume = clampVolume(parseInt(localStorage.getItem('cer_volume') || '10', 10));
   let musicEl = null;
   let previewTimer = null;
 
   function clampVolume(v) {
-    return Math.min(100, Math.max(0, Number.isFinite(v) ? v : 70));
+    return Math.min(100, Math.max(0, Number.isFinite(v) ? v : 10));
   }
 
   function getCtx() {

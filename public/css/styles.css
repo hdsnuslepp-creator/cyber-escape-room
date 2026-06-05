@@ -218,7 +218,7 @@ body::before {
 }
 
 .volume-slider {
-  --volume: 70%;
+  --volume: 10%;
   flex: 1;
   height: 14px;
   -webkit-appearance: none;

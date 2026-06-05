@@ -341,14 +341,18 @@
     AudioFX.click();
 
     if (PHISHING_FLAG_KEYS.has(flag)) {
-      this.classList.add('phishing-target--found');
-      foundFlags.add(flag);
-      AudioFX.flagFound();
-      document.getElementById('flagCount').textContent = String(foundFlags.size);
-      if (foundFlags.size >= REQUIRED_PHISHING_FLAGS) {
-        document.getElementById('btn-phishing').disabled = false;
-        AudioFX.doorUnlock();
-        showFeedback('feedback-phishing', 'All 3 red flags found!', 'success');
+      if (!foundFlags.has(flag)) {
+        foundFlags.add(flag);
+        document.querySelectorAll(`[data-screen="phishing"] [data-flag="${flag}"]`).forEach((el) => {
+          el.classList.add('phishing-target--found');
+        });
+        AudioFX.flagFound();
+        document.getElementById('flagCount').textContent = String(foundFlags.size);
+        if (foundFlags.size >= REQUIRED_PHISHING_FLAGS) {
+          document.getElementById('btn-phishing').disabled = false;
+          AudioFX.doorUnlock();
+          showFeedback('feedback-phishing', 'All 3 red flags found!', 'success');
+        }
       }
     } else if (flag === 'attachment') {
       showTutor('phishing', 'Good eye — .exe attachments are dangerous, but this room needs 3 core flags: sender, link, and urgency.');

@@ -455,6 +455,94 @@ body::before {
   font-family: var(--font-mono);
 }
 
+.room-theme--win98 .email-message,
+.room-theme--win98 .email-message__body,
+.room-theme--win98 .email-message__body p {
+  color: #000;
+  font-size: 1rem;
+}
+
+.room-theme--win98 .email-label {
+  color: #444;
+  font-weight: bold;
+}
+
+.room-theme--win98 .email-callout-label,
+.room-theme--win98 .email-attachment-label {
+  font-weight: bold;
+  color: #000080;
+  margin-top: 0.5rem;
+}
+
+.room-theme--win98 .email-verify-block {
+  display: block;
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  background: #ffffcc;
+  border: 2px inset #808080;
+  text-decoration: none;
+  color: #000;
+  cursor: pointer;
+}
+
+.room-theme--win98 .email-verify-block__btn {
+  display: block;
+  font-family: 'Tahoma', var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #0000ff;
+  text-decoration: underline;
+  margin-bottom: 0.5rem;
+}
+
+.room-theme--win98 .email-verify-block__url {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: #000080;
+  word-break: break-all;
+  background: #fff;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #999;
+}
+
+.room-theme--win98 .email-verify-block:hover,
+.room-theme--win98 .email-verify-block:focus-visible {
+  background: #fff3a0;
+  box-shadow: 0 0 0 2px #ff3366;
+}
+
+.room-theme--win98 .email-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 360px;
+  padding: 0.65rem 0.85rem;
+  background: #eee;
+  border: 2px inset #808080;
+  border-radius: 0;
+  color: #000;
+  font-family: 'Tahoma', var(--font-mono);
+  font-size: 1rem;
+}
+
+.room-theme--win98 .email-attachment__name {
+  font-weight: bold;
+  color: #800000;
+}
+
+.room-theme--win98 .email-attachment__size {
+  margin-left: auto;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.room-theme--win98 .phishing-target--found {
+  background: #ffe0e6 !important;
+  box-shadow: 0 0 0 2px #ff3366 !important;
+}
+
 /* Room 2 — DOS */
 .room-theme--dos {
   background: #000;

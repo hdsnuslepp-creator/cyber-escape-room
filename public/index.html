@@ -20,8 +20,8 @@
       <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">MUSIC: ON</button>
       <label class="volume-control">
         <span class="volume-control__label">Volume</span>
-        <input type="range" class="volume-slider" data-sound-volume min="0" max="100" step="1" value="70" aria-label="Volume">
-        <span class="volume-control__value" data-sound-volume-label>70%</span>
+        <input type="range" class="volume-slider" data-sound-volume min="0" max="100" step="1" value="10" aria-label="Volume">
+        <span class="volume-control__value" data-sound-volume-label>10%</span>
       </label>
     </div>
 
@@ -93,10 +93,19 @@
             </div>
             <div class="email-message__body">
               <p>Hello,</p>
-              <p>We detected unusual sign-in activity. Verify immediately:</p>
-              <p><a href="#" class="phishing-target email-link" data-flag="link" tabindex="0">https://company-login.secure-verify.net/auth</a></p>
+              <p>We detected unusual sign-in activity on your account.</p>
+              <p class="email-callout-label">Click to verify your account:</p>
+              <a href="#" class="phishing-target email-verify-block" data-flag="link" tabindex="0">
+                <span class="email-verify-block__btn">VERIFY ACCOUNT NOW</span>
+                <span class="email-verify-block__url">https://company-login.secure-verify.net/auth</span>
+              </a>
               <p>Regards, Corporate IT</p>
-              <div class="email-attachment phishing-target" data-flag="attachment" tabindex="0">📎 Account_Verification.exe (842 KB)</div>
+              <p class="email-attachment-label">Attachment:</p>
+              <div class="email-attachment phishing-target" data-flag="attachment" tabindex="0">
+                <span class="email-attachment__icon" aria-hidden="true">📎</span>
+                <span class="email-attachment__name">Account_Verification.exe</span>
+                <span class="email-attachment__size">842 KB</span>
+              </div>
             </div>
           </div>
         </div>
