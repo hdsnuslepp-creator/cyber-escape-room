@@ -23,8 +23,11 @@
     door: { c: 14, r: 3 },
     player: { c: 10, r: 5 },
     server: { c: 3, r: 7 },
-    key: { c: 15, r: 7 },
+    key: { c: 14, r: 7 },
   };
+
+  const DOOR_INTERACT_RADIUS = 80;
+  const KEY_INTERACT_RADIUS = 52;
 
   function tilePx(c, r) {
     return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
@@ -74,8 +77,6 @@
     },
   };
 
-  const DOOR_INTERACT_RADIUS = 80;
-
   let game;
 
   // ─── Boot ───────────────────────────────────────────────────────────────
@@ -92,6 +93,7 @@
   BootScene.prototype.create = function () {
     this.registry.set('agentName', '');
     this.registry.set('inboxComplete', false);
+    this.registry.set('hasKey', false);
     this.registry.set('score', 1000);
     this.scene.start('TitleScene');
   };
@@ -215,17 +217,12 @@
     this.doorOpen = inboxDone;
 
     buildCorridorMap(this);
-    this.walls = buildWallColliders(this);
 
     const spawn = tilePx(HUB.player.c, HUB.player.r);
-    this.player = this.physics.add.sprite(spawn.x, spawn.y, 'pixel');
+    this.player = this.add.sprite(spawn.x, spawn.y, 'pixel');
     this.player.setDisplaySize(20, 28);
     this.player.setTint(COLORS.player);
-    this.player.setCollideWorldBounds(false);
-    this.player.body.setSize(14, 14);
-    this.player.body.setOffset(3, 10);
-
-    this.physics.add.collider(this.player, this.walls);
+    this.player.setDepth(4);
 
     this.playerGfx = this.add.graphics();
     this.playerGfx.setDepth(5);
@@ -254,15 +251,12 @@
     }).setOrigin(0.5).setDepth(3);
 
     this.doorPos = doorPos;
-    this.doorInteractZone = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2.8, TILE * 2.2, 0xffffff, 0)
+    this.doorInteractZone = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2, TILE * 1.6, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.doorInteractZone.on('pointerdown', () => this.tryInteract(true));
 
     this.drawDoor(inboxDone);
-
-    // No physics blocker on the door — walk freely; press E when nearby to enter
-    this.doorBlocker = null;
 
     const pcXY = tileXY(HUB.pc.c - 1, HUB.pc.r);
     drawTerminal(this, pcXY.x, pcXY.y - 8, 'PC', COLORS.terminal);
@@ -270,8 +264,25 @@
     const srvXY = tileXY(HUB.server.c - 1, HUB.server.r);
     drawTerminal(this, srvXY.x, srvXY.y - 8, 'SERVER', COLORS.server);
 
-    const keyXY = tileXY(HUB.key.c, HUB.key.r);
-    drawKeycardProp(this, keyXY.x, keyXY.y - 10);
+    this.keyPos = tilePx(HUB.key.c, HUB.key.r);
+    this.hasKey = !!this.registry.get('hasKey');
+    const keyXY = tileXY(HUB.key.c - 1, HUB.key.r);
+    this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
+    if (this.hasKey) {
+      this.keyObjects.gfx.setVisible(false);
+      this.keyObjects.label.setVisible(false);
+    } else {
+      this.keyClickZone = this.add.circle(this.keyPos.x, this.keyPos.y, 24, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(16);
+      this.keyClickZone.on('pointerdown', () => this.tryPickupKey(true));
+    }
+
+    this.keyHud = this.add.text(GAME_W - 12, 8, this.hasKey ? 'KEY: ✓' : 'KEY: —', {
+      fontFamily: 'VT323, monospace',
+      fontSize: '18px',
+      color: this.hasKey ? '#ffb000' : '#556677',
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
 
     // HUD
     const agent = this.registry.get('agentName') || 'agent';
@@ -407,9 +418,46 @@
     ) < DOOR_INTERACT_RADIUS;
   };
 
+  HubScene.prototype.isNearKey = function () {
+    if (this.hasKey || !this.keyPos) return false;
+    return Phaser.Math.Distance.Between(
+      this.player.x, this.player.y,
+      this.keyPos.x, this.keyPos.y
+    ) < KEY_INTERACT_RADIUS;
+  };
+
+  HubScene.prototype.tryPickupKey = function (fromClick) {
+    if (this.hasKey) return;
+    if (!this.isNearKey()) {
+      if (fromClick) this.flashPrompt('Walk closer to the KEY (bottom-right)', '#ff3366');
+      return;
+    }
+    this.hasKey = true;
+    this.registry.set('hasKey', true);
+    if (this.keyObjects) {
+      this.keyObjects.gfx.setVisible(false);
+      this.keyObjects.label.setVisible(false);
+    }
+    if (this.keyClickZone) {
+      this.keyClickZone.destroy();
+      this.keyClickZone = null;
+    }
+    if (this.keyHud) {
+      this.keyHud.setText('KEY: ✓');
+      this.keyHud.setColor('#ffb000');
+    }
+    this.cameras.main.flash(120, 255, 176, 0);
+    this.flashPrompt('Access key acquired!', '#ffb000');
+  };
+
   HubScene.prototype.tryInteract = function (fromDoorClick) {
     if (this.dialogueBox.visible) {
       this.dialogueBox.dismiss();
+      return;
+    }
+
+    if (this.isNearKey()) {
+      this.tryPickupKey(false);
       return;
     }
 
@@ -436,20 +484,37 @@
     this.promptText.setColor(color || '#ffb000');
     if (this.promptFlash) this.promptFlash.remove();
     this.promptFlash = this.time.delayedCall(2000, () => {
-      if (this.isNearDoor() && !this.doorOpen) {
-        this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
-        this.promptText.setColor('#ffb000');
-      } else {
-        this.promptText.setText('WASD / Arrows — walk anywhere in the room');
-        this.promptText.setColor('#8899aa');
-      }
+      this.promptFlash = null;
+      this.refreshPrompt();
     });
   };
 
-  HubScene.prototype.update = function () {
-    if (!this.player || !this.player.body) return;
+  HubScene.prototype.refreshPrompt = function () {
+    if (this.isNearDoor() && !this.doorOpen) {
+      this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
+      this.promptText.setColor('#ffb000');
+    } else if (this.isNearKey()) {
+      this.promptText.setText('[ E ] or click KEY — pick up access key');
+      this.promptText.setColor('#ffb000');
+    } else if (this.hasKey) {
+      this.promptText.setText('Key acquired — head to the DOOR (top-right)');
+      this.promptText.setColor('#00ffcc');
+    } else {
+      this.promptText.setText('Move anywhere — WASD / Arrows');
+      this.promptText.setColor('#8899aa');
+    }
+  };
 
-    const speed = 150;
+  HubScene.prototype.clampPlayer = function () {
+    const m = 14;
+    this.player.x = Phaser.Math.Clamp(this.player.x, m, GAME_W - m);
+    this.player.y = Phaser.Math.Clamp(this.player.y, m, GAME_H - m);
+  };
+
+  HubScene.prototype.update = function (time, delta) {
+    if (!this.player) return;
+
+    const speed = 200;
     let vx = 0;
     let vy = 0;
 
@@ -470,30 +535,37 @@
       vy *= norm;
     }
 
-    this.player.setVelocity(vx, vy);
+    const dt = delta / 1000;
+    this.player.x += vx * dt;
+    this.player.y += vy * dt;
+    this.clampPlayer();
 
     drawPlayerSprite(this.playerGfx, this.player.x, this.player.y);
 
     this.nearDoor = this.isNearDoor();
+    this.nearKey = this.isNearKey();
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       this.tryInteract(false);
     }
 
+    if (this.promptFlash) return;
+
     if (this.nearDoor && !this.doorOpen) {
       this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
       this.promptText.setColor('#ffb000');
-      if (this.doorInteractZone) this.doorInteractZone.setAlpha(0.08);
+      if (this.doorInteractZone) this.doorInteractZone.setFillStyle(0xffffff, 0.06);
+    } else if (this.nearKey) {
+      this.promptText.setText('[ E ] or click KEY — pick up access key');
+      this.promptText.setColor('#ffb000');
+      if (this.doorInteractZone) this.doorInteractZone.setFillStyle(0xffffff, 0);
     } else if (this.nearDoor && this.doorOpen) {
       this.promptText.setText('Inbox Room — CLEARED ✓');
       this.promptText.setColor('#00ff66');
-      if (this.doorInteractZone) this.doorInteractZone.setAlpha(0);
+      if (this.doorInteractZone) this.doorInteractZone.setFillStyle(0xffffff, 0);
     } else {
-      if (!this.promptFlash) {
-        this.promptText.setText('WASD / Arrows — walk anywhere in the room');
-        this.promptText.setColor('#8899aa');
-      }
-      if (this.doorInteractZone) this.doorInteractZone.setAlpha(0);
+      this.refreshPrompt();
+      if (this.doorInteractZone) this.doorInteractZone.setFillStyle(0xffffff, 0);
     }
   };
 
@@ -724,27 +796,6 @@
     wallChar.destroy();
   }
 
-  function buildWallColliders(scene) {
-    const walls = scene.physics.add.staticGroup();
-    for (let ri = 0; ri < HUB.roomRows; ri++) {
-      for (let col = 0; col < MAP_W; col++) {
-        const isWall = ri === 0 || ri === HUB.roomRows - 1 || col === 0 || col === MAP_W - 1;
-        if (!isWall) continue;
-        const row = HUB.roomY + ri;
-        const wall = scene.add.rectangle(
-          col * TILE + TILE / 2,
-          row * TILE + TILE / 2,
-          TILE,
-          TILE,
-          0x000000,
-          0
-        );
-        walls.add(wall);
-      }
-    }
-    return walls;
-  }
-
   function drawPlayerSprite(g, x, y) {
     g.clear();
     g.fillStyle(COLORS.playerOutline, 1);
@@ -787,7 +838,7 @@
     g.fillRect(x + 3, y + 9, 8, 7);
     g.lineStyle(1, 0xffdd88, 0.8);
     g.strokeRect(x, y + 6, 24, 14);
-    scene.add.text(x + 12, y + 24, 'KEY', {
+    const label = scene.add.text(x + 12, y + 24, 'KEY', {
       fontFamily: 'VT323, monospace',
       fontSize: '14px',
       color: '#ffb000',
@@ -800,6 +851,7 @@
       yoyo: true,
       repeat: -1,
     });
+    return { gfx: g, label };
   }
 
   function drawScanlines(scene) {
