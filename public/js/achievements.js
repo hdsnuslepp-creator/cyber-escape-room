@@ -6,14 +6,19 @@ const Achievements = (() => {
   const MAX_ENTRIES = 10;
 
   const DEFS = [
-    { id: 'first_room', icon: '🚪', title: 'First Door Open', desc: 'Complete your first room.' },
-    { id: 'no_hints', icon: '💡', title: 'No Help Needed', desc: 'Escape without using any hints.' },
-    { id: 'perfect_quiz', icon: '📝', title: 'Quiz Master', desc: 'Score 5/5 on the final quiz.' },
+    { id: 'first_click', icon: '🏆', title: 'First Click', desc: 'Complete the Phishing Inbox mission.' },
+    { id: 'password_master', icon: '🔑', title: 'Password Master', desc: 'Complete Password Vault with zero mistakes.' },
+    { id: 'cryptographer', icon: '🔐', title: 'Cryptographer', desc: 'Solve the Cipher Lab without using hints.' },
+    { id: 'database_defender', icon: '🛡️', title: 'Database Defender', desc: 'Fix the SQL Breach on the first try.' },
+    { id: 'threat_hunter', icon: '🎯', title: 'Threat Hunter', desc: 'Complete Log Forensics in under 2 minutes.' },
+    { id: 'human_firewall', icon: '🧠', title: 'Human Firewall', desc: 'Perfect score on Social Engineering.' },
+    { id: 'zero_trust', icon: '📱', title: 'Zero Trust Agent', desc: 'Complete the MFA Lockdown mission.' },
+    { id: 'cyber_escape_champion', icon: '🏅', title: 'Cyber Escape Champion', desc: 'Complete the full playable campaign and stop the ransomware.' },
+    { id: 'chapter_one_clear', icon: '📧', title: 'Email Contained', desc: 'Defeat the Chapter 1 boss before the timer expires.' },
+    { id: 'no_hints', icon: '💡', title: 'No Help Needed', desc: 'Complete the campaign without using any hints.' },
+    { id: 'perfect_quiz', icon: '📝', title: 'Quiz Master', desc: 'Score 5/5 on the final debrief quiz.' },
     { id: 'flawless', icon: '✨', title: 'Flawless Run', desc: 'Complete with zero mistakes.' },
     { id: 'speed_demon', icon: '⚡', title: 'Speed Demon', desc: 'Escape in under 10 minutes.' },
-    { id: 'survivor', icon: '❤️', title: 'Last Life Legend', desc: 'Escape with only 1 life remaining.' },
-    { id: 'high_scorer', icon: '🏆', title: 'High Scorer', desc: 'Finish with 1200+ points.' },
-    { id: 'all_rooms', icon: '🔓', title: 'Full Escape', desc: 'Complete all 8 security rooms.' },
   ];
 
   let unlocked = new Set();
@@ -51,8 +56,38 @@ const Achievements = (() => {
 
   function checkAfterRoom(roomId) {
     const s = GameState.getState();
-    if (s.completedRooms.length === 1) unlock('first_room');
-    if (s.completedRooms.length === GameState.ROOMS.length) unlock('all_rooms');
+    switch (roomId) {
+      case 'phishing':
+        unlock('first_click');
+        break;
+      case 'ch1_boss':
+        unlock('chapter_one_clear');
+        break;
+      case 'password':
+        if ((s.roomMistakes.password || 0) === 0) unlock('password_master');
+        break;
+      case 'cipher':
+        if ((s.roomHints.cipher || 0) === 0) unlock('cryptographer');
+        break;
+      case 'sql':
+        if ((s.roomMistakes.sql || 0) === 0) unlock('database_defender');
+        break;
+      case 'logs':
+        if (GameState.getRoomDuration('logs') <= 120) unlock('threat_hunter');
+        break;
+      case 'social':
+        if ((s.roomMistakes.social || 0) === 0) unlock('human_firewall');
+        break;
+      case 'mfa':
+        unlock('zero_trust');
+        break;
+      case 'ransomware':
+        unlock('cyber_escape_champion');
+        break;
+    }
+    if (s.completedRooms.length === GameState.ROOMS.length) {
+      unlock('cyber_escape_champion');
+    }
   }
 
   function checkOnComplete() {
@@ -60,8 +95,6 @@ const Achievements = (() => {
     if (s.hintsUsed.length === 0) unlock('no_hints');
     if (s.mistakes === 0) unlock('flawless');
     if (s.elapsedSeconds <= 600) unlock('speed_demon');
-    if (s.lives === 1) unlock('survivor');
-    if (s.score >= 1200) unlock('high_scorer');
     if (s.quizScore && s.quizScore.correct === s.quizScore.total) unlock('perfect_quiz');
   }
 

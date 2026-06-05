@@ -1,0 +1,84 @@
+/* Cyber Escape: Lockdown Protocol — Phaser game shell */
+body.game-body {
+  margin: 0;
+  background: #0a0e17;
+  overflow: hidden;
+  font-family: 'Press Start 2P', 'VT323', monospace;
+}
+
+body.game-body .scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.12) 0px,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+body.game-body .crt-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+}
+
+#phaser-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+#game-canvas-wrap {
+  position: relative;
+  border: 4px solid #00ffcc;
+  box-shadow: 0 0 24px rgba(0, 255, 204, 0.25), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+#game-canvas-wrap canvas {
+  display: block;
+}
+
+.game-topbar {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  margin-bottom: 0.35rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.45rem;
+  color: #00ffcc;
+  letter-spacing: 0.04em;
+}
+
+.game-topbar a {
+  color: #ffb000;
+  text-decoration: none;
+}
+
+.game-topbar a:hover {
+  color: #00ff66;
+}
+
+.game-hint-bar {
+  width: 100%;
+  max-width: 800px;
+  font-family: 'VT323', monospace;
+  font-size: 1.1rem;
+  color: #8899aa;
+  text-align: center;
+  margin-top: 0.35rem;
+}

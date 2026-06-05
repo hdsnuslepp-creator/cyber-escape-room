@@ -8,6 +8,21 @@ const TutorClient = (() => {
       'Inspect the link URL — does it match your company?',
       'Find language that creates false urgency.',
     ],
+    attachment: [
+      'PDFs should not ask you to enable macros.',
+      'Look for external download links inside the document.',
+      'Legitimate invoices rarely use paypa1-style domains.',
+    ],
+    fake_login: [
+      'Compare each URL character by character.',
+      'The real domain uses the official company name.',
+      'Typosquats swap letters like l vs 1 or add hyphens.',
+    ],
+    ch1_boss: [
+      'Quarantine the sender with the misspelled domain.',
+      'Block the typosquatted portal, not the real one.',
+      'You have 90 seconds — prioritize both tasks.',
+    ],
     password: [
       'Long random strings beat clever substitutions.',
       'Which password would take billions of guesses?',
@@ -51,6 +66,20 @@ const TutorClient = (() => {
       link: 'This link is suspicious because the domain does not match the real organization.',
       urgency: 'False urgency tricks you into acting before verifying the request.',
       default: 'Look for spoofed senders, fake links, and pressure tactics.',
+    },
+    attachment: {
+      wrong_click: 'That part looks normal — focus on macros and suspicious links.',
+      default: 'Malicious PDFs often hide macros and fake download URLs.',
+    },
+    fake_login: {
+      typosquat: 'This URL mimics the real site with a subtle spelling change.',
+      correct: 'Always verify the exact domain before entering credentials.',
+      default: 'Typosquatted domains swap or add characters to fool users.',
+    },
+    ch1_boss: {
+      wrong_url: 'Blocking the legitimate site would lock out real users.',
+      boss_timeout: 'Act fast — quarantine the email and block the fake portal.',
+      default: 'Stop the email threat and block the cloned login page.',
     },
     password: {
       default: 'Weak passwords are short, common, or follow predictable patterns attackers already try.',

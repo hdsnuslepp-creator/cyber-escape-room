@@ -2,7 +2,8 @@
  * Cyber Escape Room — SFX (Web Audio) + background music (HTML Audio)
  */
 const AudioFX = (() => {
-  const MUSIC_SRC = new URL('audio/vinyl-hearth.mp3', window.location.href).href;
+  const MUSIC_VERSION = '2';
+  const MUSIC_SRC = new URL(`audio/vinyl-hearth-v2.mp3?v=${MUSIC_VERSION}`, window.location.href).href;
 
   let ctx = null;
   let masterGain = null;
@@ -33,7 +34,11 @@ const AudioFX = (() => {
   }
 
   function initMusicElement() {
-    if (musicEl) return;
+    if (musicEl && musicEl.src === MUSIC_SRC) return;
+    if (musicEl) {
+      musicEl.pause();
+      musicEl = null;
+    }
     musicEl = new Audio(MUSIC_SRC);
     musicEl.loop = true;
     musicEl.preload = 'auto';
@@ -280,6 +285,72 @@ const AudioFX = (() => {
     updateUI();
   }
 
+  function levelComplete() {
+    arpeggio([392, 523, 659, 784, 988], 0.11, 'sine', 0.08);
+    setTimeout(() => sweep(400, 900, 0.25, 0.04), 400);
+  }
+
+  function roomComplete(roomId) {
+    switch (roomId) {
+      case 'phishing':
+        // Win98 mail sent chime
+        arpeggio([523, 659, 784, 1047], 0.09, 'square', 0.07);
+        break;
+      case 'attachment':
+        arpeggio([440, 554, 659], 0.08, 'square', 0.07);
+        setTimeout(() => tone(880, 0.12, 'square', 0.07), 200);
+        break;
+      case 'fake_login':
+        arpeggio([523, 659, 784], 0.1, 'sine', 0.08);
+        break;
+      case 'ch1_boss':
+        sweep(200, 880, 0.25, 0.06);
+        setTimeout(() => arpeggio([392, 523, 659, 784], 0.1, 'square', 0.08), 280);
+        break;
+      case 'password':
+        // DOS terminal beeps
+        tone(880, 0.05, 'square', 0.07);
+        setTimeout(() => tone(1100, 0.05, 'square', 0.07), 90);
+        setTimeout(() => tone(1320, 0.14, 'square', 0.08), 180);
+        break;
+      case 'cipher':
+        // Military console access granted
+        tone(220, 0.12, 'sawtooth', 0.06);
+        setTimeout(() => tone(330, 0.12, 'sawtooth', 0.06), 130);
+        setTimeout(() => tone(660, 0.2, 'square', 0.08), 280);
+        break;
+      case 'sql':
+        // Server rack data sync
+        arpeggio([440, 554, 659, 784, 988], 0.06, 'square', 0.06);
+        setTimeout(() => tone(1175, 0.1, 'square', 0.07), 350);
+        break;
+      case 'logs':
+        // Bank vault approved
+        arpeggio([392, 494, 587], 0.12, 'sine', 0.09);
+        setTimeout(() => tone(784, 0.25, 'sine', 0.1), 380);
+        break;
+      case 'social':
+        // SOC alert cleared
+        sweep(880, 440, 0.2, 0.05);
+        setTimeout(() => arpeggio([523, 659, 784], 0.1, 'triangle', 0.08), 220);
+        break;
+      case 'mfa':
+        // Hacker terminal bypass
+        tone(330, 0.08, 'sawtooth', 0.08);
+        setTimeout(() => tone(220, 0.08, 'sawtooth', 0.07), 90);
+        setTimeout(() => sweep(200, 880, 0.3, 0.06), 180);
+        break;
+      case 'ransomware':
+        // Mainframe core restored — big finish
+        sweep(80, 520, 0.4, 0.07);
+        setTimeout(() => arpeggio([392, 523, 659, 784, 988, 1175], 0.12, 'sine', 0.1), 350);
+        setTimeout(() => tone(1568, 0.35, 'sine', 0.11), 900);
+        break;
+      default:
+        levelComplete();
+    }
+  }
+
   return {
     resume,
     initUI,
@@ -291,6 +362,7 @@ const AudioFX = (() => {
     getVolume,
     startMusic,
     stopMusic,
+    roomComplete,
 
     click: sfxClick,
     type: () => tone(900 + Math.random() * 200, 0.025, 'square', 0.03),
@@ -320,10 +392,7 @@ const AudioFX = (() => {
       tone(311, 0.2, 'sawtooth', 0.1);
       setTimeout(() => tone(196, 0.35, 'sawtooth', 0.09), 150);
     },
-    levelComplete: () => {
-      arpeggio([392, 523, 659, 784, 988], 0.11, 'sine', 0.08);
-      setTimeout(() => sweep(400, 900, 0.25, 0.04), 400);
-    },
+    levelComplete,
     doorUnlock: () => {
       arpeggio([220, 277, 330, 440], 0.08, 'square', 0.06);
       setTimeout(() => tone(880, 0.2, 'sine', 0.08), 320);

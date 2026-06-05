@@ -2,7 +2,7 @@
  * Central game state — timer, score, lives, hints, per-room stats.
  */
 const GameState = (() => {
-  const ROOMS = ['phishing', 'password', 'cipher', 'sql', 'logs', 'social', 'mfa', 'ransomware'];
+  const ROOMS = Campaign.getPlayableRoomIds();
   const START_SCORE = 1000;
   const MISTAKE_PENALTY = 50;
   const HINT_PENALTY = 25;
@@ -21,6 +21,7 @@ const GameState = (() => {
     roomMistakes: {},
     roomHints: {},
     roomTimes: {},
+    roomEnterAt: {},
     currentRoomIndex: 0,
     completedRooms: [],
     startTime: null,
@@ -35,6 +36,7 @@ const GameState = (() => {
     state.roomMistakes[r] = 0;
     state.roomHints[r] = 0;
     state.roomTimes[r] = 0;
+    state.roomEnterAt[r] = 0;
   });
 
   function formatTime(seconds) {
@@ -57,17 +59,19 @@ const GameState = (() => {
   }
 
   function getRoomLabel(id) {
-    const labels = {
-      phishing: 'Phishing Detection',
-      password: 'Password Security',
-      cipher: 'Encryption Challenge',
-      sql: 'SQL Injection Fix',
-      logs: 'Log Analysis',
-      social: 'Social Engineering',
-      mfa: 'MFA Security',
-      ransomware: 'Ransomware Response',
-    };
-    return labels[id] || id;
+    return Campaign.getRoom(id).title;
+  }
+
+  function enterRoom(roomId) {
+    if (ROOMS.includes(roomId)) {
+      state.roomEnterAt[roomId] = state.elapsedSeconds;
+    }
+  }
+
+  function getRoomDuration(roomId) {
+    const start = state.roomEnterAt[roomId];
+    if (start == null) return 0;
+    return Math.max(0, state.elapsedSeconds - start);
   }
 
   function getRoomNumber(roomId) {
@@ -111,6 +115,7 @@ const GameState = (() => {
         state.roomMistakes[r] = 0;
         state.roomHints[r] = 0;
         state.roomTimes[r] = 0;
+        state.roomEnterAt[r] = 0;
       });
     },
 
@@ -187,5 +192,7 @@ const GameState = (() => {
     getHardestRoom,
     getRoomLabel,
     getRoomNumber,
+    enterRoom,
+    getRoomDuration,
   };
 })();

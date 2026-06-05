@@ -57,15 +57,40 @@
   const IP_OPTIONS = ['192.168.1.45', '203.45.67.89', '10.0.0.12', '172.16.0.5'];
   const CIPHER_ANSWER = 'TOP SECRET';
 
+  const ATTACHMENT_FLAG_KEYS = new Set(['macro', 'link']);
+  const REQUIRED_ATTACHMENT_FLAGS = 2;
+  const FAKE_LOGIN_OPTIONS = [
+    { id: 'a', text: 'https://login.acmecorp.com/auth', correct: true, ctx: 'correct' },
+    { id: 'b', text: 'https://login-acmecorp.com/auth', correct: false, ctx: 'typosquat' },
+    { id: 'c', text: 'https://acmecorp-secure.com/login', correct: false, ctx: 'typosquat' },
+    { id: 'd', text: 'https://acmec0rp.com/signin', correct: false, ctx: 'typosquat' },
+  ];
+  const CH1_BOSS_URL_OPTIONS = [
+    { id: 'fake', text: 'https://paypa1-verify.com/login', correct: true },
+    { id: 'real', text: 'https://paypal.com/signin', correct: false },
+    { id: 'other', text: 'https://secure-paypal.com/auth', correct: false },
+  ];
+  const CH1_BOSS_TIME_SEC = 90;
+
   let currentScreen = 'intro';
+  let hintLevels = {};
+  let pendingChapterId = 1;
   let foundFlags = new Set();
+  let attachmentFlags = new Set();
+  let selectedFakeLogin = null;
+  let ch1BossTimerId = null;
+  let ch1BossSecondsLeft = CH1_BOSS_TIME_SEC;
+  let ch1BossTasks = new Set();
   let selectedPassword = null;
   let selectedSql = null;
   let selectedIp = null;
   let selectedSocial = null;
   let selectedMfa = null;
-  let selectedRansomware = null;
-  let hintLevels = {};
+  const BOSS_TIME_SEC = 300;
+  const BOSS_TASK_KEYS = ['phishing', 'cipher', 'sql', 'logs', 'mfa'];
+  let bossTimerId = null;
+  let bossSecondsLeft = BOSS_TIME_SEC;
+  let bossTasksComplete = new Set();
   let quizData = [];
   let quizAnswers = {};
 
@@ -92,11 +117,11 @@
 
     const lines = [
       { html: '<span class="prompt">&gt;</span> LOADING SECURE_TRAINING_ROOM.EXE' },
+      { html: '<span class="prompt">&gt;</span> CAMPAIGN MODE: 9 CHAPTERS / 27 MISSIONS', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> CHECKING FIREWALL... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> CONNECTING TO MAINFRAME... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
-      { html: '<span class="prompt">&gt;</span> 8 ROOMS DETECTED', cls: 'boot-line--ok' },
-      { html: '<span class="prompt">&gt;</span> WARNING: SYSTEM LOCKDOWN ACTIVE', cls: 'boot-line--warn' },
-      { html: '<span class="prompt">&gt;</span> <span class="blink">ACCESS DENIED — BREACH REQUIRED</span>', cls: 'boot-line--danger' },
+      { html: '<span class="prompt">&gt;</span> THREAT LEVEL: CRITICAL', cls: 'boot-line--warn' },
+      { html: '<span class="prompt">&gt;</span> <span class="blink">BREACH DETECTED — CONTAINMENT REQUIRED</span>', cls: 'boot-line--danger' },
     ];
 
     let i = 0;
@@ -119,9 +144,10 @@
   }
 
   function buildProgressBar() {
-    progressBar.innerHTML = GameState.ROOMS.map(
-      (r, i) => `<div class="progress-step" data-room="${r}" title="${GameState.getRoomLabel(r)}"></div>`
-    ).join('') + '<div class="progress-step" data-room="quiz" title="Quiz"></div>';
+    progressBar.innerHTML = GameState.ROOMS.map((r) => {
+      const c = Campaign.getRoom(r);
+      return `<div class="progress-step" data-room="${r}" title="${c.actTitle} — ${c.title}"></div>`;
+    }).join('') + '<div class="progress-step" data-room="quiz" title="Final Debrief Quiz"></div>';
   }
 
   function bind(el, event, handler) {
@@ -130,6 +156,7 @@
 
   function bindGlobalEvents() {
     bind(document.getElementById('btnStart'), 'click', startGame);
+    bind(document.getElementById('btnChapterContinue'), 'click', enterChapter);
     bind(document.getElementById('btnRestart'), 'click', () => location.reload());
     bind(document.getElementById('btnRetry'), 'click', () => location.reload());
     bind(document.getElementById('btnPrint'), 'click', () => window.print());
@@ -139,13 +166,14 @@
     });
 
     bind(document.getElementById('btn-phishing'), 'click', submitPhishing);
+    bind(document.getElementById('btn-attachment'), 'click', submitAttachment);
+    bind(document.getElementById('btn-fake_login'), 'click', submitFakeLogin);
     bind(document.getElementById('btn-password'), 'click', submitPassword);
     bind(document.getElementById('btn-cipher'), 'click', submitCipher);
     bind(document.getElementById('btn-sql'), 'click', submitSql);
     bind(document.getElementById('btn-logs'), 'click', submitLogs);
     bind(document.getElementById('btn-social'), 'click', submitSocial);
     bind(document.getElementById('btn-mfa'), 'click', submitMfa);
-    bind(document.getElementById('btn-ransomware'), 'click', submitRansomware);
     bind(document.getElementById('btn-quiz'), 'click', submitQuiz);
 
     bind(document.getElementById('cipherAnswer'), 'keydown', (e) => {
@@ -161,12 +189,13 @@
 
   function initRooms() {
     initPhishing();
+    initAttachment();
+    initFakeLogin();
     initPassword();
     initLogs();
     initSql();
     initSocial();
     initMfa();
-    initRansomware();
   }
 
   async function startGame() {
@@ -188,7 +217,10 @@
     selectedIp = null;
     selectedSocial = null;
     selectedMfa = null;
-    selectedRansomware = null;
+    attachmentFlags = new Set();
+    selectedFakeLogin = null;
+    stopBossTimer();
+    stopCh1BossTimer();
 
     gameHeader.classList.remove('header--intro');
     progressBar.classList.remove('header__progress--idle');
@@ -198,10 +230,84 @@
       document.getElementById('hudTime').textContent = formatted;
     });
 
-    showScreen('phishing');
+    showChapterIntro(1);
+  }
+
+  function showChapterIntro(chapterId) {
+    pendingChapterId = chapterId;
+    const ch = Campaign.getChapter(chapterId);
+    if (!ch) return;
+
+    document.getElementById('chapterLabel').textContent = `Chapter ${chapterId}`;
+    document.getElementById('chapterTitle').textContent = ch.title;
+    document.getElementById('chapterTagline').textContent = `"${ch.tagline}"`;
+
+    const completed = new Set(GameState.getState().completedRooms);
+    const entries = Object.entries(Campaign.ROOM_CATALOG)
+      .filter(([, r]) => r.chapter === chapterId && (r.num > 0 || r.isBoss))
+      .sort((a, b) => {
+        if (a[1].isBoss) return 1;
+        if (b[1].isBoss) return -1;
+        return a[1].num - b[1].num;
+      });
+
+    document.getElementById('chapterRoomList').innerHTML = entries.map(([id, r]) => {
+      const done = completed.has(id);
+      const locked = r.locked || (!r.playable && !done);
+      const cls = done ? 'chapter-room chapter-room--done' : locked ? 'chapter-room chapter-room--locked' : 'chapter-room';
+      const label = r.isBoss ? `BOSS: ${r.title || ch.boss?.title}` : `${r.num}. ${r.title}`;
+      const suffix = done ? ' ✓' : locked ? ' 🔒' : '';
+      return `<div class="${cls}">${escapeHtml(label)}${suffix}</div>`;
+    }).join('');
+
+    showScreen('chapter');
+  }
+
+  function enterChapter() {
+    AudioFX.click();
+    const roomId = Campaign.getChapterFirstRoom(pendingChapterId);
+    if (roomId) {
+      refreshRoomChrome(roomId);
+      showScreen(roomId);
+    }
+  }
+
+  function refreshRoomChrome(roomId) {
+    const meta = Campaign.getRoom(roomId);
+    const screen = document.querySelector(`[data-screen="${roomId}"]`);
+    if (!screen || !meta.chapter) return;
+
+    const tag = screen.querySelector('.room-theme__tag');
+    if (tag && meta.tag) tag.textContent = meta.tag;
+
+    screen.querySelectorAll('[data-chapter-banner], .act-banner:not(.act-banner--boss)').forEach((el) => {
+      if (!el.classList.contains('act-banner--boss') && meta.actTitle) {
+        el.textContent = meta.actTitle;
+      }
+    });
+
+    const badge = screen.querySelector('.room-badge:not(.room-badge--boss)');
+    if (badge && meta.label) badge.textContent = meta.label;
+
+    const h2 = screen.querySelector('.level-header h2');
+    if (h2 && meta.title && !meta.isBoss) h2.textContent = meta.title;
+
+    const desc = screen.querySelector('.level-desc');
+    if (desc && (meta.story || meta.goal)) {
+      const theme = meta.theme || '';
+      desc.innerHTML = theme
+        ? `<span class="level-theme">${escapeHtml(theme)}</span> — ${escapeHtml(meta.story || meta.goal)}`
+        : escapeHtml(meta.story || meta.goal);
+    }
   }
 
   function showScreen(screenId, opts = {}) {
+    if (currentScreen === 'ransomware' && screenId !== 'ransomware') {
+      stopBossTimer();
+    }
+    if (currentScreen === 'ch1_boss' && screenId !== 'ch1_boss') {
+      stopCh1BossTimer();
+    }
     const wasInGame = currentScreen !== 'intro' && currentScreen !== 'gameover';
     currentScreen = screenId;
     document.querySelectorAll('.screen').forEach((el) => {
@@ -216,15 +322,32 @@
     if (opts.playTransition !== false && wasInGame && screenId !== 'gameover') {
       AudioFX.roomTransition();
     }
+    if (GameState.ROOMS.includes(screenId)) {
+      refreshRoomChrome(screenId);
+      GameState.enterRoom(screenId);
+      if (screenId === 'ransomware') initBossRoom();
+      if (screenId === 'ch1_boss') initCh1BossRoom();
+    }
     updateProgress();
     updateHud();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function getProgressIndex() {
+    if (currentScreen === 'gameover' || currentScreen === 'intro') return -1;
+    if (currentScreen === 'chapter') {
+      const nextRoom = Campaign.getChapterFirstRoom(pendingChapterId);
+      return nextRoom ? GameState.ROOMS.indexOf(nextRoom) : 0;
+    }
+    const roomIdx = GameState.ROOMS.indexOf(currentScreen);
+    if (roomIdx >= 0) return roomIdx;
+    if (currentScreen === 'quiz') return GameState.ROOMS.length;
+    if (currentScreen === 'certificate') return GameState.ROOMS.length + 1;
+    return 0;
+  }
+
   function updateProgress() {
-    const state = GameState.getState();
-    const order = [...GameState.ROOMS, 'quiz', 'certificate'];
-    const idx = order.indexOf(currentScreen === 'gameover' ? 'intro' : currentScreen);
+    const idx = getProgressIndex();
 
     progressBar.querySelectorAll('.progress-step').forEach((step, i) => {
       step.classList.remove('progress-step--complete', 'progress-step--current');
@@ -296,20 +419,27 @@
   }
 
   async function completeRoom(roomId) {
-    AudioFX.levelComplete();
+    AudioFX.roomComplete(roomId);
     GameState.completeRoom(roomId);
     Achievements.checkAfterRoom(roomId);
     const summary = await TutorClient.summary(roomId, GameState.getState().roomStats);
     showTutor(roomId, summary);
-    showFeedback('feedback-' + roomId, summary + ' Room unlocked!', 'success');
+    showFeedback('feedback-' + roomId, summary + ' Mission complete!', 'success');
 
-    const rooms = GameState.ROOMS;
-    const idx = rooms.indexOf(roomId);
-    const next = rooms[idx + 1];
+    await advanceCampaign(roomId);
+  }
 
+  async function advanceCampaign(fromRoomId) {
+    const next = Campaign.getNextStep(fromRoomId);
     setTimeout(async () => {
-      if (next) showScreen(next);
-      else await startQuiz();
+      if (next?.type === 'chapter') {
+        showChapterIntro(next.chapterId);
+      } else if (next?.type === 'quiz') {
+        await startQuiz();
+      } else if (typeof next === 'string') {
+        refreshRoomChrome(next);
+        showScreen(next);
+      }
     }, 2000);
   }
 
@@ -366,6 +496,176 @@
     if (foundFlags.size >= REQUIRED_PHISHING_FLAGS) {
       await completeRoom('phishing');
     }
+  }
+
+  // --- Attachment Sandbox ---
+  function initAttachment() {
+    attachmentFlags = new Set();
+    document.getElementById('attachmentFlagCount').textContent = '0';
+    document.getElementById('btn-attachment').disabled = true;
+    hideFeedback('feedback-attachment');
+    document.getElementById('tutor-attachment').hidden = true;
+
+    document.querySelectorAll('[data-screen="attachment"] .phishing-target').forEach((el) => {
+      el.classList.remove('phishing-target--found');
+      el.onclick = onAttachmentClick;
+      el.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onAttachmentClick.call(el, e);
+        }
+      };
+    });
+  }
+
+  function onAttachmentClick(e) {
+    e.preventDefault();
+    const flag = this.dataset.flag;
+    if (!flag || this.classList.contains('phishing-target--found')) return;
+
+    AudioFX.click();
+
+    if (ATTACHMENT_FLAG_KEYS.has(flag)) {
+      if (!attachmentFlags.has(flag)) {
+        attachmentFlags.add(flag);
+        this.classList.add('phishing-target--found');
+        AudioFX.flagFound();
+        document.getElementById('attachmentFlagCount').textContent = String(attachmentFlags.size);
+        if (attachmentFlags.size >= REQUIRED_ATTACHMENT_FLAGS) {
+          document.getElementById('btn-attachment').disabled = false;
+          AudioFX.doorUnlock();
+          showFeedback('feedback-attachment', 'Both PDF threats identified!', 'success');
+        }
+      }
+    } else if (flag === 'title') {
+      showTutor('attachment', 'Urgency is suspicious, but focus on the macro warning and the fake download link.');
+    } else {
+      handleMistake('attachment', 'wrong_click');
+    }
+  }
+
+  async function submitAttachment() {
+    AudioFX.submit();
+    if (attachmentFlags.size >= REQUIRED_ATTACHMENT_FLAGS) {
+      await completeRoom('attachment');
+    }
+  }
+
+  // --- Fake Login Portal ---
+  function initFakeLogin() {
+    selectedFakeLogin = null;
+    document.getElementById('btn-fake_login').disabled = true;
+    hideFeedback('feedback-fake_login');
+    document.getElementById('tutor-fake_login').hidden = true;
+
+    initOptionRoom('fakeLoginOptions', FAKE_LOGIN_OPTIONS, (id, btn, container) => {
+      selectedFakeLogin = id;
+      container.querySelectorAll('.option-btn').forEach((el) => el.classList.remove('option-btn--selected'));
+      btn.classList.add('option-btn--selected');
+      document.getElementById('btn-fake_login').disabled = false;
+      hideFeedback('feedback-fake_login');
+    });
+  }
+
+  async function submitFakeLogin() {
+    AudioFX.submit();
+    const chosen = FAKE_LOGIN_OPTIONS.find((o) => o.id === selectedFakeLogin);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('fake_login');
+    } else {
+      await handleMistake('fake_login', chosen.ctx);
+    }
+  }
+
+  // --- Chapter 1 Boss ---
+  function stopCh1BossTimer() {
+    if (ch1BossTimerId) {
+      clearInterval(ch1BossTimerId);
+      ch1BossTimerId = null;
+    }
+  }
+
+  function updateCh1BossTimerUI() {
+    const el = document.getElementById('ch1BossTimer');
+    if (el) el.textContent = GameState.formatTime(ch1BossSecondsLeft);
+  }
+
+  function updateCh1BossTaskUI() {
+    const countEl = document.getElementById('ch1BossTaskCount');
+    if (countEl) countEl.textContent = String(ch1BossTasks.size);
+
+    if (ch1BossTasks.has('quarantine')) {
+      document.querySelector('[data-boss="quarantine"]')?.classList.add('boss-panel--done');
+      const s = document.getElementById('ch1StatusQuarantine');
+      if (s) s.textContent = '✓ Quarantined';
+    }
+    if (ch1BossTasks.has('block')) {
+      document.querySelector('[data-boss="block"]')?.classList.add('boss-panel--done');
+      const s = document.getElementById('ch1StatusBlock');
+      if (s) s.textContent = '✓ Blocked';
+    }
+  }
+
+  async function completeCh1BossTask(task) {
+    if (ch1BossTasks.has(task)) return;
+    ch1BossTasks.add(task);
+    AudioFX.flagFound();
+    updateCh1BossTaskUI();
+    if (ch1BossTasks.size >= 2) {
+      stopCh1BossTimer();
+      AudioFX.submit();
+      await completeRoom('ch1_boss');
+    }
+  }
+
+  function initCh1BossRoom() {
+    stopCh1BossTimer();
+    ch1BossSecondsLeft = CH1_BOSS_TIME_SEC;
+    ch1BossTasks = new Set();
+    hideFeedback('feedback-ch1_boss');
+    document.getElementById('tutor-ch1_boss').hidden = true;
+
+    document.querySelectorAll('[data-screen="ch1_boss"] .boss-panel').forEach((p) => {
+      p.classList.remove('boss-panel--done');
+    });
+    const qStatus = document.getElementById('ch1StatusQuarantine');
+    const bStatus = document.getElementById('ch1StatusBlock');
+    if (qStatus) qStatus.textContent = 'Pending';
+    if (bStatus) bStatus.textContent = 'Pending';
+
+    document.querySelectorAll('.ch1-quarantine').forEach((el) => {
+      el.classList.remove('phishing-target--found');
+      el.onclick = (e) => {
+        e.preventDefault();
+        if (ch1BossTasks.has('quarantine')) return;
+        AudioFX.click();
+        el.classList.add('phishing-target--found');
+        completeCh1BossTask('quarantine');
+      };
+    });
+
+    initBossOptions('ch1BossUrlOptions', CH1_BOSS_URL_OPTIONS, async (id) => {
+      if (ch1BossTasks.has('block')) return;
+      if (id === 'fake') {
+        await completeCh1BossTask('block');
+      } else {
+        await handleMistake('ch1_boss', 'wrong_url');
+      }
+    });
+
+    updateCh1BossTimerUI();
+    updateCh1BossTaskUI();
+
+    ch1BossTimerId = setInterval(async () => {
+      ch1BossSecondsLeft -= 1;
+      updateCh1BossTimerUI();
+      if (ch1BossSecondsLeft <= 0) {
+        stopCh1BossTimer();
+        showFeedback('feedback-ch1_boss', 'Initial compromise succeeded — containment window expired!', 'error');
+        await handleMistake('ch1_boss', 'boss_timeout');
+      }
+    }, 1000);
   }
 
   // --- Password ---
@@ -573,28 +873,182 @@
     }
   }
 
-  function initRansomware() {
-    selectedRansomware = null;
-    document.getElementById('btn-ransomware').disabled = true;
-    hideFeedback('feedback-ransomware');
-    document.getElementById('tutor-ransomware').hidden = true;
-    initOptionRoom('ransomwareOptions', RANSOMWARE_OPTIONS, (id, btn, container) => {
-      selectedRansomware = id;
-      container.querySelectorAll('.option-btn').forEach((el) => el.classList.remove('option-btn--selected'));
-      btn.classList.add('option-btn--selected');
-      document.getElementById('btn-ransomware').disabled = false;
+  // --- Final Boss (Room 8) ---
+  function stopBossTimer() {
+    if (bossTimerId) {
+      clearInterval(bossTimerId);
+      bossTimerId = null;
+    }
+  }
+
+  function updateBossTimerUI() {
+    const el = document.getElementById('bossTimer');
+    if (el) el.textContent = GameState.formatTime(bossSecondsLeft);
+  }
+
+  function updateBossTaskUI() {
+    const countEl = document.getElementById('bossTaskCount');
+    if (countEl) countEl.textContent = String(bossTasksComplete.size);
+    const statusMap = {
+      phishing: 'Phishing',
+      cipher: 'Cipher',
+      sql: 'Sql',
+      logs: 'Logs',
+      mfa: 'Mfa',
+    };
+    BOSS_TASK_KEYS.forEach((key) => {
+      const panel = document.querySelector(`[data-boss="${key}"]`);
+      const status = document.getElementById('bossStatus' + statusMap[key]);
+      if (bossTasksComplete.has(key)) {
+        panel?.classList.add('boss-panel--done');
+        if (status) status.textContent = '✓ Secured';
+      }
+    });
+    if (bossTasksComplete.size >= BOSS_TASK_KEYS.length) {
+      document.getElementById('bossContain').hidden = false;
+      initBossContain();
+    }
+  }
+
+  function completeBossTask(task) {
+    if (bossTasksComplete.has(task)) return;
+    bossTasksComplete.add(task);
+    AudioFX.flagFound();
+    updateBossTaskUI();
+  }
+
+  function initBossOptions(containerId, options, onPick) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = options.map((o) =>
+      `<button type="button" class="option-btn boss-option-btn" data-id="${escapeHtml(o.id)}">${escapeHtml(o.text)}</button>`
+    ).join('');
+    container.querySelectorAll('.option-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (bossTasksComplete.has(container.closest('[data-boss]')?.dataset.boss)) return;
+        AudioFX.click();
+        container.querySelectorAll('.option-btn').forEach((b) => b.classList.remove('option-btn--selected'));
+        btn.classList.add('option-btn--selected');
+        onPick(btn.dataset.id);
+      });
     });
   }
 
-  async function submitRansomware() {
-    AudioFX.submit();
-    const chosen = RANSOMWARE_OPTIONS.find((o) => o.id === selectedRansomware);
-    if (!chosen) return;
-    if (chosen.correct) {
-      await completeRoom('ransomware');
-    } else {
-      await handleMistake('ransomware', chosen.ctx);
+  function initBossContain() {
+    const container = document.getElementById('bossContainOptions');
+    if (!container || container.dataset.bound) return;
+    container.dataset.bound = '1';
+    initBossOptions('bossContainOptions', RANSOMWARE_OPTIONS, async (id) => {
+      const chosen = RANSOMWARE_OPTIONS.find((o) => o.id === id);
+      if (chosen?.correct) {
+        AudioFX.submit();
+        stopBossTimer();
+        await completeRoom('ransomware');
+      } else {
+        await handleMistake('ransomware', chosen?.ctx || 'default');
+      }
+    });
+  }
+
+  function initBossRoom() {
+    stopBossTimer();
+    bossSecondsLeft = BOSS_TIME_SEC;
+    bossTasksComplete = new Set();
+    hideFeedback('feedback-ransomware');
+    document.getElementById('tutor-ransomware').hidden = true;
+    document.getElementById('bossContain').hidden = true;
+    const containOpts = document.getElementById('bossContainOptions');
+    if (containOpts) {
+      containOpts.innerHTML = '';
+      delete containOpts.dataset.bound;
     }
+
+    document.querySelectorAll('.boss-panel').forEach((p) => p.classList.remove('boss-panel--done'));
+    ['Phishing', 'Cipher', 'Sql', 'Logs', 'Mfa'].forEach((n) => {
+      const s = document.getElementById('bossStatus' + n);
+      if (s) s.textContent = 'Pending';
+    });
+
+    const cipherInput = document.getElementById('bossCipherInput');
+    if (cipherInput) cipherInput.value = '';
+
+    document.querySelectorAll('.boss-phish-target').forEach((el) => {
+      el.classList.remove('phishing-target--found');
+      el.onclick = (e) => {
+        e.preventDefault();
+        if (bossTasksComplete.has('phishing')) return;
+        AudioFX.click();
+        el.classList.add('phishing-target--found');
+        completeBossTask('phishing');
+      };
+    });
+
+    const cipherBtn = document.getElementById('bossCipherBtn');
+    if (cipherBtn) {
+      cipherBtn.onclick = async () => {
+        if (bossTasksComplete.has('cipher')) return;
+        const val = document.getElementById('bossCipherInput').value.trim().toUpperCase();
+        if (val === CIPHER_ANSWER) {
+          AudioFX.submit();
+          completeBossTask('cipher');
+        } else {
+          await handleMistake('ransomware', 'wrong_cipher');
+        }
+      };
+    }
+
+    initBossOptions('bossSqlOptions', [
+      { id: 'b', text: 'Use parameterized query', correct: true },
+      { id: 'a', text: 'Add input length validation only', correct: false },
+    ], async (id) => {
+      if (bossTasksComplete.has('sql')) return;
+      if (id === 'b') {
+        AudioFX.submit();
+        completeBossTask('sql');
+      } else {
+        await handleMistake('ransomware', 'default');
+      }
+    });
+
+    initBossOptions('bossIpOptions', IP_OPTIONS.map((ip) => ({
+      id: ip,
+      text: ip,
+      correct: ip === ATTACK_IP,
+    })), async (id) => {
+      if (bossTasksComplete.has('logs')) return;
+      if (id === ATTACK_IP) {
+        AudioFX.submit();
+        completeBossTask('logs');
+      } else {
+        await handleMistake('ransomware', 'wrong_ip');
+      }
+    });
+
+    initBossOptions('bossMfaOptions', [
+      { id: 'b', text: 'Ignore — never share MFA codes', correct: true },
+      { id: 'a', text: 'Read the code aloud to the agent', correct: false },
+    ], async (id) => {
+      if (bossTasksComplete.has('mfa')) return;
+      if (id === 'b') {
+        AudioFX.submit();
+        completeBossTask('mfa');
+      } else {
+        await handleMistake('ransomware', 'share_code');
+      }
+    });
+
+    updateBossTimerUI();
+    updateBossTaskUI();
+
+    bossTimerId = setInterval(async () => {
+      bossSecondsLeft -= 1;
+      updateBossTimerUI();
+      if (bossSecondsLeft <= 0) {
+        stopBossTimer();
+        showFeedback('feedback-ransomware', 'Ransomware deployed — containment window expired!', 'error');
+        await handleMistake('ransomware', 'boss_timeout');
+      }
+    }, 1000);
   }
 
   // --- Quiz ---
@@ -716,6 +1170,14 @@
       : '';
 
     Achievements.renderLeaderboard('certLeaderboard', s.studentName);
+
+    const mapEl = document.getElementById('certCampaignMap');
+    if (mapEl) {
+      const showSecret = Campaign.canUnlockSecret(s);
+      mapEl.innerHTML = Campaign.renderCampaignMap(s.completedRooms, { showSecret });
+      const secretEl = document.getElementById('certSecretTeaser');
+      if (secretEl) secretEl.hidden = showSecret;
+    }
   }
 
   function escapeHtml(str) {
