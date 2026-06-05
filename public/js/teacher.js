@@ -22,8 +22,14 @@
   }
 
   async function loadSessions() {
+    const url = AppConfig.apiUrl('/sessions');
+    if (!url) {
+      document.getElementById('sessionsBody').innerHTML =
+        '<tr><td colspan="8" class="empty-row">Teacher dashboard requires the Node server. Run npm start locally, or share your certificate PDF from the game.</td></tr>';
+      return;
+    }
     try {
-      const res = await fetch('/api/sessions');
+      const res = await fetch(url);
       sessions = await res.json();
       renderSessions();
     } catch {
@@ -101,8 +107,14 @@
   }
 
   async function loadRooms() {
+    const url = AppConfig.apiUrl('/rooms');
+    if (!url) {
+      document.getElementById('roomsBody').innerHTML =
+        '<tr><td colspan="4" class="empty-row">Custom rooms require the Node server (npm start).</td></tr>';
+      return;
+    }
     try {
-      const res = await fetch('/api/rooms');
+      const res = await fetch(url);
       const rooms = await res.json();
       renderRooms(rooms);
     } catch {
@@ -129,14 +141,16 @@
 
     tbody.querySelectorAll('[data-delete]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        await fetch('/api/rooms/' + btn.dataset.delete, { method: 'DELETE' });
+        await fetch(AppConfig.apiUrl('/rooms/' + btn.dataset.delete), { method: 'DELETE' });
         loadRooms();
       });
     });
   }
 
   document.getElementById('btnExport').addEventListener('click', () => {
-    window.location.href = '/api/sessions/export';
+    const url = AppConfig.apiUrl('/sessions/export');
+    if (url) window.location.href = url;
+    else alert('CSV export requires the Node server. Run npm start locally.');
   });
 
   document.getElementById('roomForm').addEventListener('submit', async (e) => {
@@ -151,7 +165,12 @@
       return;
     }
 
-    const res = await fetch('/api/rooms', {
+    const url = AppConfig.apiUrl('/rooms');
+    if (!url) {
+      alert('Custom rooms require the Node server. Run npm start locally.');
+      return;
+    }
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, roomType, content }),
@@ -174,4 +193,8 @@
 
   loadSessions();
   loadRooms();
+
+  if (AppConfig.isStaticHost()) {
+    document.getElementById('staticNotice').hidden = false;
+  }
 })();

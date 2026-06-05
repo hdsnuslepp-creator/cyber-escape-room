@@ -60,8 +60,10 @@ const TutorClient = (() => {
   };
 
   async function apiPost(path, body) {
+    const url = AppConfig.apiUrl(path);
+    if (!url) return null;
     try {
-      const res = await fetch('/api' + path, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -72,6 +74,14 @@ const TutorClient = (() => {
       return null;
     }
   }
+
+  const LOCAL_QUIZ = [
+    { question: 'What is the best way to verify a suspicious email link?', options: ['Click it quickly', 'Hover to inspect the URL', 'Forward to colleagues', 'Reply and ask'], correct: 1 },
+    { question: 'Which password property matters most against brute force?', options: ['Contains a symbol', 'Length and randomness', 'Starts with uppercase', 'Has numbers only'], correct: 1 },
+    { question: 'How do you defend against SQL injection?', options: ['Escape HTML', 'Use parameterized queries', 'Add a firewall', 'Encrypt passwords only'], correct: 1 },
+    { question: 'What log pattern suggests brute force?', options: ['One failed login', 'Many failures from one IP', 'Successful login at 9 AM', 'Logout events'], correct: 1 },
+    { question: 'A caller claiming to be IT asks for your password. You should:', options: ['Give it to help them', 'Hang up and verify via official IT', 'Email it instead', 'Share your MFA code'], correct: 1 },
+  ];
 
   return {
     async explain(roomId, context) {
@@ -95,13 +105,16 @@ const TutorClient = (() => {
     },
 
     async fetchQuiz() {
-      try {
-        const res = await fetch('/api/ai/quiz');
-        if (res.ok) return res.json();
-      } catch {
-        /* fallback below */
+      const url = AppConfig.apiUrl('/ai/quiz');
+      if (url) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) return res.json();
+        } catch {
+          /* use local quiz */
+        }
       }
-      return [];
+      return LOCAL_QUIZ.map((q, id) => ({ id, ...q }));
     },
   };
 })();

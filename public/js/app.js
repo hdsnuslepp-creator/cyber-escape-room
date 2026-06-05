@@ -517,8 +517,10 @@
   }
 
   async function saveResults() {
+    const url = AppConfig.apiUrl('/sessions');
+    if (!url) return;
     try {
-      await fetch('/api/sessions', {
+      await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(GameState.getResultsPayload()),
