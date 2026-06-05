@@ -25,6 +25,7 @@
           <div class="hud__item"><span class="hud__label">Lives</span><span class="hud__value hud__value--lives" id="hudLives">❤❤❤</span></div>
           <div class="sound-controls sound-controls--hud">
             <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
+            <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">🎵 Music On</button>
             <label class="volume-control">
               <span class="volume-control__label">Vol</span>
               <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
@@ -46,9 +47,9 @@
           </div>
           <div class="terminal-window__body">
             <p class="terminal-line"><span class="prompt">&gt;</span> Initializing cybersecurity training platform...</p>
-            <p class="terminal-line"><span class="prompt">&gt;</span> <span class="blink">ACCESS DENIED — 6 ROOMS LOCKED</span></p>
-            <p class="terminal-line terminal-line--dim">Complete 6 security challenges to escape.</p>
-            <p class="terminal-line terminal-line--dim">Timer, score, lives, and hints are active.</p>
+            <p class="terminal-line"><span class="prompt">&gt;</span> <span class="blink">ACCESS DENIED — 8 ROOMS LOCKED</span></p>
+            <p class="terminal-line terminal-line--dim">Complete 8 security challenges to escape.</p>
+            <p class="terminal-line terminal-line--dim">Earn achievements, climb the leaderboard, beat the timer!</p>
             <div class="input-group">
               <label for="studentName">Enter your name</label>
               <input type="text" id="studentName" class="input" placeholder="Student name..." maxlength="60" autocomplete="name">
@@ -56,21 +57,25 @@
             <button class="btn btn--primary" id="btnStart">Begin Escape</button>
             <div class="sound-controls sound-controls--intro">
               <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
+            <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">🎵 Music On</button>
               <label class="volume-control">
                 <span class="volume-control__label">Volume</span>
                 <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
                 <span class="volume-control__value" data-sound-volume-label>70%</span>
               </label>
             </div>
+            <div class="leaderboard-panel">
+              <h3>🏆 Leaderboard</h3>
+              <div id="introLeaderboard"></div>
+            </div>
           </div>
         </div>
       </section>
-
       <!-- Room 1: Phishing -->
       <section class="screen" data-screen="phishing">
         <div class="room-toolbar">
           <div class="level-header">
-            <span class="level-badge" id="badge-phishing">Room 1 / 6</span>
+            <span class="level-badge room-badge" data-room="phishing">Room 1 / 8</span>
             <h2>Phishing Detection</h2>
             <p class="level-desc">Click <strong>3 suspicious parts</strong> of this email.</p>
           </div>
@@ -106,7 +111,7 @@
       <section class="screen" data-screen="password">
         <div class="room-toolbar">
           <div class="level-header">
-            <span class="level-badge">Room 2 / 6</span>
+            <span class="level-badge room-badge" data-room="password">Room 2 / 8</span>
             <h2>Password Security</h2>
             <p class="level-desc">Choose the strongest password.</p>
           </div>
@@ -122,7 +127,7 @@
       <section class="screen" data-screen="cipher">
         <div class="room-toolbar">
           <div class="level-header">
-            <span class="level-badge">Room 3 / 6</span>
+            <span class="level-badge room-badge" data-room="cipher">Room 3 / 8</span>
             <h2>Encryption Challenge</h2>
             <p class="level-desc">Decode the Caesar cipher to get the door code (shift each letter back by 3).</p>
           </div>
@@ -145,7 +150,7 @@
       <section class="screen" data-screen="sql">
         <div class="room-toolbar">
           <div class="level-header">
-            <span class="level-badge">Room 4 / 6</span>
+            <span class="level-badge room-badge" data-room="sql">Room 4 / 8</span>
             <h2>SQL Injection Fix</h2>
             <p class="level-desc">Pick the fix that prevents SQL injection.</p>
           </div>
@@ -168,7 +173,7 @@ AND password = '" + password + "'"</code></pre>
       <section class="screen" data-screen="logs">
         <div class="room-toolbar">
           <div class="level-header">
-            <span class="level-badge">Room 5 / 6</span>
+            <span class="level-badge room-badge" data-room="logs">Room 5 / 8</span>
             <h2>Log Analysis</h2>
             <p class="level-desc">Find the IP conducting suspicious login attempts.</p>
           </div>
@@ -188,7 +193,7 @@ AND password = '" + password + "'"</code></pre>
       <section class="screen" data-screen="social">
         <div class="room-toolbar">
           <div class="level-header">
-            <span class="level-badge">Room 6 / 6</span>
+            <span class="level-badge room-badge" data-room="social">Room 6 / 8</span>
             <h2>Social Engineering Scenario</h2>
             <p class="level-desc">Choose the safest response.</p>
           </div>
@@ -201,6 +206,48 @@ AND password = '" + password + "'"</code></pre>
         <div class="option-grid" id="socialOptions"></div>
         <div class="feedback" id="feedback-social" hidden></div>
         <button class="btn btn--primary" id="btn-social" disabled>Confirm Response</button>
+      </section>
+
+      <!-- Room 7: MFA -->
+      <section class="screen" data-screen="mfa">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge room-badge" data-room="mfa">Room 7 / 8</span>
+            <h2>MFA Security</h2>
+            <p class="level-desc">Choose the safest response to this MFA request.</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="mfa">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-mfa" hidden></div>
+        <div class="scenario-box scenario-box--sms">
+          <p>📱 SMS from unknown number:</p>
+          <p class="sms-bubble">"Your verification code is <strong>847291</strong>. An IT agent is on the line — read this code aloud to confirm your identity."</p>
+        </div>
+        <div class="option-grid" id="mfaOptions"></div>
+        <div class="feedback" id="feedback-mfa" hidden></div>
+        <button class="btn btn--primary" id="btn-mfa" disabled>Submit</button>
+      </section>
+
+      <!-- Room 8: Ransomware -->
+      <section class="screen" data-screen="ransomware">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge room-badge" data-room="ransomware">Room 8 / 8</span>
+            <h2>Ransomware Response</h2>
+            <p class="level-desc">Your screen shows a ransomware popup. What do you do?</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="ransomware">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-ransomware" hidden></div>
+        <div class="ransomware-popup animate-shake">
+          <div class="ransomware-popup__header">⚠️ YOUR FILES ARE ENCRYPTED</div>
+          <p>All your documents have been locked. Pay <strong>0.5 BTC</strong> within 24 hours or lose everything forever.</p>
+          <p class="ransomware-popup__timer">Time remaining: 23:59:41</p>
+          <button type="button" class="ransomware-popup__fake-btn" disabled>Pay Now</button>
+        </div>
+        <div class="option-grid" id="ransomwareOptions"></div>
+        <div class="feedback" id="feedback-ransomware" hidden></div>
+        <button class="btn btn--primary" id="btn-ransomware" disabled>Confirm Action</button>
       </section>
 
       <!-- Quiz -->
@@ -224,6 +271,11 @@ AND password = '" + password + "'"</code></pre>
             <p class="certificate__awarded">Awarded to</p>
             <p class="certificate__name" id="certName">Student</p>
             <div class="certificate__stats" id="certStats"></div>
+            <div class="achievements-list" id="certAchievements"></div>
+            <div class="leaderboard-panel leaderboard-panel--cert">
+              <h3>🏆 Leaderboard</h3>
+              <div id="certLeaderboard"></div>
+            </div>
             <p class="certificate__date" id="certDate"></p>
             <button class="btn btn--primary" id="btnPrint">Print Certificate</button>
             <button class="btn btn--secondary" id="btnRestart">Play Again</button>
@@ -246,8 +298,17 @@ AND password = '" + password + "'"</code></pre>
     </footer>
   </div>
 
+  <div id="achievementToast" class="achievement-toast" hidden>
+    <span class="achievement-toast__icon">🏆</span>
+    <div>
+      <strong id="achievementTitle">Achievement</strong>
+      <p id="achievementDesc">Unlocked!</p>
+    </div>
+  </div>
+
   <script src="js/config.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/achievements.js"></script>
   <script src="js/game-state.js"></script>
   <script src="js/tutor-client.js"></script>
   <script src="js/app.js"></script>

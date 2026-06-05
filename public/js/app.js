@@ -28,6 +28,20 @@
     { id: 'd', text: 'Ask them to email you a link and click it', correct: false, ctx: 'default' },
   ];
 
+  const MFA_OPTIONS = [
+    { id: 'a', text: 'Read the code aloud to the agent on the phone', correct: false, ctx: 'share_code' },
+    { id: 'b', text: 'Ignore the message — never share MFA codes with anyone', correct: true, ctx: 'correct' },
+    { id: 'c', text: 'Text the code to the number so they can verify faster', correct: false, ctx: 'share_code' },
+    { id: 'd', text: 'Enter the code on a link they send you', correct: false, ctx: 'default' },
+  ];
+
+  const RANSOMWARE_OPTIONS = [
+    { id: 'a', text: 'Pay the Bitcoin immediately to get your files back', correct: false, ctx: 'pay' },
+    { id: 'b', text: 'Disconnect from the network and report to IT immediately', correct: true, ctx: 'correct' },
+    { id: 'c', text: 'Restart the computer and hope it goes away', correct: false, ctx: 'restart' },
+    { id: 'd', text: 'Download the "decryption tool" from the popup', correct: false, ctx: 'download' },
+  ];
+
   const LOG_ENTRIES = [
     { time: '09:01:12', user: 'jsmith', ip: '192.168.1.45', status: 'SUCCESS', location: 'Office — NYC' },
     { time: '09:02:33', user: 'admin', ip: '203.45.67.89', status: 'FAIL', location: 'Unknown — RU' },
@@ -49,6 +63,8 @@
   let selectedSql = null;
   let selectedIp = null;
   let selectedSocial = null;
+  let selectedMfa = null;
+  let selectedRansomware = null;
   let hintLevels = {};
   let quizData = [];
   let quizAnswers = {};
@@ -62,6 +78,7 @@
     bindGlobalEvents();
     initRooms();
     updateHud();
+    Achievements.renderLeaderboard('introLeaderboard');
   }
 
   function buildProgressBar() {
@@ -86,6 +103,8 @@
     document.getElementById('btn-sql').addEventListener('click', submitSql);
     document.getElementById('btn-logs').addEventListener('click', submitLogs);
     document.getElementById('btn-social').addEventListener('click', submitSocial);
+    document.getElementById('btn-mfa').addEventListener('click', submitMfa);
+    document.getElementById('btn-ransomware').addEventListener('click', submitRansomware);
     document.getElementById('btn-quiz').addEventListener('click', submitQuiz);
 
     document.getElementById('cipherAnswer').addEventListener('keydown', (e) => {
@@ -105,6 +124,8 @@
     initLogs();
     initSql();
     initSocial();
+    initMfa();
+    initRansomware();
   }
 
   async function startGame() {
@@ -116,13 +137,17 @@
 
     AudioFX.resume();
     AudioFX.boot();
+    if (localStorage.getItem('cer_music') !== 'off') AudioFX.startMusic();
     GameState.reset(name);
+    Achievements.reset();
     hintLevels = {};
     foundFlags = new Set();
     selectedPassword = null;
     selectedSql = null;
     selectedIp = null;
     selectedSocial = null;
+    selectedMfa = null;
+    selectedRansomware = null;
 
     gameHeader.hidden = false;
     initRooms();
@@ -138,7 +163,13 @@
     const wasInGame = currentScreen !== 'intro' && currentScreen !== 'gameover';
     currentScreen = screenId;
     document.querySelectorAll('.screen').forEach((el) => {
-      el.classList.toggle('screen--active', el.dataset.screen === screenId);
+      const active = el.dataset.screen === screenId;
+      el.classList.toggle('screen--active', active);
+      if (active) {
+        el.classList.remove('screen--enter');
+        void el.offsetWidth;
+        el.classList.add('screen--enter');
+      }
     });
     if (opts.playTransition !== false && wasInGame && screenId !== 'gameover') {
       AudioFX.roomTransition();
@@ -158,6 +189,13 @@
       if (i < idx) step.classList.add('progress-step--complete');
       else if (i === idx) step.classList.add('progress-step--current');
     });
+  }
+
+  function pulseScore() {
+    const el = document.getElementById('hudScore');
+    el.classList.remove('hud__value--pulse');
+    void el.offsetWidth;
+    el.classList.add('hud__value--pulse');
   }
 
   function updateHud() {
@@ -218,6 +256,7 @@
   async function completeRoom(roomId) {
     AudioFX.levelComplete();
     GameState.completeRoom(roomId);
+    Achievements.checkAfterRoom(roomId);
     const summary = await TutorClient.summary(roomId, GameState.getState().roomStats);
     showTutor(roomId, summary);
     showFeedback('feedback-' + roomId, summary + ' Room unlocked!', 'success');
@@ -448,6 +487,70 @@
     }
   }
 
+  function initOptionRoom(containerId, options, onSelect) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    options.forEach((opt) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'option-btn';
+      btn.textContent = opt.text;
+      btn.addEventListener('click', () => {
+        AudioFX.click();
+        onSelect(opt.id, btn, container);
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function initMfa() {
+    selectedMfa = null;
+    document.getElementById('btn-mfa').disabled = true;
+    hideFeedback('feedback-mfa');
+    document.getElementById('tutor-mfa').hidden = true;
+    initOptionRoom('mfaOptions', MFA_OPTIONS, (id, btn, container) => {
+      selectedMfa = id;
+      container.querySelectorAll('.option-btn').forEach((el) => el.classList.remove('option-btn--selected'));
+      btn.classList.add('option-btn--selected');
+      document.getElementById('btn-mfa').disabled = false;
+    });
+  }
+
+  async function submitMfa() {
+    AudioFX.submit();
+    const chosen = MFA_OPTIONS.find((o) => o.id === selectedMfa);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('mfa');
+    } else {
+      await handleMistake('mfa', chosen.ctx);
+    }
+  }
+
+  function initRansomware() {
+    selectedRansomware = null;
+    document.getElementById('btn-ransomware').disabled = true;
+    hideFeedback('feedback-ransomware');
+    document.getElementById('tutor-ransomware').hidden = true;
+    initOptionRoom('ransomwareOptions', RANSOMWARE_OPTIONS, (id, btn, container) => {
+      selectedRansomware = id;
+      container.querySelectorAll('.option-btn').forEach((el) => el.classList.remove('option-btn--selected'));
+      btn.classList.add('option-btn--selected');
+      document.getElementById('btn-ransomware').disabled = false;
+    });
+  }
+
+  async function submitRansomware() {
+    AudioFX.submit();
+    const chosen = RANSOMWARE_OPTIONS.find((o) => o.id === selectedRansomware);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('ransomware');
+    } else {
+      await handleMistake('ransomware', chosen.ctx);
+    }
+  }
+
   // --- Quiz ---
   async function startQuiz() {
     quizData = await TutorClient.fetchQuiz();
@@ -498,17 +601,30 @@
     });
 
     GameState.setQuizScore(correct, quizData.length);
+    const timeBonus = GameState.applyTimeBonus();
+    if (timeBonus > 0) {
+      AudioFX.scoreBonus();
+      pulseScore();
+    }
+    Achievements.checkOnComplete();
     updateHud();
     if (correct >= 3) AudioFX.success();
 
     showFeedback(
       'feedback-quiz',
-      `Quiz complete: ${correct}/${quizData.length} correct (+${correct * 20} bonus points)`,
+      `Quiz: ${correct}/${quizData.length} correct (+${correct * 20} pts)${timeBonus ? ` | Speed bonus: +${timeBonus}` : ''}`,
       correct >= 3 ? 'success' : 'info'
     );
 
     GameState.stopTimer();
     await saveResults();
+    const s = GameState.getState();
+    Achievements.saveLeaderboard({
+      name: s.studentName,
+      score: s.score,
+      time: s.elapsedSeconds,
+      achievements: Achievements.getUnlockedList().length,
+    });
     renderCertificate();
     setTimeout(() => {
       AudioFX.certificate();
@@ -541,11 +657,19 @@
     document.getElementById('certStats').innerHTML = `
       <div class="cert-stat"><span>Score</span><strong>${s.score}</strong></div>
       <div class="cert-stat"><span>Time</span><strong>${GameState.formatTime(s.elapsedSeconds)}</strong></div>
+      <div class="cert-stat"><span>Time Bonus</span><strong>+${s.timeBonus || 0}</strong></div>
       <div class="cert-stat"><span>Mistakes</span><strong>${s.mistakes}</strong></div>
       <div class="cert-stat"><span>Hints Used</span><strong>${s.hintsUsed.length}</strong></div>
       <div class="cert-stat"><span>Hardest Room</span><strong>${GameState.getRoomLabel(hardest)}</strong></div>
       <div class="cert-stat"><span>Quiz</span><strong>${s.quizScore ? s.quizScore.correct + '/' + s.quizScore.total : '—'}</strong></div>
     `;
+
+    const ach = Achievements.getUnlockedList();
+    document.getElementById('certAchievements').innerHTML = ach.length
+      ? `<h3>🏅 Achievements (${ach.length})</h3><div class="achievement-badges">${ach.map((a) => `<span class="achievement-badge" title="${a.desc}">${a.icon} ${a.title}</span>`).join('')}</div>`
+      : '';
+
+    Achievements.renderLeaderboard('certLeaderboard', s.studentName);
   }
 
   function escapeHtml(str) {

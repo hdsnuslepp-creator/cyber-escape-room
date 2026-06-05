@@ -2,11 +2,15 @@
  * Central game state — timer, score, lives, hints, per-room stats.
  */
 const GameState = (() => {
-  const ROOMS = ['phishing', 'password', 'cipher', 'sql', 'logs', 'social'];
+  const ROOMS = ['phishing', 'password', 'cipher', 'sql', 'logs', 'social', 'mfa', 'ransomware'];
   const START_SCORE = 1000;
   const MISTAKE_PENALTY = 50;
   const HINT_PENALTY = 25;
   const MAX_LIVES = 3;
+  const TIME_BONUS_FAST = 100;
+  const TIME_BONUS_MEDIUM = 50;
+  const TIME_FAST_SEC = 600;
+  const TIME_MEDIUM_SEC = 900;
 
   const state = {
     studentName: '',
@@ -24,6 +28,7 @@ const GameState = (() => {
     elapsedSeconds: 0,
     gameOver: false,
     quizScore: null,
+    timeBonus: 0,
   };
 
   ROOMS.forEach((r) => {
@@ -59,8 +64,26 @@ const GameState = (() => {
       sql: 'SQL Injection Fix',
       logs: 'Log Analysis',
       social: 'Social Engineering',
+      mfa: 'MFA Security',
+      ransomware: 'Ransomware Response',
     };
     return labels[id] || id;
+  }
+
+  function getRoomNumber(roomId) {
+    const idx = ROOMS.indexOf(roomId);
+    return idx >= 0 ? idx + 1 : 1;
+  }
+
+  function applyTimeBonus() {
+    state.timeBonus = 0;
+    if (state.elapsedSeconds <= TIME_FAST_SEC) {
+      state.timeBonus = TIME_BONUS_FAST;
+    } else if (state.elapsedSeconds <= TIME_MEDIUM_SEC) {
+      state.timeBonus = TIME_BONUS_MEDIUM;
+    }
+    state.score += state.timeBonus;
+    return state.timeBonus;
   }
 
   return {
@@ -83,6 +106,7 @@ const GameState = (() => {
       state.elapsedSeconds = 0;
       state.gameOver = false;
       state.quizScore = null;
+      state.timeBonus = 0;
       ROOMS.forEach((r) => {
         state.roomMistakes[r] = 0;
         state.roomHints[r] = 0;
@@ -138,6 +162,8 @@ const GameState = (() => {
       state.score += correct * 20;
     },
 
+    applyTimeBonus,
+
     getResultsPayload() {
       return {
         studentName: state.studentName,
@@ -146,17 +172,20 @@ const GameState = (() => {
         mistakes: state.mistakes,
         hintsUsed: state.hintsUsed,
         hardestRoom: getHardestRoom(),
+        timeBonus: state.timeBonus,
         roomStats: {
           mistakes: { ...state.roomMistakes },
           hints: { ...state.roomHints },
           times: { ...state.roomTimes },
         },
         quizScore: state.quizScore,
+        achievements: Achievements.getUnlockedList().map((a) => a.id),
       };
     },
 
     formatTime,
     getHardestRoom,
     getRoomLabel,
+    getRoomNumber,
   };
 })();

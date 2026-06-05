@@ -11,6 +11,8 @@
     sql: 'SQL Injection Fix',
     logs: 'Log Analysis',
     social: 'Social Engineering',
+    mfa: 'MFA Security',
+    ransomware: 'Ransomware Response',
   };
 
   let sessions = [];

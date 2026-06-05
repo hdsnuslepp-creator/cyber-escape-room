@@ -33,6 +33,16 @@ const TutorClient = (() => {
       'Verify callers through official channels.',
       'Urgency is a classic manipulation tactic.',
     ],
+    mfa: [
+      'MFA codes are secrets — only you should see them.',
+      'Legitimate support never asks you to read codes aloud.',
+      'Ignore unsolicited MFA requests.',
+    ],
+    ransomware: [
+      'Never pay ransomware — it funds criminals.',
+      'Disconnect from the network to stop spread.',
+      'Report to IT — do not download tools from the popup.',
+    ],
   };
 
   const LOCAL_EXPLAIN = {
@@ -56,6 +66,16 @@ const TutorClient = (() => {
     },
     social: {
       default: 'Never share credentials. Verify identity through official channels before acting.',
+    },
+    mfa: {
+      share_code: 'Never share MFA codes — attackers use them to bypass your second factor.',
+      default: 'MFA codes are for your eyes only. Real IT never asks you to read them aloud.',
+    },
+    ransomware: {
+      pay: 'Paying ransomware does not guarantee recovery and funds criminals.',
+      restart: 'Restarting may spread the infection — isolate the device first.',
+      download: 'Never download tools from a ransomware popup — it may be more malware.',
+      default: 'Disconnect from the network and report to IT immediately.',
     },
   };
 

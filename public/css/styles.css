@@ -1126,3 +1126,214 @@ body::before {
     font-size: 0.7rem;
   }
 }
+
+/* Animations */
+.screen--enter {
+  animation: screenEnter 0.45s ease forwards;
+}
+
+@keyframes screenEnter {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.hud__value--pulse {
+  animation: scorePulse 0.5s ease;
+}
+
+@keyframes scorePulse {
+  0%, 100% { transform: scale(1); color: var(--accent); }
+  50% { transform: scale(1.2); color: #fff; text-shadow: 0 0 12px var(--accent-glow); }
+}
+
+.animate-shake {
+  animation: shake 3s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50% { transform: translateX(-2px); }
+  20%, 40% { transform: translateX(2px); }
+}
+
+.phishing-target--found {
+  animation: flagPop 0.45s ease;
+}
+
+@keyframes flagPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 0 16px var(--danger-glow); }
+  100% { transform: scale(1); }
+}
+
+.certificate__border {
+  animation: certGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes certGlow {
+  from { box-shadow: 0 0 30px var(--accent-glow); }
+  to { box-shadow: 0 0 50px rgba(0, 255, 136, 0.4); }
+}
+
+/* Achievement toast */
+.achievement-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-panel);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-glow);
+  max-width: 320px;
+  transform: translateX(120%);
+  transition: transform 0.4s ease;
+}
+
+.achievement-toast--show {
+  transform: translateX(0);
+}
+
+.achievement-toast--hide {
+  transform: translateX(120%);
+}
+
+.achievement-toast__icon {
+  font-size: 2rem;
+}
+
+.achievement-toast strong {
+  display: block;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.achievement-toast p {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin: 0.25rem 0 0;
+}
+
+/* Leaderboard */
+.leaderboard-panel {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: rgba(0, 255, 136, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.leaderboard-panel h3 {
+  font-size: 0.85rem;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+
+.leaderboard-panel--cert {
+  margin-top: 1rem;
+  text-align: left;
+}
+
+.leaderboard-empty {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.leaderboard-table {
+  width: 100%;
+  font-size: 0.8rem;
+  border-collapse: collapse;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.leaderboard-table th {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+}
+
+.leaderboard-row--you {
+  background: rgba(0, 255, 136, 0.12);
+}
+
+.leaderboard-row--you td {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.achievement-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.achievement-badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: 999px;
+  color: var(--text-dim);
+}
+
+.achievements-list h3 {
+  font-size: 0.85rem;
+  color: var(--accent);
+  margin: 1rem 0 0.5rem;
+  text-align: left;
+}
+
+/* Ransomware popup */
+.ransomware-popup {
+  background: #1a0000;
+  border: 3px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 0 30px var(--danger-glow);
+}
+
+.ransomware-popup__header {
+  font-family: var(--font-display);
+  color: var(--danger);
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.ransomware-popup__timer {
+  color: var(--warning);
+  font-weight: 600;
+  margin: 0.75rem 0;
+}
+
+.ransomware-popup__fake-btn {
+  padding: 0.5rem 1.5rem;
+  background: var(--danger);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  opacity: 0.7;
+}
+
+.scenario-box--sms .sms-bubble {
+  background: var(--bg-card);
+  border-left: 3px solid var(--info);
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  margin-top: 0.5rem;
+}
+
+.feedback {
+  animation: fadeIn 0.3s ease;
+}
