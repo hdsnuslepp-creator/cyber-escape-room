@@ -793,6 +793,78 @@ body::before {
   border-color: #ccc;
 }
 
+.room-theme--bank .log-table tbody tr {
+  background: #fff;
+}
+
+.room-theme--bank .log-table tbody tr:hover {
+  background: #dceeff;
+}
+
+.room-theme--bank .log-table tbody tr:hover td {
+  color: #001a33;
+}
+
+.room-theme--bank .log-table .row--highlight {
+  background: rgba(255, 71, 87, 0.12);
+}
+
+.room-theme--bank .log-table .row--highlight:hover {
+  background: rgba(255, 71, 87, 0.22);
+}
+
+.room-theme--bank .log-table .status--fail {
+  color: #cc0033;
+}
+
+.room-theme--bank .log-table .status--success {
+  color: #006633;
+}
+
+/* Attacker IP picker — high contrast on bank portal theme */
+.room-theme--bank .ip-options {
+  margin-top: 0.75rem;
+}
+
+.room-theme--bank .ip-option {
+  background: #fff;
+  color: #003366;
+  border: 2px solid #1a4a7a;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.85rem 1rem;
+}
+
+.room-theme--bank .ip-option:hover {
+  background: #e8f4ff;
+  border-color: #0066cc;
+  color: #001a33;
+  box-shadow: 0 0 14px rgba(0, 102, 204, 0.35);
+}
+
+.room-theme--bank .ip-option--selected {
+  background: #003366;
+  color: #fff;
+  border-color: #00ff66;
+  box-shadow: 0 0 14px rgba(0, 255, 102, 0.4);
+}
+
+.room-theme--bank .ip-option--selected:hover {
+  background: #004488;
+  color: #fff;
+}
+
+.room-theme--bank .log-prompt--bank {
+  margin-top: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  color: #66aaff;
+  font-weight: 600;
+}
+
 .room-theme--bank .room-theme__tag {
   color: #66aaff;
 }

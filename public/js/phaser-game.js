@@ -69,7 +69,12 @@
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
     scene: [BootScene, TitleScene, HubScene, PhishingScene, ChapterCompleteScene],
+    input: {
+      keyboard: true,
+    },
   };
+
+  const DOOR_INTERACT_RADIUS = 80;
 
   let game;
 
@@ -210,24 +215,23 @@
     this.doorOpen = inboxDone;
 
     buildCorridorMap(this);
-    const walkTop = HUB.roomY + 1;
-    const walkRows = HUB.roomRows - 2;
-    this.physics.world.setBounds(TILE, walkTop * TILE, (MAP_W - 2) * TILE, walkRows * TILE);
+    this.walls = buildWallColliders(this);
 
     const spawn = tilePx(HUB.player.c, HUB.player.r);
     this.player = this.physics.add.sprite(spawn.x, spawn.y, 'pixel');
     this.player.setDisplaySize(20, 28);
     this.player.setTint(COLORS.player);
-    this.player.setCollideWorldBounds(true);
-    this.player.body.setSize(16, 20).setOffset(2, 6);
+    this.player.setCollideWorldBounds(false);
+    this.player.body.setSize(14, 14);
+    this.player.body.setOffset(3, 10);
+
+    this.physics.add.collider(this.player, this.walls);
 
     this.playerGfx = this.add.graphics();
     this.playerGfx.setDepth(5);
     drawPlayerSprite(this.playerGfx, this.player.x, this.player.y);
 
     const doorPos = tilePx(HUB.door.c, HUB.door.r);
-    this.doorZone = this.add.zone(doorPos.x, doorPos.y, TILE * 2, TILE * 2);
-    this.physics.add.existing(this.doorZone, true);
 
     this.doorGfx = this.add.graphics().setDepth(2);
     this.doorLabel = this.add.text(doorPos.x, doorPos.y - TILE * 0.55, 'DOOR', {
@@ -249,14 +253,16 @@
       color: '#8899aa',
     }).setOrigin(0.5).setDepth(3);
 
+    this.doorPos = doorPos;
+    this.doorInteractZone = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2.8, TILE * 2.2, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(15);
+    this.doorInteractZone.on('pointerdown', () => this.tryInteract(true));
+
     this.drawDoor(inboxDone);
 
+    // No physics blocker on the door — walk freely; press E when nearby to enter
     this.doorBlocker = null;
-    if (!inboxDone) {
-      this.doorBlocker = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2.2, TILE * 1.4, 0x000000, 0);
-      this.physics.add.existing(this.doorBlocker, true);
-      this.physics.add.collider(this.player, this.doorBlocker);
-    }
 
     const pcXY = tileXY(HUB.pc.c - 1, HUB.pc.r);
     drawTerminal(this, pcXY.x, pcXY.y - 8, 'PC', COLORS.terminal);
@@ -293,16 +299,28 @@
     // Input
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys({
-      w: Phaser.Input.Keyboard.KeyCodes.W,
-      a: Phaser.Input.Keyboard.KeyCodes.A,
-      s: Phaser.Input.Keyboard.KeyCodes.S,
-      d: Phaser.Input.Keyboard.KeyCodes.D,
-      e: Phaser.Input.Keyboard.KeyCodes.E,
-      space: Phaser.Input.Keyboard.KeyCodes.SPACE,
+      W: Phaser.Input.Keyboard.KeyCodes.W,
+      A: Phaser.Input.Keyboard.KeyCodes.A,
+      S: Phaser.Input.Keyboard.KeyCodes.S,
+      D: Phaser.Input.Keyboard.KeyCodes.D,
+      UP: Phaser.Input.Keyboard.KeyCodes.UP,
+      DOWN: Phaser.Input.Keyboard.KeyCodes.DOWN,
+      LEFT: Phaser.Input.Keyboard.KeyCodes.LEFT,
+      RIGHT: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      E: Phaser.Input.Keyboard.KeyCodes.E,
+      SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
     });
 
-    this.input.keyboard.on('keydown-E', () => this.tryInteract());
-    this.input.keyboard.on('keydown-SPACE', () => this.tryInteract());
+    // Keep keyboard focus on the game canvas
+    if (this.game.canvas) {
+      this.game.canvas.setAttribute('tabindex', '0');
+      this.game.canvas.focus();
+    }
+    this.input.on('pointerdown', () => {
+      if (this.game.canvas) this.game.canvas.focus();
+      const wrap = document.getElementById('game-canvas-wrap');
+      if (wrap) wrap.focus();
+    });
 
     // Unlock animation if just completed
     if (this.registry.get('justUnlockedInbox')) {
@@ -367,10 +385,6 @@
     this.time.delayedCall(1200, () => {
       pulse.destroy();
       this.drawDoor(true);
-      if (this.doorBlocker && this.doorBlocker.active) {
-        this.doorBlocker.destroy();
-        this.doorBlocker = null;
-      }
       this.input.enabled = true;
       this.showDialogue('Door unlocked! Inbox Room secured.', () => {
         this.time.delayedCall(800, () => {
@@ -385,54 +399,101 @@
     this.dialogueBox.show(text, onClose);
   };
 
-  HubScene.prototype.tryInteract = function () {
+  HubScene.prototype.isNearDoor = function () {
+    if (!this.player || !this.doorPos) return false;
+    return Phaser.Math.Distance.Between(
+      this.player.x, this.player.y,
+      this.doorPos.x, this.doorPos.y
+    ) < DOOR_INTERACT_RADIUS;
+  };
+
+  HubScene.prototype.tryInteract = function (fromDoorClick) {
     if (this.dialogueBox.visible) {
       this.dialogueBox.dismiss();
       return;
     }
-    if (this.nearDoor && !this.doorOpen) {
+
+    const near = this.isNearDoor();
+    if (!near && !fromDoorClick) {
+      this.flashPrompt('Move closer to the DOOR (top-right)', '#ff3366');
+      return;
+    }
+    if (!near && fromDoorClick) {
+      this.flashPrompt('Walk up to the DOOR first', '#ff3366');
+      return;
+    }
+
+    if (!this.doorOpen) {
       this.cameras.main.fadeOut(350, 0, 0, 0);
       this.time.delayedCall(380, () => this.scene.start('PhishingScene'));
-    } else if (this.nearDoor && this.doorOpen) {
+    } else {
       this.showDialogue('Inbox Room already cleared. More doors coming soon.');
     }
   };
 
-  HubScene.prototype.update = function () {
-    const speed = 120;
-    this.player.setVelocity(0);
-    let moving = false;
+  HubScene.prototype.flashPrompt = function (text, color) {
+    this.promptText.setText(text);
+    this.promptText.setColor(color || '#ffb000');
+    if (this.promptFlash) this.promptFlash.remove();
+    this.promptFlash = this.time.delayedCall(2000, () => {
+      if (this.isNearDoor() && !this.doorOpen) {
+        this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
+        this.promptText.setColor('#ffb000');
+      } else {
+        this.promptText.setText('WASD / Arrows — walk anywhere in the room');
+        this.promptText.setColor('#8899aa');
+      }
+    });
+  };
 
-    if (this.cursors.left.isDown || this.keys.a.isDown) {
-      this.player.setVelocityX(-speed);
-      moving = true;
-    } else if (this.cursors.right.isDown || this.keys.d.isDown) {
-      this.player.setVelocityX(speed);
-      moving = true;
+  HubScene.prototype.update = function () {
+    if (!this.player || !this.player.body) return;
+
+    const speed = 150;
+    let vx = 0;
+    let vy = 0;
+
+    const left = this.cursors.left.isDown || this.keys.A.isDown || this.keys.LEFT.isDown;
+    const right = this.cursors.right.isDown || this.keys.D.isDown || this.keys.RIGHT.isDown;
+    const up = this.cursors.up.isDown || this.keys.W.isDown || this.keys.UP.isDown;
+    const down = this.cursors.down.isDown || this.keys.S.isDown || this.keys.DOWN.isDown;
+
+    if (left) vx = -speed;
+    else if (right) vx = speed;
+
+    if (up) vy = -speed;
+    else if (down) vy = speed;
+
+    if (vx !== 0 && vy !== 0) {
+      const norm = Math.SQRT1_2;
+      vx *= norm;
+      vy *= norm;
     }
-    if (this.cursors.up.isDown || this.keys.w.isDown) {
-      this.player.setVelocityY(-speed);
-      moving = true;
-    } else if (this.cursors.down.isDown || this.keys.s.isDown) {
-      this.player.setVelocityY(speed);
-      moving = true;
-    }
+
+    this.player.setVelocity(vx, vy);
 
     drawPlayerSprite(this.playerGfx, this.player.x, this.player.y);
 
-    const doorPos = tilePx(HUB.door.c, HUB.door.r);
-    const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, doorPos.x, doorPos.y);
-    this.nearDoor = dist < 44;
+    this.nearDoor = this.isNearDoor();
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
+      this.tryInteract(false);
+    }
 
     if (this.nearDoor && !this.doorOpen) {
-      this.promptText.setText('[ E ] Enter Inbox Room — Phishing challenge');
+      this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
       this.promptText.setColor('#ffb000');
+      if (this.doorInteractZone) this.doorInteractZone.setAlpha(0.08);
     } else if (this.nearDoor && this.doorOpen) {
       this.promptText.setText('Inbox Room — CLEARED ✓');
       this.promptText.setColor('#00ff66');
+      if (this.doorInteractZone) this.doorInteractZone.setAlpha(0);
     } else {
-      this.promptText.setText('WASD / Arrows to move  •  Walk to doors to interact');
-      this.promptText.setColor('#8899aa');
+      if (!this.promptFlash) {
+        this.promptText.setText('WASD / Arrows — walk anywhere in the room');
+        this.promptText.setColor('#8899aa');
+      }
+      if (this.doorInteractZone) this.doorInteractZone.setAlpha(0);
     }
   };
 
@@ -661,6 +722,27 @@
       }
     }
     wallChar.destroy();
+  }
+
+  function buildWallColliders(scene) {
+    const walls = scene.physics.add.staticGroup();
+    for (let ri = 0; ri < HUB.roomRows; ri++) {
+      for (let col = 0; col < MAP_W; col++) {
+        const isWall = ri === 0 || ri === HUB.roomRows - 1 || col === 0 || col === MAP_W - 1;
+        if (!isWall) continue;
+        const row = HUB.roomY + ri;
+        const wall = scene.add.rectangle(
+          col * TILE + TILE / 2,
+          row * TILE + TILE / 2,
+          TILE,
+          TILE,
+          0x000000,
+          0
+        );
+        walls.add(wall);
+      }
+    }
+    return walls;
   }
 
   function drawPlayerSprite(g, x, y) {
