@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Dashboard — Cyber Escape Room</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/teacher.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="teacher-app">
+    <header class="teacher-header">
+      <div>
+        <h1>Teacher Dashboard</h1>
+        <p class="teacher-subtitle">Monitor student progress, export results, and create custom rooms.</p>
+      </div>
+      <a href="index.html" class="btn btn--secondary">← Back to Game</a>
+    </header>
+
+    <section class="teacher-section">
+      <div class="section-header">
+        <h2>Student Results</h2>
+        <button class="btn btn--primary" id="btnExport">Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table class="teacher-table" id="sessionsTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Score</th>
+              <th>Time</th>
+              <th>Mistakes</th>
+              <th>Hints</th>
+              <th>Hardest Room</th>
+              <th>Quiz</th>
+              <th>Completed</th>
+            </tr>
+          </thead>
+          <tbody id="sessionsBody">
+            <tr><td colspan="8" class="empty-row">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="teacher-section">
+      <h2>Student Detail</h2>
+      <div class="detail-panel" id="detailPanel">
+        <p class="empty-row">Click a student row to see room-by-room breakdown.</p>
+      </div>
+    </section>
+
+    <section class="teacher-section">
+      <h2>Create Custom Room</h2>
+      <form class="room-form" id="roomForm">
+        <div class="form-row">
+          <div class="input-group">
+            <label for="roomTitle">Room Title</label>
+            <input type="text" id="roomTitle" class="input" placeholder="e.g. Advanced Phishing Lab" required>
+          </div>
+          <div class="input-group">
+            <label for="roomType">Room Type</label>
+            <select id="roomType" class="input">
+              <option value="phishing">Phishing Detection</option>
+              <option value="password">Password Security</option>
+              <option value="cipher">Encryption Challenge</option>
+              <option value="sql">SQL Injection Fix</option>
+              <option value="logs">Log Analysis</option>
+              <option value="social">Social Engineering</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="roomContent">Custom Content (JSON)</label>
+          <textarea id="roomContent" class="input textarea" rows="6" placeholder='{"prompt": "Your custom scenario...", "answer": "expected"}'></textarea>
+        </div>
+        <button type="submit" class="btn btn--primary">Save Custom Room</button>
+      </form>
+
+      <h3 class="subsection-title">Saved Custom Rooms</h3>
+      <div class="table-wrap">
+        <table class="teacher-table">
+          <thead>
+            <tr><th>Title</th><th>Type</th><th>Created</th><th></th></tr>
+          </thead>
+          <tbody id="roomsBody">
+            <tr><td colspan="4" class="empty-row">No custom rooms yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/teacher.js"></script>
+</body>
+</html>

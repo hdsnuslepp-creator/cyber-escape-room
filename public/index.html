@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Escape Room Platform</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="header" id="gameHeader" hidden>
+      <div class="header__top">
+        <div class="header__brand">
+          <span class="header__icon">🔒</span>
+          <h1>Cyber Escape Room</h1>
+        </div>
+        <div class="hud">
+          <div class="hud__item"><span class="hud__label">Time</span><span class="hud__value" id="hudTime">00:00</span></div>
+          <div class="hud__item"><span class="hud__label">Score</span><span class="hud__value hud__value--score" id="hudScore">1000</span></div>
+          <div class="hud__item"><span class="hud__label">Lives</span><span class="hud__value hud__value--lives" id="hudLives">❤❤❤</span></div>
+          <div class="sound-controls sound-controls--hud">
+            <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
+            <label class="volume-control">
+              <span class="volume-control__label">Vol</span>
+              <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
+              <span class="volume-control__value" data-sound-volume-label>70%</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="header__progress" id="progressBar" aria-label="Room progress"></div>
+    </header>
+
+    <main id="gameContainer">
+      <!-- Intro -->
+      <section class="screen screen--active" data-screen="intro">
+        <div class="terminal-window">
+          <div class="terminal-window__bar">
+            <span class="dot dot--red"></span><span class="dot dot--yellow"></span><span class="dot dot--green"></span>
+            <span class="terminal-window__title">SECURE_TRAINING_ROOM.exe</span>
+          </div>
+          <div class="terminal-window__body">
+            <p class="terminal-line"><span class="prompt">&gt;</span> Initializing cybersecurity training platform...</p>
+            <p class="terminal-line"><span class="prompt">&gt;</span> <span class="blink">ACCESS DENIED — 6 ROOMS LOCKED</span></p>
+            <p class="terminal-line terminal-line--dim">Complete 6 security challenges to escape.</p>
+            <p class="terminal-line terminal-line--dim">Timer, score, lives, and hints are active.</p>
+            <div class="input-group">
+              <label for="studentName">Enter your name</label>
+              <input type="text" id="studentName" class="input" placeholder="Student name..." maxlength="60" autocomplete="name">
+            </div>
+            <button class="btn btn--primary" id="btnStart">Begin Escape</button>
+            <div class="sound-controls sound-controls--intro">
+              <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
+              <label class="volume-control">
+                <span class="volume-control__label">Volume</span>
+                <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
+                <span class="volume-control__value" data-sound-volume-label>70%</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Room 1: Phishing -->
+      <section class="screen" data-screen="phishing">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge" id="badge-phishing">Room 1 / 6</span>
+            <h2>Phishing Detection</h2>
+            <p class="level-desc">Click <strong>3 suspicious parts</strong> of this email.</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="phishing">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-phishing" hidden></div>
+        <div class="email-client">
+          <div class="email-client__toolbar"><span>Inbox</span><span class="email-client__count">1 unread</span></div>
+          <div class="email-message">
+            <div class="email-message__row">
+              <span class="email-label">From:</span>
+              <span class="phishing-target" data-flag="sender" tabindex="0">IT Support &lt;it-support@microsft-security.com&gt;</span>
+            </div>
+            <div class="email-message__row">
+              <span class="email-label">Subject:</span>
+              <span class="phishing-target" data-flag="urgency" tabindex="0">URGENT: Account suspended — verify in 2 hours!</span>
+            </div>
+            <div class="email-message__body">
+              <p>Hello,</p>
+              <p>We detected unusual sign-in activity. Verify immediately:</p>
+              <p><a href="#" class="phishing-target email-link" data-flag="link" tabindex="0">https://company-login.secure-verify.net/auth</a></p>
+              <p>Regards, Corporate IT</p>
+              <div class="email-attachment phishing-target" data-flag="attachment" tabindex="0">📎 Account_Verification.exe (842 KB)</div>
+            </div>
+          </div>
+        </div>
+        <div class="flag-counter">Red flags: <strong id="flagCount">0</strong> / 3</div>
+        <div class="feedback" id="feedback-phishing" hidden></div>
+        <button class="btn btn--primary" id="btn-phishing" disabled>Unlock Room</button>
+      </section>
+
+      <!-- Room 2: Password -->
+      <section class="screen" data-screen="password">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge">Room 2 / 6</span>
+            <h2>Password Security</h2>
+            <p class="level-desc">Choose the strongest password.</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="password">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-password" hidden></div>
+        <div class="password-grid" id="passwordOptions"></div>
+        <div class="feedback" id="feedback-password" hidden></div>
+        <button class="btn btn--primary" id="btn-password" disabled>Submit</button>
+      </section>
+
+      <!-- Room 3: Cipher -->
+      <section class="screen" data-screen="cipher">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge">Room 3 / 6</span>
+            <h2>Encryption Challenge</h2>
+            <p class="level-desc">Decode the Caesar cipher to get the door code (shift each letter back by 3).</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="cipher">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-cipher" hidden></div>
+        <div class="cipher-box">
+          <label class="cipher-label">Encrypted</label>
+          <code class="cipher-text">WRS VHFRHW</code>
+        </div>
+        <div class="input-group">
+          <label for="cipherAnswer">Door code</label>
+          <input type="text" id="cipherAnswer" class="input" placeholder="Enter decoded code..." autocomplete="off">
+        </div>
+        <div class="feedback" id="feedback-cipher" hidden></div>
+        <button class="btn btn--primary" id="btn-cipher">Unlock Door</button>
+      </section>
+
+      <!-- Room 4: SQL Injection -->
+      <section class="screen" data-screen="sql">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge">Room 4 / 6</span>
+            <h2>SQL Injection Fix</h2>
+            <p class="level-desc">Pick the fix that prevents SQL injection.</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="sql">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-sql" hidden></div>
+        <div class="code-block">
+          <p class="code-block__label">Vulnerable login query</p>
+          <pre><code>SELECT * FROM users
+WHERE username = '" + username + "'
+AND password = '" + password + "'"</code></pre>
+        </div>
+        <p class="level-desc">Attacker input: <code class="inline-code">admin' --</code></p>
+        <div class="option-grid" id="sqlOptions"></div>
+        <div class="feedback" id="feedback-sql" hidden></div>
+        <button class="btn btn--primary" id="btn-sql" disabled>Apply Fix</button>
+      </section>
+
+      <!-- Room 5: Logs -->
+      <section class="screen" data-screen="logs">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge">Room 5 / 6</span>
+            <h2>Log Analysis</h2>
+            <p class="level-desc">Find the IP conducting suspicious login attempts.</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="logs">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-logs" hidden></div>
+        <div class="log-table-wrap">
+          <table class="log-table"><thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Location</th></tr></thead>
+          <tbody id="logTableBody"></tbody></table>
+        </div>
+        <div class="ip-options" id="ipOptions"></div>
+        <div class="feedback" id="feedback-logs" hidden></div>
+        <button class="btn btn--primary" id="btn-logs" disabled>Submit</button>
+      </section>
+
+      <!-- Room 6: Social Engineering -->
+      <section class="screen" data-screen="social">
+        <div class="room-toolbar">
+          <div class="level-header">
+            <span class="level-badge">Room 6 / 6</span>
+            <h2>Social Engineering Scenario</h2>
+            <p class="level-desc">Choose the safest response.</p>
+          </div>
+          <button class="btn btn--hint" data-hint-room="social">💡 Hint</button>
+        </div>
+        <div class="tutor-panel" id="tutor-social" hidden></div>
+        <div class="scenario-box">
+          <p>📞 Incoming call: "Hi, this is IT Support. We're seeing a breach on your account and need your password <em>right now</em> to lock it down. You have 30 seconds."</p>
+        </div>
+        <div class="option-grid" id="socialOptions"></div>
+        <div class="feedback" id="feedback-social" hidden></div>
+        <button class="btn btn--primary" id="btn-social" disabled>Confirm Response</button>
+      </section>
+
+      <!-- Quiz -->
+      <section class="screen" data-screen="quiz">
+        <div class="level-header">
+          <span class="level-badge">Final Quiz</span>
+          <h2>AI Security Quiz</h2>
+          <p class="level-desc">Answer 5 questions to earn bonus points.</p>
+        </div>
+        <div id="quizContainer"></div>
+        <div class="feedback" id="feedback-quiz" hidden></div>
+        <button class="btn btn--primary" id="btn-quiz" disabled>Submit Quiz</button>
+      </section>
+
+      <!-- Certificate -->
+      <section class="screen" data-screen="certificate">
+        <div class="certificate">
+          <div class="certificate__border">
+            <p class="certificate__label">Certificate of Completion</p>
+            <h2 class="certificate__title">Cybersecurity Escape Room</h2>
+            <p class="certificate__awarded">Awarded to</p>
+            <p class="certificate__name" id="certName">Student</p>
+            <div class="certificate__stats" id="certStats"></div>
+            <p class="certificate__date" id="certDate"></p>
+            <button class="btn btn--primary" id="btnPrint">Print Certificate</button>
+            <button class="btn btn--secondary" id="btnRestart">Play Again</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Game Over -->
+      <section class="screen" data-screen="gameover">
+        <div class="gameover-card">
+          <h2>System Locked</h2>
+          <p>You ran out of lives. Review the lessons and try again.</p>
+          <button class="btn btn--primary" id="btnRetry">Try Again</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <a href="teacher.html">Teacher Dashboard</a>
+    </footer>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/game-state.js"></script>
+  <script src="js/tutor-client.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
