@@ -1,28 +1,21 @@
 /**
- * Cyber Escape Room — Sound effects (Web Audio) + background music (Vinyl Hearth.mp3)
+ * Cyber Escape Room — Sound effects + background music (Vinyl Hearth.mp3)
  */
 const AudioFX = (() => {
-  const MUSIC_SRC = 'audio/vinyl-hearth.mp3';
+  const MUSIC_SRC = new URL('audio/vinyl-hearth.mp3', window.location.href).href;
 
   let ctx = null;
   let enabled = localStorage.getItem('cer_sound') !== 'off';
   let musicOn = localStorage.getItem('cer_music') !== 'off';
   let volume = clampVolume(parseInt(localStorage.getItem('cer_volume') || '70', 10));
   let masterGain = null;
+  let musicGain = null;
   let musicEl = null;
+  let musicConnected = false;
   let previewTimer = null;
 
   function clampVolume(v) {
     return Math.min(100, Math.max(0, Number.isFinite(v) ? v : 70));
-  }
-
-  function getMusicEl() {
-    if (!musicEl) {
-      musicEl = new Audio(MUSIC_SRC);
-      musicEl.loop = true;
-      musicEl.preload = 'auto';
-    }
-    return musicEl;
   }
 
   function getCtx() {
@@ -30,21 +23,45 @@ const AudioFX = (() => {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       masterGain = ctx.createGain();
       masterGain.connect(ctx.destination);
+      musicGain = ctx.createGain();
+      musicGain.connect(masterGain);
       applyMasterGain();
+      applyMusicGain();
     }
     return ctx;
+  }
+
+  function initMusicElement() {
+    if (musicEl) return;
+    musicEl = new Audio(MUSIC_SRC);
+    musicEl.loop = true;
+    musicEl.preload = 'auto';
+  }
+
+  function connectMusicToWebAudio() {
+    if (musicConnected || !musicEl) return;
+    try {
+      const ac = getCtx();
+      const source = ac.createMediaElementSource(musicEl);
+      source.connect(musicGain);
+      musicConnected = true;
+    } catch {
+      /* fallback: use HTML audio volume directly */
+    }
   }
 
   function applyMasterGain() {
     if (!masterGain) return;
     masterGain.gain.value = enabled && volume > 0 ? volume / 100 : 0;
-    syncMusicVolume();
   }
 
-  function syncMusicVolume() {
-    const el = getMusicEl();
-    const shouldPlay = musicOn && enabled && volume > 0;
-    el.volume = shouldPlay ? Math.min(1, (volume / 100) * 0.45) : 0;
+  function applyMusicGain() {
+    if (!musicGain) return;
+    const level = musicOn && enabled && volume > 0 ? 0.55 : 0;
+    musicGain.gain.value = level;
+    if (!musicConnected && musicEl) {
+      musicEl.volume = level;
+    }
   }
 
   function out(node) {
@@ -55,25 +72,27 @@ const AudioFX = (() => {
     enabled = on;
     localStorage.setItem('cer_sound', on ? 'on' : 'off');
     applyMasterGain();
+    applyMusicGain();
     updateUI();
     if (on && volume > 0) {
       resume();
       if (musicOn) startMusic();
       else click();
     } else {
-      stopMusic();
+      pauseMusic();
     }
   }
 
   function setVolume(v, preview = false) {
     volume = clampVolume(v);
     localStorage.setItem('cer_volume', String(volume));
-    if (volume > 0 && !enabled) {
-      enabled = true;
-      localStorage.setItem('cer_sound', 'on');
-    }
     applyMasterGain();
+    applyMusicGain();
     updateUI();
+    if (musicOn && enabled && volume > 0) {
+      resume();
+      startMusic();
+    }
     if (preview && enabled && volume > 0) {
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => click(), 80);
@@ -83,20 +102,23 @@ const AudioFX = (() => {
   function toggleMusic() {
     musicOn = !musicOn;
     localStorage.setItem('cer_music', musicOn ? 'on' : 'off');
+    applyMusicGain();
     updateUI();
-    if (musicOn && enabled && volume > 0) {
-      resume();
-      startMusic();
-    } else {
-      stopMusic();
-    }
+    resume();
+    if (musicOn && enabled && volume > 0) startMusic();
+    else pauseMusic();
   }
 
   function startMusic() {
     if (!musicOn || !enabled || volume === 0) return;
-    const el = getMusicEl();
-    syncMusicVolume();
-    el.play().catch(() => { /* autoplay blocked until user gesture */ });
+    initMusicElement();
+    connectMusicToWebAudio();
+    applyMusicGain();
+    musicEl.play().catch(() => { /* needs user gesture */ });
+  }
+
+  function pauseMusic() {
+    if (musicEl) musicEl.pause();
   }
 
   function stopMusic() {
@@ -122,9 +144,6 @@ const AudioFX = (() => {
     });
     document.querySelectorAll('[data-sound-volume]').forEach((s) => { s.value = String(volume); });
     document.querySelectorAll('[data-sound-volume-label]').forEach((l) => { l.textContent = volume + '%'; });
-    document.querySelectorAll('.sound-controls').forEach((el) => {
-      el.classList.toggle('sound-controls--muted', !enabled);
-    });
   }
 
   function tone(freq, duration, type = 'square', vol = 0.08, when = 0) {
@@ -197,10 +216,10 @@ const AudioFX = (() => {
 
     initUI() {
       document.querySelectorAll('[data-sound-toggle]').forEach((btn) => {
-        btn.addEventListener('click', () => toggle());
+        btn.addEventListener('click', () => { resume(); toggle(); });
       });
       document.querySelectorAll('[data-music-toggle]').forEach((btn) => {
-        btn.addEventListener('click', () => toggleMusic());
+        btn.addEventListener('click', () => { resume(); toggleMusic(); });
       });
       document.querySelectorAll('[data-sound-volume]').forEach((slider) => {
         slider.addEventListener('input', () => {
@@ -208,6 +227,7 @@ const AudioFX = (() => {
           setVolume(parseInt(slider.value, 10), true);
         });
       });
+      initMusicElement();
       updateUI();
     },
 

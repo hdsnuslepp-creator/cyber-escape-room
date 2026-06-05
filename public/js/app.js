@@ -137,7 +137,7 @@
 
     AudioFX.resume();
     AudioFX.boot();
-    if (localStorage.getItem('cer_music') !== 'off') AudioFX.startMusic();
+    AudioFX.startMusic();
     GameState.reset(name);
     Achievements.reset();
     hintLevels = {};

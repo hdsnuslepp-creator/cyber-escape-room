@@ -79,6 +79,10 @@ body::before {
 }
 
 /* Header & HUD */
+.header[hidden] {
+  display: none !important;
+}
+
 .header {
   display: flex;
   flex-direction: column;
@@ -151,6 +155,24 @@ body::before {
 
 .sound-toggle--intro {
   margin-top: 0;
+}
+
+.audio-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.audio-bar .volume-control {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
 }
 
 .sound-controls {
@@ -468,7 +490,7 @@ body::before {
 }
 
 @media print {
-  .scanlines, .header, .footer, .btn { display: none !important; }
+  .scanlines, .header, .footer, .btn, .audio-bar { display: none !important; }
   body { background: white; color: black; }
   .certificate__border { border-color: #333; box-shadow: none; }
 }

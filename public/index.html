@@ -13,6 +13,16 @@
   <div class="scanlines" aria-hidden="true"></div>
 
   <div class="app">
+    <div class="audio-bar" id="audioBar">
+      <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
+      <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">🎵 Music On</button>
+      <label class="volume-control">
+        <span class="volume-control__label">Volume</span>
+        <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
+        <span class="volume-control__value" data-sound-volume-label>70%</span>
+      </label>
+    </div>
+
     <header class="header" id="gameHeader" hidden>
       <div class="header__top">
         <div class="header__brand">
@@ -23,15 +33,6 @@
           <div class="hud__item"><span class="hud__label">Time</span><span class="hud__value" id="hudTime">00:00</span></div>
           <div class="hud__item"><span class="hud__label">Score</span><span class="hud__value hud__value--score" id="hudScore">1000</span></div>
           <div class="hud__item"><span class="hud__label">Lives</span><span class="hud__value hud__value--lives" id="hudLives">❤❤❤</span></div>
-          <div class="sound-controls sound-controls--hud">
-            <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
-            <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">🎵 Music On</button>
-            <label class="volume-control">
-              <span class="volume-control__label">Vol</span>
-              <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
-              <span class="volume-control__value" data-sound-volume-label>70%</span>
-            </label>
-          </div>
         </div>
       </div>
       <div class="header__progress" id="progressBar" aria-label="Room progress"></div>
@@ -55,15 +56,6 @@
               <input type="text" id="studentName" class="input" placeholder="Student name..." maxlength="60" autocomplete="name">
             </div>
             <button class="btn btn--primary" id="btnStart">Begin Escape</button>
-            <div class="sound-controls sound-controls--intro">
-              <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">🔊 Sound On</button>
-            <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">🎵 Music On</button>
-              <label class="volume-control">
-                <span class="volume-control__label">Volume</span>
-                <input type="range" class="volume-slider" data-sound-volume min="0" max="100" value="70" aria-label="Volume">
-                <span class="volume-control__value" data-sound-volume-label>70%</span>
-              </label>
-            </div>
             <div class="leaderboard-panel">
               <h3>🏆 Leaderboard</h3>
               <div id="introLeaderboard"></div>
