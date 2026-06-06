@@ -417,10 +417,7 @@ const HijackSystem = (() => {
     if (fb) fb.hidden = true;
     pauseMouseHijack();
     modal.hidden = false;
-    if (typeof ReadAloud !== 'undefined') {
-      ReadAloud.stop();
-      ReadAloud.announceVerify(scenario.verifyQuestion, scenario.options.map((o) => o.text));
-    }
+    if (typeof ReadAloud !== 'undefined') ReadAloud.stop();
   }
 
   function hideVerifyModal() {

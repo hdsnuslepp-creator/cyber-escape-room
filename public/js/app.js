@@ -171,8 +171,7 @@
         ProfileSave.saveSettings({ dyslexiaMode: dysEl.checked });
         ReadAloud.warmUpSpeech();
         syncReadAloudUi();
-        if (dysEl.checked) repeatReadAloud();
-        else ReadAloud.stop();
+        if (!dysEl.checked) ReadAloud.stop();
       });
     }
     buildProgressBar();
@@ -212,27 +211,17 @@
     if (briefRead) briefRead.hidden = !on || !briefOpen;
   }
 
-  function scheduleRoomReadAloud(roomId) {
-    if (!ReadAloud.isEnabled() || !roomId) return;
-    if (!ReadAloud.shouldAutoRead()) {
-      ReadAloud.hintTapToRead();
-      return;
-    }
-    const target = roomId;
-    setTimeout(() => {
-      if (currentScreen === target && GameState.ROOMS.includes(target)) {
-        ReadAloud.announceRoom(target);
-      }
-    }, 900);
-  }
-
-  function readAloudAfterGesture(fn) {
-    if (!ReadAloud.isEnabled() || ReadAloud.shouldAutoRead()) return;
-    fn();
-  }
-
   function repeatReadAloud() {
     if (!ReadAloud.isEnabled()) return;
+
+    const hijackModal = document.getElementById('hijackVerifyModal');
+    if (hijackModal && !hijackModal.hidden) {
+      const q = document.getElementById('hijackVerifyQuestion')?.textContent || '';
+      const opts = [...document.querySelectorAll('.hijack-verify-option')].map((b) => b.textContent.trim());
+      ReadAloud.announceVerify(q, opts);
+      return;
+    }
+
     const briefModal = document.getElementById('missionBriefModal');
     if (briefModal && !briefModal.hidden && pendingBriefRoomId) {
       const meta = Campaign.getRoom(pendingBriefRoomId);
@@ -428,10 +417,8 @@
     if (startChapter > 1) {
       skipProgressToChapter(startChapter);
       showChapterIntro(startChapter);
-      readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(startChapter)));
     } else {
       showChapterIntro(1);
-      readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(1)));
     }
     persistSave();
   }
@@ -487,7 +474,6 @@
     }, elapsed);
     updateHud();
     showChapterIntro(pendingChapterId);
-    readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId)));
   }
 
   function getStartChapterFromUrl() {
@@ -575,7 +561,6 @@
       const nextChapter = pendingChapterId + 1;
       if (nextChapter <= Campaign.CHAPTERS.length) {
         showChapterIntro(nextChapter);
-        readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(nextChapter)));
       }
       return;
     }
@@ -594,11 +579,6 @@
     document.getElementById('missionBriefModal').hidden = false;
     syncReadAloudUi();
     ReadAloud.stop();
-    ReadAloud.announceBrief(
-      meta.title,
-      meta.story || meta.goal || '',
-      document.getElementById('briefObjective').textContent
-    );
   }
 
   function confirmMissionBrief() {
@@ -610,7 +590,6 @@
     if (GameState.getState().completedRooms.includes(roomId)) return;
     refreshRoomChrome(roomId);
     showScreen(roomId);
-    readAloudAfterGesture(() => ReadAloud.announceRoom(roomId));
   }
 
   function retryFailedChapter() {
@@ -747,24 +726,6 @@
     syncReadAloudUi();
     document.body.classList.toggle('fail-screen-active', screenId === 'gameover');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    if (screenId === 'chapter') {
-      if (ReadAloud.isEnabled() && ReadAloud.shouldAutoRead()) {
-        setTimeout(() => {
-          if (currentScreen === 'chapter') {
-            ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId));
-          }
-        }, 400);
-      } else if (ReadAloud.isEnabled()) {
-        ReadAloud.hintTapToRead('Tap READ to hear the chapter intro.');
-      }
-    } else if (screenId === 'quiz') {
-      if (ReadAloud.isEnabled() && !ReadAloud.shouldAutoRead()) {
-        ReadAloud.hintTapToRead('Tap READ to hear this round.');
-      }
-    } else if (GameState.ROOMS.includes(screenId)) {
-      scheduleRoomReadAloud(screenId);
-    }
   }
 
   function getProgressIndex() {
@@ -1977,14 +1938,6 @@
 
     renderQuizProgress();
     startQuizTimer();
-
-    if (ReadAloud.isEnabled() && ReadAloud.shouldAutoRead()) {
-      setTimeout(() => {
-        if (currentScreen === 'quiz' && quizCurrentIndex === quizData.indexOf(q)) {
-          ReadAloud.announceQuiz([q]);
-        }
-      }, 350);
-    }
   }
 
   function showQuizStreak() {

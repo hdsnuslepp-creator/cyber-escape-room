@@ -25,8 +25,9 @@ const ReadAloud = (() => {
     return window.matchMedia?.('(max-width: 640px)')?.matches ?? false;
   }
 
+  /** Read-aloud is manual only — player taps READ. */
   function shouldAutoRead() {
-    return !isIOS();
+    return false;
   }
 
   function isEnabled() {
