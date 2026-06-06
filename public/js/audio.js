@@ -412,6 +412,11 @@ const AudioFX = (() => {
       setTimeout(() => tone(165, 0.25, 'sawtooth', 0.08), 120);
       noiseBurst(0.08, 0.04);
     },
+    alarm: () => {
+      tone(880, 0.08, 'square', 0.07);
+      setTimeout(() => tone(660, 0.08, 'square', 0.07), 100);
+      setTimeout(() => tone(880, 0.1, 'square', 0.06), 220);
+    },
     lifeLost: () => {
       tone(311, 0.2, 'sawtooth', 0.1);
       setTimeout(() => tone(196, 0.35, 'sawtooth', 0.09), 150);

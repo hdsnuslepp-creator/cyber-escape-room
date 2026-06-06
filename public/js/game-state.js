@@ -30,6 +30,7 @@ const GameState = (() => {
     gameOver: false,
     quizScore: null,
     timeBonus: 0,
+    hijacksCleared: 0,
   };
 
   ROOMS.forEach((r) => {
@@ -111,6 +112,7 @@ const GameState = (() => {
       state.gameOver = false;
       state.quizScore = null;
       state.timeBonus = 0;
+      state.hijacksCleared = 0;
       ROOMS.forEach((r) => {
         state.roomMistakes[r] = 0;
         state.roomHints[r] = 0;
@@ -150,6 +152,14 @@ const GameState = (() => {
       state.hintsUsed.push({ room: roomId, hint: hintText, at: state.elapsedSeconds });
     },
 
+    recordHijackCleared() {
+      state.hijacksCleared += 1;
+      state.score += 15;
+      if (state.hijacksCleared >= 5 && typeof Achievements !== 'undefined') {
+        Achievements.unlock('hijack_hunter');
+      }
+    },
+
     completeRoom(roomId) {
       const alreadyDone = state.completedRooms.includes(roomId);
       if (!alreadyDone) {
@@ -185,6 +195,7 @@ const GameState = (() => {
           times: { ...state.roomTimes },
         },
         quizScore: state.quizScore,
+        hijacksCleared: state.hijacksCleared,
         achievements: Achievements.getUnlockedList().map((a) => a.id),
       };
     },

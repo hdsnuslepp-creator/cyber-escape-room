@@ -109,12 +109,14 @@ const HijackSystem = (() => {
   }
 
   function updateHudBadge(show) {
+    const wrap = document.getElementById('hudHijackWrap');
     const el = document.getElementById('hudHijack');
+    if (wrap) wrap.hidden = !show;
     if (!el) return;
-    el.hidden = !show;
-    el.textContent = verified ? 'HIJACK: CLEARED ✓' : 'HIJACK: ?';
-    el.classList.toggle('hud__value--hijack', show && !verified);
-    el.classList.toggle('hud__value--hijack-ok', show && verified);
+    if (!show) return;
+    el.textContent = verified ? 'CLEARED ✓' : 'VERIFY ?';
+    el.classList.toggle('hud__value--hijack', !verified);
+    el.classList.toggle('hud__value--hijack-ok', verified);
   }
 
   function showFakeTutor(msg) {
@@ -230,7 +232,7 @@ const HijackSystem = (() => {
       clearFakeTutor();
       restoreRoomTag();
       updateHudBadge(true);
-      GameState.recordHijackCleared?.();
+      GameState.recordHijackCleared();
       setTimeout(hideVerifyModal, 900);
     } else {
       if (typeof AudioFX !== 'undefined') AudioFX.error();

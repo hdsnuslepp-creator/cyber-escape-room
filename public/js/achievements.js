@@ -18,6 +18,7 @@ const Achievements = (() => {
     { id: 'credential_lockdown', icon: '🔒', title: 'Credential Lockdown', desc: 'Defeat the Chapter 2 boss before the timer expires.' },
     { id: 'stego_hunter', icon: '🖼️', title: 'Stego Hunter', desc: 'Extract a hidden payload from the steganography lab.' },
     { id: 'backup_hero', icon: '💾', title: 'Backup Hero', desc: 'Select the correct clean backup before the final boss.' },
+    { id: 'hijack_hunter', icon: '🛡️', title: 'Hijack Hunter', desc: 'Correctly double-check 5 CHIMERA UI hijacks.' },
     { id: 'no_hints', icon: '💡', title: 'No Help Needed', desc: 'Complete the campaign without using any hints.' },
     { id: 'perfect_quiz', icon: '📝', title: 'Quiz Master', desc: 'Score 5/5 on the final debrief quiz.' },
     { id: 'flawless', icon: '✨', title: 'Flawless Run', desc: 'Complete with zero mistakes.' },

@@ -150,6 +150,9 @@
     bind(document.getElementById('btn-engine-hint'), 'click', () => {
       if (RoomEngine.isEngineRoom(currentScreen)) useHint(currentScreen);
     });
+    HijackSystem.bindVerifySubmit((ctx) => {
+      if (GameState.ROOMS.includes(currentScreen)) handleMistake(currentScreen, ctx);
+    });
     buildProgressBar();
     bindGlobalEvents();
     initRooms();
@@ -283,6 +286,7 @@
     stopBossTimer();
     stopCh1BossTimer();
     stopCh2BossTimer();
+    HijackSystem.clear();
     completingRoom = false;
     if (campaignAdvanceTimer) {
       clearTimeout(campaignAdvanceTimer);
@@ -331,6 +335,9 @@
       const suffix = done ? ' ✓' : locked ? ' 🔒' : '';
       return `<div class="${cls}">${escapeHtml(label)}${suffix}</div>`;
     }).join('');
+
+    const hijackWarn = document.getElementById('chapterHijackWarn');
+    if (hijackWarn) hijackWarn.hidden = chapterId < HijackSystem.MIN_CHAPTER;
 
     showScreen('chapter');
   }
@@ -381,6 +388,13 @@
     return RoomEngine.isEngineRoom(roomId) ? 'tutor-engine' : 'tutor-' + roomId;
   }
 
+  function blockIfHijacked(roomId) {
+    if (HijackSystem.canSubmit()) return false;
+    showFeedback(feedbackElId(roomId), HijackSystem.blockMessage(), 'error');
+    AudioFX.hint();
+    return true;
+  }
+
   function mountEngineRoom(roomId) {
     RoomEngine.mount(roomId, {
       onComplete: () => completeRoom(roomId),
@@ -397,6 +411,9 @@
     }
     if (currentScreen === 'ch2_boss' && screenId !== 'ch2_boss') {
       stopCh2BossTimer();
+    }
+    if (!GameState.ROOMS.includes(screenId)) {
+      HijackSystem.clear();
     }
     const wasInGame = currentScreen !== 'intro' && currentScreen !== 'gameover';
     const engineActive = RoomEngine.isEngineRoom(screenId);
@@ -426,6 +443,11 @@
         else if (screenId === 'ch2_boss') initCh2BossRoom();
         else reinitRoomOnEnter(screenId);
       }
+      setTimeout(() => {
+        if (currentScreen === screenId && GameState.ROOMS.includes(screenId)) {
+          HijackSystem.onRoomEnter(screenId);
+        }
+      }, 480);
     }
     updateProgress();
     updateHud();
@@ -551,6 +573,7 @@
   }
 
   async function completeRoom(roomId) {
+    if (blockIfHijacked(roomId)) return;
     if (completingRoom || GameState.getState().completedRooms.includes(roomId)) return;
     completingRoom = true;
     const submitBtn = document.getElementById('btn-' + roomId);
@@ -641,6 +664,7 @@
   }
 
   async function submitPhishing() {
+    if (blockIfHijacked('phishing')) return;
     AudioFX.submit();
     if (foundFlags.size >= REQUIRED_PHISHING_FLAGS) {
       await completeRoom('phishing');
@@ -696,6 +720,7 @@
   }
 
   async function submitAttachment() {
+    if (blockIfHijacked('attachment')) return;
     AudioFX.submit();
     if (attachmentFlags.size >= REQUIRED_ATTACHMENT_FLAGS) {
       await completeRoom('attachment');
@@ -719,6 +744,7 @@
   }
 
   async function submitFakeLogin() {
+    if (blockIfHijacked('fake_login')) return;
     AudioFX.submit();
     const chosen = FAKE_LOGIN_OPTIONS.find((o) => o.id === selectedFakeLogin);
     if (!chosen) return;
@@ -956,6 +982,7 @@
   }
 
   async function submitSteganography() {
+    if (blockIfHijacked('steganography')) return;
     AudioFX.submit();
     if (stegoFound) {
       await completeRoom('steganography');
@@ -991,6 +1018,7 @@
   }
 
   async function submitDbForensics() {
+    if (blockIfHijacked('db_forensics')) return;
     AudioFX.submit();
     const chosen = DB_FORENSICS_OPTIONS.find((o) => o.id === selectedDbForensics);
     if (!chosen) return;
@@ -1007,6 +1035,7 @@
   }
 
   async function submitSiem() {
+    if (blockIfHijacked('siem')) return;
     AudioFX.submit();
     const chosen = SIEM_OPTIONS.find((o) => o.id === selectedSiem);
     if (!chosen) return;
@@ -1023,6 +1052,7 @@
   }
 
   async function submitInsider() {
+    if (blockIfHijacked('insider')) return;
     AudioFX.submit();
     const chosen = INSIDER_OPTIONS.find((o) => o.id === selectedInsider);
     if (!chosen) return;
@@ -1039,6 +1069,7 @@
   }
 
   async function submitBackup() {
+    if (blockIfHijacked('backup')) return;
     AudioFX.submit();
     const chosen = BACKUP_OPTIONS.find((o) => o.id === selectedBackup);
     if (!chosen) return;
@@ -1076,6 +1107,7 @@
   }
 
   async function submitPassword() {
+    if (blockIfHijacked('password')) return;
     AudioFX.submit();
     const chosen = PASSWORDS.find((p) => p.id === selectedPassword);
     if (!chosen) return;
@@ -1088,6 +1120,7 @@
 
   // --- Cipher ---
   async function submitCipher() {
+    if (blockIfHijacked('cipher')) return;
     AudioFX.submit();
     const val = document.getElementById('cipherAnswer').value.trim().toUpperCase().replace(/\s+/g, ' ');
     if (!val) {
@@ -1127,6 +1160,7 @@
   }
 
   async function submitSql() {
+    if (blockIfHijacked('sql')) return;
     AudioFX.submit();
     const chosen = SQL_OPTIONS.find((o) => o.id === selectedSql);
     if (!chosen) return;
@@ -1169,6 +1203,7 @@
   }
 
   async function submitLogs() {
+    if (blockIfHijacked('logs')) return;
     AudioFX.submit();
     if (!selectedIp) return;
     if (selectedIp === ATTACK_IP) {
@@ -1204,6 +1239,7 @@
   }
 
   async function submitSocial() {
+    if (blockIfHijacked('social')) return;
     AudioFX.submit();
     const chosen = SOCIAL_OPTIONS.find((o) => o.id === selectedSocial);
     if (!chosen) return;
@@ -1244,6 +1280,7 @@
   }
 
   async function submitMfa() {
+    if (blockIfHijacked('mfa')) return;
     AudioFX.submit();
     const chosen = MFA_OPTIONS.find((o) => o.id === selectedMfa);
     if (!chosen) return;

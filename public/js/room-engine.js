@@ -109,6 +109,16 @@ const RoomEngine = (() => {
 
   function submit() {
     if (!activeRoomId) return;
+    if (typeof HijackSystem !== 'undefined' && !HijackSystem.canSubmit()) {
+      const fb = document.getElementById('feedback-engine');
+      if (fb) {
+        fb.hidden = false;
+        fb.textContent = HijackSystem.blockMessage();
+        fb.className = 'feedback feedback--error';
+      }
+      if (typeof AudioFX !== 'undefined') AudioFX.hint();
+      return;
+    }
     const def = EngineRooms.get(activeRoomId);
     const chosen = def?.options?.find((o) => o.id === selectedOption);
     if (!chosen) return;

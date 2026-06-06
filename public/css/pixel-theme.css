@@ -1645,3 +1645,153 @@ body::before {
   text-align: center;
   margin-top: 0.75rem;
 }
+
+/* CHIMERA UI hijack */
+body.hijack-glitch .scanlines {
+  animation: hijack-flicker 0.15s steps(2) infinite;
+}
+
+@keyframes hijack-flicker {
+  0%, 100% { opacity: 0.12; }
+  50% { opacity: 0.22; }
+}
+
+.hijack-active {
+  position: relative;
+}
+
+.hijack-injection {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--danger);
+  background: rgba(255, 51, 102, 0.12);
+  box-shadow: 0 0 16px rgba(255, 51, 102, 0.25);
+  font-family: var(--font-mono);
+}
+
+.hijack-injection--cleared {
+  border-color: var(--accent);
+  background: rgba(0, 255, 102, 0.08);
+  box-shadow: 0 0 12px rgba(0, 255, 102, 0.2);
+}
+
+.hijack-injection__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.hijack-injection__title {
+  color: #ff6688;
+  font-family: var(--font-display);
+  font-size: 0.45rem;
+  letter-spacing: 0.04em;
+}
+
+.hijack-injection__pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--danger);
+  animation: hijack-pulse 1s ease infinite;
+}
+
+@keyframes hijack-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.hijack-injection__text {
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.btn--hijack-verify {
+  border-color: var(--danger) !important;
+  color: #ff8899 !important;
+}
+
+.tutor-panel--hijacked {
+  border-color: var(--danger) !important;
+  background: rgba(255, 51, 102, 0.15) !important;
+  animation: hijack-shake 0.4s ease;
+}
+
+.tutor-panel--hijacked strong {
+  color: #ff6688;
+}
+
+@keyframes hijack-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.room-theme__tag--hijack {
+  color: var(--danger) !important;
+  animation: hijack-flicker 0.2s steps(2) infinite;
+}
+
+.hud__value--hijack {
+  color: var(--danger);
+  animation: hijack-pulse 1.2s ease infinite;
+}
+
+.hud__value--hijack-ok {
+  color: var(--accent);
+}
+
+.chapter-card__hijack-warn {
+  color: #ff8899;
+  border: 1px dashed rgba(255, 51, 102, 0.45);
+  padding: 0.5rem;
+}
+
+.hijack-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 1rem;
+}
+
+.hijack-modal[hidden] {
+  display: none !important;
+}
+
+.hijack-modal__panel {
+  width: min(520px, 100%);
+  background: var(--bg-elevated, #0a0e17);
+  border: 3px solid var(--danger);
+  padding: 1.25rem;
+  box-shadow: 0 0 32px rgba(255, 51, 102, 0.35);
+}
+
+.hijack-modal__label {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  color: var(--danger);
+  margin: 0 0 0.75rem;
+}
+
+.hijack-modal__question {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  margin: 0 0 1rem;
+  line-height: 1.45;
+}
+
+.hijack-modal__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.hijack-verify-feedback {
+  margin-top: 0.75rem;
+}
