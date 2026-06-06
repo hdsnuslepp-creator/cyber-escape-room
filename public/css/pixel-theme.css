@@ -2795,6 +2795,358 @@ body.hijack-cursor-active .audio-bar * {
   }
 }
 
+/* ── 8-bit game animations ── */
+.pixel-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  overflow: hidden;
+}
+
+.pixel-bg__bit {
+  position: absolute;
+  bottom: -8px;
+  width: 4px;
+  height: 4px;
+  image-rendering: pixelated;
+  animation: pixel-bit-float linear infinite;
+}
+
+@keyframes pixel-bit-float {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-110vh) translateX(24px); opacity: 0; }
+}
+
+.pixel-game-active .screen--enter {
+  animation: pixel-screen-in 0.42s steps(6) forwards;
+}
+
+@keyframes pixel-screen-in {
+  0% { opacity: 0; transform: translateY(12px); filter: brightness(1.4); }
+  100% { opacity: 1; transform: translateY(0); filter: brightness(1); }
+}
+
+.pixel-flash-clear {
+  animation: pixel-flash-green 0.35s steps(2);
+}
+
+.pixel-flash-damage {
+  animation: pixel-flash-red 0.28s steps(2);
+}
+
+@keyframes pixel-flash-green {
+  0% { box-shadow: inset 0 0 0 9999px rgba(0, 255, 136, 0.12); }
+  100% { box-shadow: inset 0 0 0 9999px transparent; }
+}
+
+@keyframes pixel-flash-red {
+  0% { box-shadow: inset 0 0 0 9999px rgba(255, 51, 85, 0.14); }
+  100% { box-shadow: inset 0 0 0 9999px transparent; }
+}
+
+.pixel-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.pixel-burst__bit {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 6px;
+  height: 6px;
+  animation: pixel-burst-fly 0.7s steps(4) forwards;
+}
+
+@keyframes pixel-burst-fly {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(0.3); }
+}
+
+/* CSS pixel agent sprite */
+.pixel-agent {
+  width: 8px;
+  height: 8px;
+  margin: 0 auto;
+  background: #00ff88;
+  image-rendering: pixelated;
+  box-shadow:
+    8px 0 0 #00ff88,
+    -8px 8px 0 #00cc66,
+    0 8px 0 #00cc66,
+    8px 8px 0 #1a1a2e,
+    0 16px 0 #1a1a2e,
+    -8px 16px 0 #1a1a2e,
+    8px 16px 0 #1a1a2e,
+    0 -8px 0 #00e5ff,
+    -8px 0 0 #00e5ff,
+    8px -8px 0 #00e5ff;
+}
+
+.pixel-agent--idle {
+  animation: pixel-agent-bob 1s steps(2) infinite;
+}
+
+.pixel-agent--walk {
+  animation: pixel-agent-walk 0.5s steps(2) infinite;
+}
+
+@keyframes pixel-agent-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes pixel-agent-walk {
+  0% { transform: translateX(-4px) translateY(0); }
+  50% { transform: translateX(4px) translateY(-2px); }
+  100% { transform: translateX(-4px) translateY(0); }
+}
+
+.intro-hero {
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  border: 2px dashed rgba(0, 255, 136, 0.25);
+  background: rgba(0, 20, 40, 0.45);
+}
+
+.intro-hero__tag {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: 0.45rem;
+  color: var(--accent);
+  letter-spacing: 0.15em;
+  animation: pixel-blink 1.2s steps(2) infinite;
+}
+
+@keyframes pixel-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.chapter-card__hero {
+  margin-bottom: 0.75rem;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chapter-card.screen--enter .pixel-agent--walk,
+.screen--active[data-screen="chapter"] .pixel-agent--walk {
+  animation: pixel-agent-walk 0.45s steps(2) infinite, pixel-agent-enter 0.5s steps(4);
+}
+
+@keyframes pixel-agent-enter {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Difficulty picker cards */
+.difficulty-select-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.difficulty-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.difficulty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.65rem 0.35rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: transform 0.1s steps(2), border-color 0.1s;
+  touch-action: manipulation;
+}
+
+.difficulty-card:hover,
+.difficulty-card:focus-visible {
+  border-color: var(--cyan);
+  outline: none;
+}
+
+.difficulty-card--active {
+  border-color: var(--accent);
+  background: rgba(0, 255, 102, 0.08);
+  box-shadow: 0 0 12px rgba(0, 255, 102, 0.2);
+  animation: difficulty-card-glow 2s steps(2) infinite;
+}
+
+.difficulty-card--pick {
+  transform: scale(0.94);
+}
+
+.difficulty-card[data-difficulty="hard"].difficulty-card--active {
+  border-color: #ff3355;
+  background: rgba(255, 51, 85, 0.08);
+  box-shadow: 0 0 12px rgba(255, 51, 85, 0.2);
+  animation: difficulty-card-glow-hard 2s steps(2) infinite;
+}
+
+.difficulty-card[data-difficulty="normal"].difficulty-card--active {
+  border-color: #00e5ff;
+  background: rgba(0, 229, 255, 0.06);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+}
+
+@keyframes difficulty-card-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 255, 102, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(0, 255, 102, 0.35); }
+}
+
+@keyframes difficulty-card-glow-hard {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 51, 85, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(255, 51, 85, 0.35); }
+}
+
+.difficulty-card__name {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.06em;
+}
+
+.difficulty-card__detail {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.difficulty-card__icon {
+  width: 28px;
+  height: 20px;
+  image-rendering: pixelated;
+}
+
+.difficulty-card__icon--easy {
+  background:
+    linear-gradient(#ff3355 0 0) 4px 8px / 4px 4px no-repeat,
+    linear-gradient(#ff3355 0 0) 12px 8px / 4px 4px no-repeat,
+    linear-gradient(#ff3355 0 0) 20px 8px / 4px 4px no-repeat,
+    linear-gradient(#ff3355 0 0) 8px 4px / 4px 4px no-repeat,
+    linear-gradient(#ff3355 0 0) 16px 4px / 4px 4px no-repeat;
+  animation: pixel-hearts-pulse 1.5s steps(2) infinite;
+}
+
+.difficulty-card__icon--normal {
+  background:
+    linear-gradient(#00e5ff 0 0) 6px 8px / 4px 4px no-repeat,
+    linear-gradient(#00e5ff 0 0) 14px 8px / 4px 4px no-repeat,
+    linear-gradient(#00e5ff 0 0) 10px 4px / 4px 4px no-repeat;
+}
+
+.difficulty-card__icon--hard {
+  background:
+    linear-gradient(#ff3355 0 0) 8px 6px / 4px 4px no-repeat,
+    linear-gradient(#ff3355 0 0) 16px 6px / 4px 4px no-repeat,
+    linear-gradient(#ffcc00 0 0) 4px 2px / 4px 4px no-repeat,
+    linear-gradient(#ffcc00 0 0) 20px 2px / 4px 4px no-repeat;
+  animation: pixel-skull-shake 2s steps(2) infinite;
+}
+
+@keyframes pixel-hearts-pulse {
+  50% { transform: scale(1.08); }
+}
+
+@keyframes pixel-skull-shake {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-2px); }
+}
+
+.hud__value--mode {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  letter-spacing: 0.05em;
+}
+
+.hud__value--life-lost {
+  animation: hud-life-lost 0.45s steps(3);
+}
+
+@keyframes hud-life-lost {
+  0%, 100% { transform: scale(1); color: inherit; }
+  33% { transform: scale(1.15); color: #ff3355; }
+  66% { transform: scale(0.92); }
+}
+
+.btn--pixel {
+  position: relative;
+  transition: transform 0.08s steps(2), box-shadow 0.08s steps(2);
+}
+
+.btn--pixel:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none !important;
+}
+
+.btn--primary.btn--pixel:not(:disabled):hover {
+  animation: btn-pixel-glow 1.2s steps(2) infinite;
+}
+
+@keyframes btn-pixel-glow {
+  50% { box-shadow: 0 0 14px rgba(0, 255, 102, 0.45); }
+}
+
+.progress-step--current {
+  animation: progress-dot-blink 1s steps(2) infinite;
+}
+
+@keyframes progress-dot-blink {
+  50% { opacity: 0.55; }
+}
+
+@media (max-width: 640px) {
+  .difficulty-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .difficulty-card {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 0.75rem;
+  }
+
+  .difficulty-card__detail {
+    text-align: left;
+    margin-left: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-bg__bit,
+  .pixel-agent,
+  .intro-hero__tag,
+  .difficulty-card--active,
+  .btn--primary.btn--pixel:hover {
+    animation: none !important;
+  }
+
+  .pixel-game-active .screen--enter {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
+
 /* Voice picker removed — hide if old cached HTML still loads on mobile */
 .read-aloud-voice-wrap,
 #readAloudVoiceWrap,

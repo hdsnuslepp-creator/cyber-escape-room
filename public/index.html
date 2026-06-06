@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyber Escape Room</title>
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/pixel-theme.css?v=7">
+  <link rel="stylesheet" href="css/pixel-theme.css?v=8">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -13,6 +13,7 @@
 <body class="crt-screen">
   <div class="scanlines" aria-hidden="true"></div>
   <div class="crt-vignette" aria-hidden="true"></div>
+  <div id="pixelBg" class="pixel-bg" aria-hidden="true"></div>
 
   <div class="app">
     <div class="audio-bar" id="audioBar">
@@ -35,6 +36,10 @@
           </div>
         </div>
         <div class="hud">
+          <div class="hud__item hud__item--mode" id="hudModeWrap" hidden>
+            <span class="hud__label">MODE</span>
+            <span class="hud__value hud__value--mode" id="hudDifficulty">NORMAL</span>
+          </div>
           <div class="hud__item"><span class="hud__label">TIME</span><span class="hud__value" id="hudTime">00:00</span></div>
           <div class="hud__item"><span class="hud__label">SCORE</span><span class="hud__value hud__value--score" id="hudScore">1000</span></div>
           <div class="hud__item"><span class="hud__label">LIVES</span><span class="hud__value hud__value--lives" id="hudLives">♥♥♥</span></div>
@@ -58,16 +63,37 @@
           <div class="terminal-window__body">
             <div id="bootSequence" class="boot-sequence" aria-live="polite"></div>
             <div id="introActions" class="intro-actions" hidden>
+              <div class="intro-hero">
+                <div class="pixel-agent pixel-agent--idle" aria-hidden="true"></div>
+                <p class="intro-hero__tag">AGENT READY</p>
+              </div>
               <div class="input-group input-group--pixel">
                 <label for="studentName">&gt; ENTER AGENT CODENAME</label>
                 <input type="text" id="studentName" class="input input--pixel" placeholder="agent_codename..." maxlength="60" autocomplete="name">
               </div>
               <div class="input-group input-group--pixel">
-                <label for="difficultySelect">&gt; DIFFICULTY</label>
-                <select id="difficultySelect" class="input input--pixel">
-                  <option value="easy">Easy — 5 lives, hints on</option>
-                  <option value="normal" selected>Normal — 3 lives</option>
-                  <option value="hard">Hard — 2 lives, no hints, tougher hijacks</option>
+                <label>&gt; DIFFICULTY</label>
+                <div class="difficulty-picker" id="difficultyPicker" role="group" aria-label="Choose difficulty">
+                  <button type="button" class="difficulty-card" data-difficulty="easy" aria-pressed="false">
+                    <span class="difficulty-card__icon difficulty-card__icon--easy" aria-hidden="true"></span>
+                    <span class="difficulty-card__name">EASY</span>
+                    <span class="difficulty-card__detail">5 lives · hints on</span>
+                  </button>
+                  <button type="button" class="difficulty-card difficulty-card--active" data-difficulty="normal" aria-pressed="true">
+                    <span class="difficulty-card__icon difficulty-card__icon--normal" aria-hidden="true"></span>
+                    <span class="difficulty-card__name">NORMAL</span>
+                    <span class="difficulty-card__detail">3 lives · standard</span>
+                  </button>
+                  <button type="button" class="difficulty-card" data-difficulty="hard" aria-pressed="false">
+                    <span class="difficulty-card__icon difficulty-card__icon--hard" aria-hidden="true"></span>
+                    <span class="difficulty-card__name">HARD</span>
+                    <span class="difficulty-card__detail">2 lives · no hints</span>
+                  </button>
+                </div>
+                <select id="difficultySelect" class="difficulty-select-hidden" aria-hidden="true" tabindex="-1">
+                  <option value="easy">Easy</option>
+                  <option value="normal" selected>Normal</option>
+                  <option value="hard">Hard</option>
                 </select>
               </div>
               <label class="intro-check">
@@ -92,6 +118,9 @@
       <!-- Chapter intro -->
       <section class="screen" data-screen="chapter">
         <div class="chapter-card">
+          <div class="chapter-card__hero">
+            <div class="pixel-agent pixel-agent--walk" aria-hidden="true"></div>
+          </div>
           <p class="chapter-card__label" id="chapterLabel">Chapter 1</p>
           <h2 class="chapter-card__title" id="chapterTitle">The Email</h2>
           <p class="chapter-card__tagline" id="chapterTagline">"Something got through."</p>
@@ -781,9 +810,10 @@ AND password = '" + password + "'"</code></pre>
   <script src="js/campaign.js"></script>
   <script src="js/game-state.js"></script>
   <script src="js/room-engine.js"></script>
+  <script src="js/pixel-fx.js"></script>
   <script src="js/read-aloud.js?v=6"></script>
   <script src="js/hijack-system.js"></script>
   <script src="js/tutor-client.js"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>

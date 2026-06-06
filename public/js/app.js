@@ -181,6 +181,7 @@
     runBootSequence();
     initIntroFromSave();
     ReadAloud.removeLegacyVoicePicker?.();
+    if (typeof PixelFX !== 'undefined') PixelFX.init();
   }
 
   function initIntroFromSave() {
@@ -192,6 +193,9 @@
     if (fxEl) fxEl.checked = !!settings.disableHijackEffects;
     if (dysEl) dysEl.checked = !!settings.dyslexiaMode;
     syncReadAloudUi();
+    if (typeof PixelFX !== 'undefined') {
+      PixelFX.syncDifficultyCards(settings.difficulty || 'normal');
+    }
 
     const saved = ProfileSave.loadCampaign();
     const resumeBtn = document.getElementById('btnResume');
@@ -407,6 +411,8 @@
 
     gameHeader.classList.remove('header--intro');
     progressBar.classList.remove('header__progress--idle');
+    const modeWrap = document.getElementById('hudModeWrap');
+    if (modeWrap) modeWrap.hidden = false;
     initRooms();
 
     GameState.startTimer((_, formatted) => {
@@ -465,6 +471,8 @@
 
     gameHeader.classList.remove('header--intro');
     progressBar.classList.remove('header__progress--idle');
+    const modeWrap = document.getElementById('hudModeWrap');
+    if (modeWrap) modeWrap.hidden = false;
     initRooms();
 
     pendingChapterId = saved.pendingChapterId || Campaign.getCurrentChapter(saved.completedRooms);
@@ -546,6 +554,7 @@
 
     persistSave();
     showScreen('chapter');
+    if (typeof PixelFX !== 'undefined') PixelFX.animateAgent(document.querySelector('[data-screen="chapter"]'));
   }
 
   function getNextIncompleteRoomInChapter(chapterId) {
@@ -777,6 +786,7 @@
     });
     const engineHint = document.getElementById('btn-engine-hint');
     if (engineHint) engineHint.hidden = !GameState.hintsAllowed();
+    if (typeof PixelFX !== 'undefined') PixelFX.updateDifficultyHud(s.difficulty);
   }
 
   function showFeedback(id, msg, type) {
@@ -805,6 +815,7 @@
     const dead = GameState.recordMistake(roomId);
     if (!dead && GameState.getState().lives < prevLives) {
       AudioFX.lifeLost();
+      if (typeof PixelFX !== 'undefined') PixelFX.lifeLost();
     }
     updateHud();
     const msg = await TutorClient.explain(roomId, context);
@@ -882,6 +893,7 @@
       }
 
       AudioFX.roomComplete(roomId);
+      if (typeof PixelFX !== 'undefined') PixelFX.missionClear();
       GameState.completeRoom(roomId);
       ProfileSave.syncTrainingRoomClear(roomId);
       persistSave();
