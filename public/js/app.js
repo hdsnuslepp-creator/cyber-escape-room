@@ -138,12 +138,18 @@
   let bossTasksComplete = new Set();
   let quizData = [];
   let quizAnswers = {};
+  let campaignAdvanceTimer = null;
+  let completingRoom = false;
 
   const gameHeader = document.getElementById('gameHeader');
   const progressBar = document.getElementById('progressBar');
 
   function init() {
     AudioFX.initUI();
+    RoomEngine.bindSubmit();
+    bind(document.getElementById('btn-engine-hint'), 'click', () => {
+      if (RoomEngine.isEngineRoom(currentScreen)) useHint(currentScreen);
+    });
     buildProgressBar();
     bindGlobalEvents();
     initRooms();
@@ -162,7 +168,7 @@
 
     const lines = [
       { html: '<span class="prompt">&gt;</span> LOADING SECURE_TRAINING_ROOM.EXE' },
-      { html: '<span class="prompt">&gt;</span> CAMPAIGN MODE: 9 CHAPTERS / 17 MISSIONS', cls: 'boot-line--ok' },
+      { html: '<span class="prompt">&gt;</span> CAMPAIGN MODE: 14 CHAPTERS / 56 MISSIONS', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> CHECKING FIREWALL... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> CONNECTING TO MAINFRAME... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> THREAT LEVEL: CRITICAL', cls: 'boot-line--warn' },
@@ -276,6 +282,17 @@
     selectedFakeLogin = null;
     stopBossTimer();
     stopCh1BossTimer();
+    stopCh2BossTimer();
+    completingRoom = false;
+    if (campaignAdvanceTimer) {
+      clearTimeout(campaignAdvanceTimer);
+      campaignAdvanceTimer = null;
+    }
+    stegoFound = false;
+    selectedDbForensics = null;
+    selectedSiem = null;
+    selectedInsider = null;
+    selectedBackup = null;
 
     gameHeader.classList.remove('header--intro');
     progressBar.classList.remove('header__progress--idle');
@@ -356,6 +373,21 @@
     }
   }
 
+  function feedbackElId(roomId) {
+    return RoomEngine.isEngineRoom(roomId) ? 'feedback-engine' : 'feedback-' + roomId;
+  }
+
+  function tutorElId(roomId) {
+    return RoomEngine.isEngineRoom(roomId) ? 'tutor-engine' : 'tutor-' + roomId;
+  }
+
+  function mountEngineRoom(roomId) {
+    RoomEngine.mount(roomId, {
+      onComplete: () => completeRoom(roomId),
+      onMistake: (ctx) => handleMistake(roomId, ctx),
+    });
+  }
+
   function showScreen(screenId, opts = {}) {
     if (currentScreen === 'ransomware' && screenId !== 'ransomware') {
       stopBossTimer();
@@ -367,9 +399,12 @@
       stopCh2BossTimer();
     }
     const wasInGame = currentScreen !== 'intro' && currentScreen !== 'gameover';
+    const engineActive = RoomEngine.isEngineRoom(screenId);
     currentScreen = screenId;
     document.querySelectorAll('.screen').forEach((el) => {
-      const active = el.dataset.screen === screenId;
+      const isEngineShell = el.dataset.screen === '_engine';
+      let active = el.dataset.screen === screenId;
+      if (engineActive) active = isEngineShell;
       el.classList.toggle('screen--active', active);
       if (active) {
         el.classList.remove('screen--enter');
@@ -381,12 +416,16 @@
       AudioFX.roomTransition();
     }
     if (GameState.ROOMS.includes(screenId)) {
-      refreshRoomChrome(screenId);
       GameState.enterRoom(screenId);
-      if (screenId === 'ransomware') initBossRoom();
-      if (screenId === 'ch1_boss') initCh1BossRoom();
-      if (screenId === 'ch2_boss') initCh2BossRoom();
-      if (screenId === 'steganography') initSteganography();
+      if (engineActive) {
+        mountEngineRoom(screenId);
+      } else {
+        refreshRoomChrome(screenId);
+        if (screenId === 'ransomware') initBossRoom();
+        else if (screenId === 'ch1_boss') initCh1BossRoom();
+        else if (screenId === 'ch2_boss') initCh2BossRoom();
+        else reinitRoomOnEnter(screenId);
+      }
     }
     updateProgress();
     updateHud();
@@ -443,7 +482,7 @@
   }
 
   function showTutor(roomId, msg) {
-    const el = document.getElementById('tutor-' + roomId);
+    const el = document.getElementById(tutorElId(roomId));
     if (!el) return;
     el.hidden = false;
     el.innerHTML = '<strong>🤖 AI Tutor:</strong> ' + escapeHtml(msg);
@@ -459,7 +498,7 @@
     updateHud();
     const msg = await TutorClient.explain(roomId, context);
     showTutor(roomId, msg);
-    showFeedback('feedback-' + roomId, msg, 'error');
+    showFeedback(feedbackElId(roomId), msg, 'error');
     if (dead) {
       GameState.stopTimer();
       AudioFX.gameOver();
@@ -472,26 +511,72 @@
     AudioFX.hint();
     const level = hintLevels[roomId] || 0;
     hintLevels[roomId] = level + 1;
-    const hint = await TutorClient.hint(roomId, level);
+    let hint;
+    if (RoomEngine.isEngineRoom(roomId)) {
+      hint = RoomEngine.getHintLevel(roomId, level);
+    } else {
+      hint = await TutorClient.hint(roomId, level);
+    }
     GameState.recordHint(roomId, hint);
     updateHud();
     showTutor(roomId, 'Hint: ' + hint);
   }
 
+  function reinitRoomOnEnter(roomId) {
+    const inits = {
+      phishing: initPhishing,
+      attachment: initAttachment,
+      fake_login: initFakeLogin,
+      password: initPassword,
+      cipher: initCipher,
+      steganography: initSteganography,
+      sql: initSql,
+      db_forensics: initDbForensics,
+      logs: initLogs,
+      siem: initSiem,
+      social: initSocial,
+      insider: initInsider,
+      mfa: initMfa,
+      backup: initBackup,
+    };
+    if (inits[roomId]) inits[roomId]();
+  }
+
+  function initCipher() {
+    const input = document.getElementById('cipherAnswer');
+    if (input) input.value = '';
+    hideFeedback('feedback-cipher');
+    const tutor = document.getElementById('tutor-cipher');
+    if (tutor) tutor.hidden = true;
+  }
+
   async function completeRoom(roomId) {
+    if (completingRoom || GameState.getState().completedRooms.includes(roomId)) return;
+    completingRoom = true;
+    const submitBtn = document.getElementById('btn-' + roomId);
+    if (submitBtn) submitBtn.disabled = true;
+    if (RoomEngine.isEngineRoom(roomId)) {
+      const eb = document.getElementById('btn-engine');
+      if (eb) eb.disabled = true;
+    }
+
     AudioFX.roomComplete(roomId);
     GameState.completeRoom(roomId);
     Achievements.checkAfterRoom(roomId);
-    const summary = await TutorClient.summary(roomId, GameState.getState().roomStats);
+    const stats = GameState.getResultsPayload().roomStats;
+    const summary = await TutorClient.summary(roomId, stats);
     showTutor(roomId, summary);
-    showFeedback('feedback-' + roomId, summary + ' Mission complete!', 'success');
+    showFeedback(feedbackElId(roomId), summary + ' Mission complete!', 'success');
 
+    completingRoom = false;
     await advanceCampaign(roomId);
   }
 
   async function advanceCampaign(fromRoomId) {
     const next = Campaign.getNextStep(fromRoomId);
-    setTimeout(async () => {
+    if (campaignAdvanceTimer) clearTimeout(campaignAdvanceTimer);
+    campaignAdvanceTimer = setTimeout(async () => {
+      campaignAdvanceTimer = null;
       if (next?.type === 'chapter') {
         showChapterIntro(next.chapterId);
       } else if (next?.type === 'quiz') {
@@ -602,7 +687,9 @@
         }
       }
     } else if (flag === 'title') {
-      showTutor('attachment', 'Urgency is suspicious, but focus on the macro warning and the fake download link.');
+      const msg = 'Urgency is suspicious, but focus on the macro warning and the fake download link.';
+      showTutor('attachment', msg);
+      showFeedback('feedback-attachment', msg, 'info');
     } else {
       handleMistake('attachment', 'wrong_click');
     }

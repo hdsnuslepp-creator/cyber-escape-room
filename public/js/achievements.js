@@ -13,7 +13,7 @@ const Achievements = (() => {
     { id: 'threat_hunter', icon: '🎯', title: 'Threat Hunter', desc: 'Complete Log Forensics in under 2 minutes.' },
     { id: 'human_firewall', icon: '🧠', title: 'Human Firewall', desc: 'Perfect score on Social Engineering.' },
     { id: 'zero_trust', icon: '📱', title: 'Zero Trust Agent', desc: 'Complete the MFA Lockdown mission.' },
-    { id: 'cyber_escape_champion', icon: '🏅', title: 'Cyber Escape Champion', desc: 'Complete the full playable campaign and stop the ransomware.' },
+    { id: 'cyber_escape_champion', icon: '🏅', title: 'Cyber Escape Champion', desc: 'Complete all 56 missions and stop Project Chimera.' },
     { id: 'chapter_one_clear', icon: '📧', title: 'Email Contained', desc: 'Defeat the Chapter 1 boss before the timer expires.' },
     { id: 'credential_lockdown', icon: '🔒', title: 'Credential Lockdown', desc: 'Defeat the Chapter 2 boss before the timer expires.' },
     { id: 'stego_hunter', icon: '🖼️', title: 'Stego Hunter', desc: 'Extract a hidden payload from the steganography lab.' },

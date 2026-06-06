@@ -215,6 +215,9 @@
     this.interactHint = null;
     this.nearDoor = false;
     this.doorOpen = inboxDone;
+    this.enteringPhishing = false;
+
+    resetCamera(this);
 
     buildCorridorMap(this);
 
@@ -298,7 +301,7 @@
       color: '#ff3366',
     }).setScrollFactor(0).setDepth(20);
 
-    this.promptText = this.add.text(GAME_W / 2, (HUB.roomY + HUB.roomRows) * TILE + 28, 'WASD / Arrows to move', {
+    this.promptText = this.add.text(GAME_W / 2, (HUB.roomY + HUB.roomRows) * TILE + 28, 'Find the KEY (bottom-right), then unlock the DOOR', {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#8899aa',
@@ -472,10 +475,14 @@
     }
 
     if (!this.doorOpen) {
-      this.cameras.main.fadeOut(350, 0, 0, 0);
-      this.time.delayedCall(380, () => {
-        this.scene.start('PhishingScene');
-      });
+      if (!this.hasKey) {
+        this.cameras.main.flash(100, 255, 51, 102);
+        this.flashPrompt('DOOR LOCKED — pick up the KEY (bottom-right) first', '#ff3366');
+        return;
+      }
+      if (this.enteringPhishing) return;
+      this.enteringPhishing = true;
+      switchScene(this, 'PhishingScene');
     } else {
       this.showDialogue('Inbox Room already cleared. More doors coming soon.');
     }
@@ -493,8 +500,13 @@
 
   HubScene.prototype.refreshPrompt = function () {
     if (this.isNearDoor() && !this.doorOpen) {
-      this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
-      this.promptText.setColor('#ffb000');
+      if (this.hasKey) {
+        this.promptText.setText('[ E ] Use KEY on DOOR — enter Inbox Room');
+        this.promptText.setColor('#ffb000');
+      } else {
+        this.promptText.setText('DOOR LOCKED — get the KEY (bottom-right) first');
+        this.promptText.setColor('#ff3366');
+      }
     } else if (this.isNearKey()) {
       this.promptText.setText('[ E ] or click KEY — pick up access key');
       this.promptText.setColor('#ffb000');
@@ -502,7 +514,7 @@
       this.promptText.setText('Key acquired — head to the DOOR (top-right)');
       this.promptText.setColor('#00ffcc');
     } else {
-      this.promptText.setText('Move anywhere — WASD / Arrows');
+      this.promptText.setText('Find the KEY (bottom-right), then unlock the DOOR');
       this.promptText.setColor('#8899aa');
     }
   };
@@ -554,8 +566,13 @@
     if (this.promptFlash) return;
 
     if (this.nearDoor && !this.doorOpen) {
-      this.promptText.setText('[ E ] or click DOOR — enter Inbox Room');
-      this.promptText.setColor('#ffb000');
+      if (this.hasKey) {
+        this.promptText.setText('[ E ] Use KEY on DOOR — enter Inbox Room');
+        this.promptText.setColor('#ffb000');
+      } else {
+        this.promptText.setText('DOOR LOCKED — get the KEY (bottom-right) first');
+        this.promptText.setColor('#ff3366');
+      }
       if (this.doorInteractZone) this.doorInteractZone.setFillStyle(0xffffff, 0.06);
     } else if (this.nearKey) {
       this.promptText.setText('[ E ] or click KEY — pick up access key');
@@ -578,12 +595,15 @@
   PhishingScene.prototype = Object.create(Phaser.Scene.prototype);
   PhishingScene.prototype.constructor = PhishingScene;
 
+  PhishingScene.prototype.init = function () {
+    resetCamera(this);
+  };
+
   PhishingScene.prototype.create = function () {
     this.foundFlags = new Set();
     this.requiredFlags = new Set(['sender', 'link', 'urgency']);
 
-    // Hub fadeOut leaves the camera black — reset before building UI
-    this.cameras.main.setAlpha(1);
+    resetCamera(this);
 
     drawScanlines(this);
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
@@ -617,7 +637,8 @@
       fontSize: '9px',
       disabled: true,
     });
-    this.completeBtn.setAlpha(0.45);
+    this.completeBtn.bg.setAlpha(0.45);
+    this.completeBtn.text.setAlpha(0.45);
 
     this.add.text(GAME_W / 2, 358, 'Click suspicious parts of the email', {
       fontFamily: 'VT323, monospace',
@@ -626,11 +647,8 @@
     }).setOrigin(0.5);
 
     makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => {
-      this.cameras.main.fadeOut(300, 0, 0, 0);
-      this.time.delayedCall(320, () => this.scene.start('HubScene'));
+      switchScene(this, 'HubScene');
     }, { fontSize: '8px', color: '#8899aa' });
-
-    this.cameras.main.fadeIn(400, 0, 0, 0);
   };
 
   PhishingScene.prototype.makeFlag = function (x, y, label, flagKey, bgColor) {
@@ -654,7 +672,8 @@
         txt.setColor('#004422');
         this.flagCounter.setText(`Red flags: ${this.foundFlags.size} / 3`);
         if (this.foundFlags.size >= 3) {
-          this.completeBtn.setAlpha(1);
+          this.completeBtn.bg.setAlpha(1);
+          this.completeBtn.text.setAlpha(1);
           this.completeBtn.disabled = false;
         }
       }
@@ -666,8 +685,7 @@
     this.registry.set('inboxComplete', true);
     this.registry.set('justUnlockedInbox', true);
     this.cameras.main.flash(150, 0, 255, 102);
-    this.cameras.main.fadeOut(450, 0, 0, 0);
-    this.time.delayedCall(480, () => this.scene.start('HubScene'));
+    switchScene(this, 'HubScene');
   };
 
   // ─── Chapter complete ───────────────────────────────────────────────────
@@ -857,6 +875,26 @@
       repeat: -1,
     });
     return { gfx: g, label };
+  }
+
+  function resetCamera(scene) {
+    const cam = scene.cameras.main;
+    if (!cam) return;
+    if (cam.fadeEffect) {
+      cam.fadeEffect.stop(true);
+      cam.fadeEffect.reset();
+    }
+    if (cam.flashEffect) {
+      cam.flashEffect.stop(true);
+    }
+    cam.setAlpha(1);
+  }
+
+  function switchScene(scene, key) {
+    scene.time.delayedCall(0, () => {
+      resetCamera(scene);
+      scene.scene.start(key);
+    });
   }
 
   function drawScanlines(scene) {

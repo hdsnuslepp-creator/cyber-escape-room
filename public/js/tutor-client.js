@@ -29,8 +29,8 @@ const TutorClient = (() => {
       'Avoid famous or common password examples.',
     ],
     cipher: [
-      'Shift each letter forward by 3 in the alphabet.',
-      'W becomes T, K becomes H when decoding.',
+      'This is a Caesar cipher — shift each letter back 3 in the alphabet.',
+      'W becomes T, R becomes O, S becomes P when decoding.',
       'The door code is a short English phrase.',
     ],
     sql: [
@@ -120,7 +120,7 @@ const TutorClient = (() => {
       default: 'Weak passwords are short, common, or follow predictable patterns attackers already try.',
     },
     cipher: {
-      default: 'Shift each encrypted letter forward by 3 to decode the door code.',
+      default: 'Shift each encrypted letter back by 3 to decode the door code.',
     },
     sql: {
       default: 'SQL injection works when user input becomes executable query code. Use parameterized queries.',
@@ -200,12 +200,20 @@ const TutorClient = (() => {
       const data = await apiPost('/ai/explain', { roomId, context });
       if (data?.message) return data.message;
       const room = LOCAL_EXPLAIN[roomId];
-      return room?.[context] || room?.default || 'Review the scenario and try again.';
+      if (room) return room[context] || room.default || 'Review the scenario and try again.';
+      if (typeof EngineRooms !== 'undefined' && EngineRooms.get(roomId)) {
+        return 'Review the scenario — rule out choices that violate security best practices.';
+      }
+      return 'Review the scenario and try again.';
     },
 
     async hint(roomId, level) {
       const data = await apiPost('/ai/hint', { roomId, level });
       if (data?.message) return data.message;
+      if (typeof EngineRooms !== 'undefined' && EngineRooms.HINTS?.[roomId]) {
+        const hints = EngineRooms.HINTS[roomId];
+        return hints[Math.min(level, hints.length - 1)];
+      }
       const hints = LOCAL_HINTS[roomId] || ['Think about what attackers exploit here.'];
       return hints[Math.min(level, hints.length - 1)];
     },

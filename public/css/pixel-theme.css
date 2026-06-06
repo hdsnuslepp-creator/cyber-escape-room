@@ -1281,6 +1281,7 @@ body::before {
   height: 6px;
 }
 
+.progress-step--complete,
 .progress-step--done {
   background: var(--accent);
   box-shadow: 0 0 6px var(--accent-glow);

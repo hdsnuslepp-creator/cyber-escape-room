@@ -151,11 +151,12 @@ const GameState = (() => {
     },
 
     completeRoom(roomId) {
-      if (!state.completedRooms.includes(roomId)) {
+      const alreadyDone = state.completedRooms.includes(roomId);
+      if (!alreadyDone) {
         state.completedRooms.push(roomId);
+        state.currentRoomIndex = Math.min(state.currentRoomIndex + 1, ROOMS.length);
       }
       state.roomTimes[roomId] = state.elapsedSeconds;
-      state.currentRoomIndex = Math.min(state.currentRoomIndex + 1, ROOMS.length);
     },
 
     addBonus(points) {
