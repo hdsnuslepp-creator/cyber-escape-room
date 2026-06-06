@@ -473,7 +473,9 @@
 
     if (!this.doorOpen) {
       this.cameras.main.fadeOut(350, 0, 0, 0);
-      this.time.delayedCall(380, () => this.scene.start('PhishingScene'));
+      this.time.delayedCall(380, () => {
+        this.scene.start('PhishingScene');
+      });
     } else {
       this.showDialogue('Inbox Room already cleared. More doors coming soon.');
     }
@@ -579,6 +581,9 @@
   PhishingScene.prototype.create = function () {
     this.foundFlags = new Set();
     this.requiredFlags = new Set(['sender', 'link', 'urgency']);
+
+    // Hub fadeOut leaves the camera black — reset before building UI
+    this.cameras.main.setAlpha(1);
 
     drawScanlines(this);
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
@@ -888,6 +893,10 @@
     text.on('pointerdown', click);
     bg.on('pointerover', () => bg.setFillStyle(0x003322, 0.9));
     bg.on('pointerout', () => bg.setFillStyle(0x000000, 0.7));
+    btn.setAlpha = (a) => {
+      bg.setAlpha(a);
+      text.setAlpha(a);
+    };
     return btn;
   }
 

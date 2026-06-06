@@ -586,10 +586,57 @@ body::before {
 }
 
 .room-theme--win98 .level-header h2,
-.room-theme--win98 .level-desc,
 .room-theme--win98 .level-badge,
 .room-theme--win98 .room-theme__tag {
   color: #000080;
+}
+
+.room-theme--win98 .level-desc {
+  color: #111 !important;
+  font-size: 1.1rem;
+  line-height: 1.55;
+}
+
+.room-theme--win98 .level-theme {
+  color: #000080 !important;
+  font-weight: bold;
+}
+
+.room-theme--win98 .act-banner,
+.room-theme--win98 .chapter-banner {
+  color: #000080 !important;
+  border-color: #000080 !important;
+  background: #dfdfdf !important;
+  font-size: 0.48rem;
+  box-shadow: none;
+}
+
+.room-theme--win98 .room-theme__tag {
+  background: #dfdfdf;
+  padding: 0.35rem 0.5rem;
+  border: 2px inset #808080;
+  display: inline-block;
+}
+
+.room-theme--win98 .level-header h2 {
+  font-size: 0.62rem;
+}
+
+.room-theme--win98 .btn.btn--hint,
+.room-theme--win98 .room-toolbar .btn--hint {
+  color: #000 !important;
+  background: #dfdfdf !important;
+  border: 2px outset #808080 !important;
+  font-size: 0.48rem;
+  box-shadow: none !important;
+}
+
+.room-theme--win98 .btn.btn--hint:hover,
+.room-theme--win98 .room-toolbar .btn--hint:hover {
+  background: #fff !important;
+  color: #000080 !important;
+  border-color: #000080 !important;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080 !important;
 }
 
 .room-theme--win98 .level-badge {
@@ -614,6 +661,8 @@ body::before {
 .room-theme--win98 .flag-counter {
   color: #000;
   font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
 }
 
 .room-theme--win98 .email-message,
@@ -639,8 +688,8 @@ body::before {
   display: block;
   margin: 0.75rem 0 1rem;
   padding: 0.75rem 1rem;
-  background: #ffffcc;
-  border: 2px inset #808080;
+  background: #fff;
+  border: 2px solid #cc0000;
   text-decoration: none;
   color: #000;
   cursor: pointer;
@@ -651,7 +700,7 @@ body::before {
   font-family: 'Tahoma', var(--font-mono);
   font-size: 1.1rem;
   font-weight: bold;
-  color: #0000ff;
+  color: #0000cc;
   text-decoration: underline;
   margin-bottom: 0.5rem;
 }
@@ -660,17 +709,17 @@ body::before {
   display: block;
   font-family: var(--font-mono);
   font-size: 0.95rem;
-  color: #000080;
+  color: #000;
   word-break: break-all;
-  background: #fff;
+  background: #f5f5f5;
   padding: 0.35rem 0.5rem;
-  border: 1px solid #999;
+  border: 1px solid #666;
 }
 
 .room-theme--win98 .email-verify-block:hover,
 .room-theme--win98 .email-verify-block:focus-visible {
-  background: #fff3a0;
-  box-shadow: 0 0 0 2px #ff3366;
+  background: #eef4ff;
+  box-shadow: 0 0 0 2px #cc0000;
 }
 
 .room-theme--win98 .email-attachment {
@@ -699,57 +748,28 @@ body::before {
   font-size: 0.9rem;
 }
 
+.room-theme--win98 .phishing-target--decoyable {
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.room-theme--win98 .phishing-target--decoy {
+  background: #e8e8e8 !important;
+  box-shadow: 0 0 0 2px #666 !important;
+  color: #333 !important;
+  opacity: 0.95;
+}
+
+.room-theme--win98 .feedback.feedback--info {
+  color: #000080;
+  background: #eef4ff;
+  border: 1px solid #000080;
+}
+
 .room-theme--win98 .phishing-target--found {
-  background: #ffe0e6 !important;
-  box-shadow: 0 0 0 2px #ff3366 !important;
+  background: #ffd6dd !important;
+  box-shadow: 0 0 0 2px #cc0000 !important;
   color: #000 !important;
-}
-
-/* Win98 — readable text on grey (fix orange/cyan on light bg) */
-.room-theme--win98 .act-banner,
-.room-theme--win98 .chapter-banner {
-  color: #000080;
-  border-color: #000080;
-  background: #ececec;
-  font-size: 0.48rem;
-}
-
-.room-theme--win98 .level-header h2 {
-  font-size: 0.62rem;
-  color: #000080;
-}
-
-.room-theme--win98 .level-desc {
-  color: #111;
-  font-size: 1.1rem;
-  line-height: 1.55;
-}
-
-.room-theme--win98 .level-theme {
-  color: #000080;
-}
-
-.room-theme--win98 .room-theme__tag {
-  color: #000080;
-  background: #dfdfdf;
-  padding: 0.35rem 0.5rem;
-  border: 2px inset #808080;
-  display: inline-block;
-}
-
-.room-theme--win98 .btn--hint {
-  color: #000;
-  background: #dfdfdf;
-  border: 2px outset #808080;
-  font-size: 0.48rem;
-  box-shadow: none;
-}
-
-.room-theme--win98 .btn--hint:hover {
-  background: #fff;
-  color: #000080;
-  border-color: #000080;
-  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #808080;
 }
 
 .room-theme--win98 .phishing-target {
@@ -760,21 +780,16 @@ body::before {
 .room-theme--win98 .email-message__row .phishing-target {
   display: inline-block;
   padding: 0.2rem 0.45rem;
-  border: 1px solid #999;
+  border: 1px solid #666;
   max-width: 100%;
   word-break: break-word;
 }
 
 .room-theme--win98 .phishing-target:hover,
 .room-theme--win98 .phishing-target:focus-visible {
-  background: #fff8dc !important;
+  background: #eef4ff !important;
   box-shadow: 0 0 0 2px #cc0000 !important;
   color: #000 !important;
-}
-
-.room-theme--win98 .flag-counter {
-  font-size: 1.05rem;
-  font-weight: 600;
 }
 
 .room-theme--win98 .flag-counter strong {
@@ -782,13 +797,25 @@ body::before {
 }
 
 .room-theme--win98 .tutor-panel {
-  color: #111;
-  background: #ffffcc;
-  border: 2px inset #808080;
+  color: #111 !important;
+  background: #f5f5f5 !important;
+  border: 2px inset #808080 !important;
+}
+
+.room-theme--win98 .tutor-panel strong {
+  color: #000080;
 }
 
 .room-theme--win98 .feedback {
   color: #111;
+  background: #f5f5f5;
+  border: 1px solid #666;
+}
+
+.room-theme--win98 .pdf-sandbox__macro {
+  background: #fde8e8 !important;
+  border: 1px solid #cc0000 !important;
+  color: #660000 !important;
 }
 
 .room-theme--win98 .pdf-sandbox .phishing-target {
@@ -797,6 +824,7 @@ body::before {
 
 .room-theme--win98 .pdf-sandbox .phishing-target:hover,
 .room-theme--win98 .pdf-sandbox .phishing-target:focus-visible {
+  background: #eef4ff !important;
   color: #000 !important;
 }
 
@@ -1020,6 +1048,226 @@ body::before {
 
 .room-theme--mainframe .room-theme__tag {
   color: var(--accent);
+}
+
+/* Steganography lab */
+.room-theme--stego {
+  background: linear-gradient(180deg, #0a0f18 0%, #121a28 100%);
+  border-color: #3d5a80;
+}
+
+.room-theme--stego .stego-prompt {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.stego-scanner {
+  display: grid;
+  grid-template-columns: 1fr minmax(180px, 240px);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .stego-scanner {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stego-image {
+  position: relative;
+  min-height: 200px;
+  background: linear-gradient(135deg, #4a90c2 0%, #87ceeb 40%, #f4d03f 70%, #2ecc71 100%);
+  border: 3px solid var(--border);
+  image-rendering: pixelated;
+}
+
+.stego-image__label {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 2px 6px;
+}
+
+.stego-hotspot {
+  position: absolute;
+  cursor: crosshair;
+  border: 2px dashed transparent;
+  transition: border-color 0.15s;
+}
+
+.stego-hotspot:hover,
+.stego-hotspot:focus-visible {
+  border-color: rgba(255, 255, 255, 0.6);
+  outline: none;
+}
+
+.stego-hotspot--sky {
+  top: 10%;
+  left: 15%;
+  width: 45%;
+  height: 35%;
+}
+
+.stego-hotspot--center {
+  top: 40%;
+  left: 35%;
+  width: 30%;
+  height: 30%;
+}
+
+.stego-hotspot--corner {
+  bottom: 0;
+  right: 0;
+  width: 18%;
+  height: 18%;
+}
+
+.stego-hotspot--found {
+  border-color: var(--accent);
+  background: rgba(0, 255, 102, 0.15);
+}
+
+.stego-readout {
+  background: #0d1117;
+  border: 2px solid var(--border);
+  padding: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.stego-readout__status {
+  color: var(--cyan);
+  margin: 0;
+}
+
+.stego-readout__data {
+  color: var(--accent);
+  margin: 0.5rem 0 0;
+  word-break: break-word;
+}
+
+/* DB Forensics */
+.room-theme--forensics {
+  background: linear-gradient(180deg, #0f1419 0%, #1a2332 100%);
+}
+
+.room-theme--forensics .forensics-table .row--highlight td {
+  color: var(--danger);
+  font-weight: bold;
+}
+
+/* SIEM dashboard */
+.room-theme--siem {
+  background: linear-gradient(180deg, #0a0e14 0%, #151b24 100%);
+}
+
+.siem-alerts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.siem-alert {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.5rem 0.65rem;
+  border: 2px solid var(--border);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.siem-alert--warn {
+  border-color: #c9a227;
+  color: #f0d878;
+}
+
+.siem-alert--crit {
+  border-color: var(--danger);
+  color: #ff8888;
+}
+
+.siem-alert--info {
+  border-color: #555;
+  color: var(--text-muted);
+}
+
+/* Insider threat */
+.room-theme--insider {
+  background: linear-gradient(180deg, #141018 0%, #1e1828 100%);
+}
+
+.insider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.insider-card {
+  border: 2px solid var(--border);
+  padding: 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.insider-card strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--cyan);
+}
+
+.insider-card--suspect {
+  border-color: rgba(255, 100, 100, 0.4);
+}
+
+/* Backup vault */
+.room-theme--backup {
+  background: linear-gradient(180deg, #0a1210 0%, #142018 100%);
+}
+
+.backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.backup-entry {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.65rem;
+  border: 2px solid var(--border);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.backup-entry code {
+  color: var(--cyan);
+}
+
+.backup-entry--good code {
+  color: var(--accent);
+}
+
+.backup-entry--bad {
+  border-color: rgba(255, 80, 80, 0.45);
+  color: #ff9999;
+}
+
+.feedback.feedback--info {
+  background: rgba(0, 120, 180, 0.15);
+  border-color: var(--cyan);
+  color: var(--text);
 }
 
 /* Feedback & progress */
@@ -1269,10 +1517,10 @@ body::before {
 }
 
 .pdf-sandbox__macro {
-  background: #fff3cd;
-  border: 1px solid #856404;
+  background: #fde8e8;
+  border: 1px solid #cc0000;
   padding: 0.5rem;
-  color: #856404;
+  color: #660000;
 }
 
 .pdf-sandbox__link {

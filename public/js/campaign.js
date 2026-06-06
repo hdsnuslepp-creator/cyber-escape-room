@@ -14,7 +14,7 @@ const Campaign = (() => {
       id: 2,
       title: 'The Breach',
       tagline: 'The attacker is inside.',
-      boss: { id: 'ch2_boss', title: 'Lock the Attacker Out', locked: true },
+      boss: { id: 'ch2_boss', title: 'Lock the Attacker Out' },
     },
     {
       id: 3,
@@ -92,13 +92,21 @@ const Campaign = (() => {
       goal: 'Deploy MFA', story: 'Roll out multi-factor authentication before the attacker reuses stolen passwords.',
       tag: '[ SYSTEM: MFA CONSOLE ]', playable: true,
     },
-    ch2_boss: { chapter: 2, num: 0, title: 'Lock the Attacker Out', locked: true, playable: false, isBoss: true },
+    ch2_boss: {
+      chapter: 2, num: 0, title: 'Lock the Attacker Out', theme: 'Credential Lockdown',
+      goal: 'Lock the attacker out', story: 'Enforce MFA and rotate compromised credentials before the attacker pivots.',
+      tag: '[ BOSS: CREDENTIAL LOCKDOWN ]', playable: true, isBoss: true,
+    },
     cipher: {
       chapter: 3, num: 7, title: 'Cipher Lab', theme: 'Encrypted Comms',
       goal: 'Decode attacker messages', story: 'Intercept encrypted commands on the wire. Shift each letter back by 3.',
       tag: '[ SYSTEM: MILITARY CONSOLE ]', playable: true,
     },
-    steganography: { chapter: 3, num: 8, title: 'Steganography', locked: true, playable: false },
+    steganography: {
+      chapter: 3, num: 8, title: 'Steganography', theme: 'Hidden Data',
+      goal: 'Find hidden data inside images', story: 'Attackers hid commands inside an innocent-looking file. Scan the image for concealed data.',
+      tag: '[ SYSTEM: STEGANO LAB ]', playable: true,
+    },
     dead_drop: { chapter: 3, num: 9, title: 'Dead Drop Server', locked: true, playable: false },
     ch3_boss: { chapter: 3, num: 0, title: 'Reveal Attacker Plans', locked: true, playable: false, isBoss: true },
     sql: {
@@ -106,7 +114,11 @@ const Campaign = (() => {
       goal: 'Patch vulnerable queries', story: 'The login form is vulnerable. Apply the fix before data is exfiltrated.',
       tag: '[ SYSTEM: SERVER RACK ]', playable: true,
     },
-    db_forensics: { chapter: 4, num: 11, title: 'Database Forensics', locked: true, playable: false },
+    db_forensics: {
+      chapter: 4, num: 11, title: 'Database Forensics', theme: 'Data Exfiltration',
+      goal: 'Find stolen records', story: 'Review the export log and identify which customer data the attacker stole.',
+      tag: '[ SYSTEM: DB FORENSICS ]', playable: true,
+    },
     api_breach: { chapter: 4, num: 12, title: 'API Breach', locked: true, playable: false },
     ch4_boss: { chapter: 4, num: 0, title: 'Save the Customer Database', locked: true, playable: false, isBoss: true },
     logs: {
@@ -114,7 +126,11 @@ const Campaign = (() => {
       goal: 'Review server logs', story: 'Authentication logs show brute-force activity. Identify the attacker IP.',
       tag: '[ SYSTEM: LOG FORENSICS ]', playable: true,
     },
-    siem: { chapter: 5, num: 14, title: 'SIEM Dashboard', locked: true, playable: false },
+    siem: {
+      chapter: 5, num: 14, title: 'SIEM Dashboard', theme: 'Alert Correlation',
+      goal: 'Correlate security alerts', story: 'Multiple alerts fired at once. Identify the attack pattern.',
+      tag: '[ SYSTEM: SIEM DASHBOARD ]', playable: true,
+    },
     network: { chapter: 5, num: 15, title: 'Network Traffic', locked: true, playable: false },
     ch5_boss: { chapter: 5, num: 0, title: 'Track Attacker Location', locked: true, playable: false, isBoss: true },
     social: {
@@ -122,14 +138,22 @@ const Campaign = (() => {
       goal: 'Spot manipulation attempts', story: 'An attacker is calling employees. Choose the response that breaks the chain.',
       tag: '[ SYSTEM: SOC DASHBOARD ]', playable: true,
     },
-    insider: { chapter: 6, num: 17, title: 'Insider Threat', locked: true, playable: false },
+    insider: {
+      chapter: 6, num: 17, title: 'Insider Threat', theme: 'Internal Investigation',
+      goal: 'Find suspicious employee behavior', story: 'Someone inside the network moved large amounts of data. Identify the insider.',
+      tag: '[ SYSTEM: HR SECURITY ]', playable: true,
+    },
     physical: { chapter: 6, num: 18, title: 'Physical Security', locked: true, playable: false },
     ch6_boss: { chapter: 6, num: 0, title: 'Unmask the Mole', locked: true, playable: false, isBoss: true },
     malware: { chapter: 7, num: 19, title: 'Malware Sandbox', locked: true, playable: false },
     lateral: { chapter: 7, num: 20, title: 'Lateral Movement', locked: true, playable: false },
     incident: { chapter: 7, num: 21, title: 'Incident Response', locked: true, playable: false },
     ch7_boss: { chapter: 7, num: 0, title: 'Prevent Total Compromise', locked: true, playable: false, isBoss: true },
-    backup: { chapter: 8, num: 22, title: 'Backup Recovery', locked: true, playable: false },
+    backup: {
+      chapter: 8, num: 22, title: 'Backup Recovery', theme: 'Restore Point',
+      goal: 'Find clean backups', story: 'Ransomware encrypted live systems. Select the last known clean backup.',
+      tag: '[ SYSTEM: BACKUP VAULT ]', playable: true,
+    },
     decryption: { chapter: 8, num: 23, title: 'Decryption Key Hunt', locked: true, playable: false },
     mainframe: { chapter: 8, num: 24, title: 'Mainframe Core', locked: true, playable: false },
     ransomware: {
@@ -148,17 +172,17 @@ const Campaign = (() => {
     { type: 'chapter', chapterId: 1 },
     'phishing', 'attachment', 'fake_login', 'ch1_boss',
     { type: 'chapter', chapterId: 2 },
-    'password', 'mfa',
+    'password', 'mfa', 'ch2_boss',
     { type: 'chapter', chapterId: 3 },
-    'cipher',
+    'cipher', 'steganography',
     { type: 'chapter', chapterId: 4 },
-    'sql',
+    'sql', 'db_forensics',
     { type: 'chapter', chapterId: 5 },
-    'logs',
+    'logs', 'siem',
     { type: 'chapter', chapterId: 6 },
-    'social',
+    'social', 'insider',
     { type: 'chapter', chapterId: 8 },
-    'ransomware',
+    'backup', 'ransomware',
   ];
 
   function getChapter(id) {

@@ -77,7 +77,7 @@
           <h2 class="chapter-card__title" id="chapterTitle">The Email</h2>
           <p class="chapter-card__tagline" id="chapterTagline">"Something got through."</p>
           <div class="chapter-card__rooms" id="chapterRoomList"></div>
-          <p class="chapter-card__note">27 missions across 9 chapters — more deploy in future updates.</p>
+          <p class="chapter-card__note">17 missions playable now · full campaign map shows 27 rooms.</p>
           <button type="button" class="btn btn--primary btn--pixel" id="btnChapterContinue">[ ENTER CHAPTER ]</button>
         </div>
       </section>
@@ -91,7 +91,7 @@
             <div class="level-header">
               <span class="level-badge room-badge" data-room="phishing">Chapter 1 — Room 1</span>
               <h2>Phishing Inbox</h2>
-              <p class="level-desc"><span class="level-theme">Phishing Inbox</span> — An employee receives a suspicious email. Identify the malicious indicators.</p>
+              <p class="level-desc"><span class="level-theme">Phishing Inbox</span> — Click anything in the email. Find 3 red flags, or try normal parts to learn why they're safe.</p>
             </div>
             <button class="btn btn--hint" data-hint-room="phishing">? HINT</button>
           </div>
@@ -108,14 +108,14 @@
               <span class="phishing-target" data-flag="urgency" tabindex="0">URGENT: Account suspended — verify in 2 hours!</span>
             </div>
             <div class="email-message__body">
-              <p>Hello,</p>
-              <p>We detected unusual sign-in activity on your account.</p>
+              <p class="phishing-target phishing-target--decoyable" data-flag="greeting" tabindex="0">Hello,</p>
+              <p class="phishing-target phishing-target--decoyable" data-flag="body" tabindex="0">We detected unusual sign-in activity on your account.</p>
               <p class="email-callout-label">Click to verify your account:</p>
               <a href="#" class="phishing-target email-verify-block" data-flag="link" tabindex="0">
                 <span class="email-verify-block__btn">VERIFY ACCOUNT NOW</span>
                 <span class="email-verify-block__url">https://company-login.secure-verify.net/auth</span>
               </a>
-              <p>Regards, Corporate IT</p>
+              <p class="phishing-target phishing-target--decoyable" data-flag="signoff" tabindex="0">Regards, Corporate IT</p>
               <p class="email-attachment-label">Attachment:</p>
               <div class="email-attachment phishing-target" data-flag="attachment" tabindex="0">
                 <span class="email-attachment__icon" aria-hidden="true">📎</span>
@@ -262,6 +262,38 @@
         </div>
       </section>
 
+      <!-- Ch3: Steganography -->
+      <section class="screen" data-screen="steganography">
+        <div class="room-shell room-theme room-theme--stego">
+          <p class="room-theme__tag">[ SYSTEM: STEGANO LAB ]</p>
+          <div class="act-banner chapter-banner" data-chapter-banner></div>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="steganography">Chapter 3 — Room 8</span>
+              <h2>Steganography</h2>
+              <p class="level-desc"><span class="level-theme">Hidden Data</span> — Attackers embedded commands in an image. Scan for concealed data.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="steganography">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-steganography" hidden></div>
+          <p class="stego-prompt">Click suspicious areas of the image to scan for hidden payloads:</p>
+          <div class="stego-scanner">
+            <div class="stego-image" id="stegoImage">
+              <span class="stego-image__label">vacation_photo.jpg</span>
+              <div class="stego-hotspot stego-hotspot--sky" data-stego="sky" tabindex="0" title="Scan sky region"></div>
+              <div class="stego-hotspot stego-hotspot--corner" data-stego="payload" tabindex="0" title="Scan corner pixels"></div>
+              <div class="stego-hotspot stego-hotspot--center" data-stego="center" tabindex="0" title="Scan center"></div>
+            </div>
+            <div class="stego-readout" id="stegoReadout">
+              <p class="stego-readout__status">AWAITING SCAN…</p>
+              <p class="stego-readout__data" id="stegoData" hidden></p>
+            </div>
+          </div>
+          <div class="feedback" id="feedback-steganography" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-steganography" disabled>EXTRACT PAYLOAD</button>
+        </div>
+      </section>
+
       <!-- Room 4: SQL Injection -->
       <section class="screen" data-screen="sql">
         <div class="room-shell room-theme room-theme--server">
@@ -286,6 +318,38 @@ AND password = '" + password + "'"</code></pre>
           <div class="option-grid" id="sqlOptions"></div>
           <div class="feedback" id="feedback-sql" hidden></div>
           <button class="btn btn--primary btn--pixel" id="btn-sql" disabled>APPLY FIX</button>
+        </div>
+      </section>
+
+      <!-- Ch4: Database Forensics -->
+      <section class="screen" data-screen="db_forensics">
+        <div class="room-shell room-theme room-theme--forensics">
+          <p class="room-theme__tag">[ SYSTEM: DB FORENSICS ]</p>
+          <div class="act-banner chapter-banner" data-chapter-banner></div>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="db_forensics">Chapter 4 — Room 11</span>
+              <h2>Database Forensics</h2>
+              <p class="level-desc"><span class="level-theme">Data Exfiltration</span> — Review export logs and identify which batch of customer records was stolen.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="db_forensics">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-db_forensics" hidden></div>
+          <div class="log-table-wrap">
+            <table class="log-table forensics-table">
+              <thead><tr><th>Export ID</th><th>User</th><th>Records</th><th>Destination</th><th>Time</th></tr></thead>
+              <tbody>
+                <tr><td>EXP-4412</td><td>jsmith</td><td>12</td><td>internal/reporting</td><td>09:15</td></tr>
+                <tr class="row--highlight"><td>EXP-4419</td><td>svc-backup</td><td>52,840</td><td>185.220.101.44</td><td>02:03</td></tr>
+                <tr><td>EXP-4420</td><td>mwilson</td><td>3</td><td>internal/hr</td><td>11:22</td></tr>
+                <tr><td>EXP-4421</td><td>etl-nightly</td><td>8,200</td><td>warehouse-db</td><td>03:00</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="log-prompt">Which export indicates data exfiltration?</p>
+          <div class="option-grid" id="dbForensicsOptions"></div>
+          <div class="feedback" id="feedback-db_forensics" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-db_forensics" disabled>FLAG EXPORT</button>
         </div>
       </section>
 
@@ -314,6 +378,33 @@ AND password = '" + password + "'"</code></pre>
         </div>
       </section>
 
+      <!-- Ch5: SIEM Dashboard -->
+      <section class="screen" data-screen="siem">
+        <div class="room-shell room-theme room-theme--siem">
+          <p class="room-theme__tag">[ SYSTEM: SIEM DASHBOARD ]</p>
+          <div class="act-banner chapter-banner" data-chapter-banner></div>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="siem">Chapter 5 — Room 14</span>
+              <h2>SIEM Dashboard</h2>
+              <p class="level-desc"><span class="level-theme">Alert Correlation</span> — Multiple alerts fired at once. Identify the attack pattern.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="siem">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-siem" hidden></div>
+          <div class="siem-alerts">
+            <div class="siem-alert siem-alert--warn">⚠ 09:02 — Brute force: 47 failed logins from 203.45.67.89</div>
+            <div class="siem-alert siem-alert--crit">🔴 09:04 — Impossible travel: admin login NYC → RU in 4 min</div>
+            <div class="siem-alert siem-alert--crit">🔴 09:06 — Outbound transfer: 2.1 GB to unknown external IP</div>
+            <div class="siem-alert siem-alert--info">ℹ 09:10 — Printer offline: Floor 3</div>
+          </div>
+          <p class="log-prompt">Which alert sequence best indicates a successful breach?</p>
+          <div class="option-grid" id="siemOptions"></div>
+          <div class="feedback" id="feedback-siem" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-siem" disabled>CORRELATE</button>
+        </div>
+      </section>
+
       <!-- Room 6: Social Engineering -->
       <section class="screen" data-screen="social">
         <div class="room-shell room-theme room-theme--soc">
@@ -334,6 +425,33 @@ AND password = '" + password + "'"</code></pre>
           <div class="option-grid" id="socialOptions"></div>
           <div class="feedback" id="feedback-social" hidden></div>
           <button class="btn btn--primary btn--pixel" id="btn-social" disabled>CONFIRM RESPONSE</button>
+        </div>
+      </section>
+
+      <!-- Ch6: Insider Threat -->
+      <section class="screen" data-screen="insider">
+        <div class="room-shell room-theme room-theme--insider">
+          <p class="room-theme__tag">[ SYSTEM: HR SECURITY ]</p>
+          <div class="act-banner chapter-banner" data-chapter-banner></div>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="insider">Chapter 6 — Room 17</span>
+              <h2>Insider Threat</h2>
+              <p class="level-desc"><span class="level-theme">Internal Investigation</span> — Someone moved large amounts of data. Identify suspicious employee activity.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="insider">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-insider" hidden></div>
+          <div class="insider-grid">
+            <div class="insider-card"><strong>Alice Chen</strong><p>Normal hours · 14 MB accessed · No USB</p></div>
+            <div class="insider-card insider-card--suspect"><strong>Bob Martinez</strong><p>03:12 AM · 2.4 GB downloaded · USB inserted</p></div>
+            <div class="insider-card"><strong>Carol Reed</strong><p>On vacation · No login activity</p></div>
+            <div class="insider-card"><strong>Dave Park</strong><p>Lunch break · Personal web browsing only</p></div>
+          </div>
+          <p class="log-prompt">Who shows insider threat indicators?</p>
+          <div class="option-grid" id="insiderOptions"></div>
+          <div class="feedback" id="feedback-insider" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-insider" disabled>REPORT</button>
         </div>
       </section>
 
@@ -358,6 +476,69 @@ AND password = '" + password + "'"</code></pre>
           <div class="option-grid" id="mfaOptions"></div>
           <div class="feedback" id="feedback-mfa" hidden></div>
           <button class="btn btn--primary btn--pixel" id="btn-mfa" disabled>SUBMIT</button>
+        </div>
+      </section>
+
+      <!-- Ch2 Boss -->
+      <section class="screen" data-screen="ch2_boss">
+        <div class="room-shell room-theme room-theme--hacker boss-room">
+          <p class="room-theme__tag">[ BOSS: CREDENTIAL LOCKDOWN ]</p>
+          <div class="act-banner act-banner--boss">Chapter 2 Boss — Lock the Attacker Out</div>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge room-badge--boss">CHAPTER 2 BOSS</span>
+              <h2>Credential Lockdown</h2>
+              <p class="level-desc">Rotate compromised credentials and enforce MFA before the attacker pivots. Complete both tasks within <strong>90 seconds</strong>.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="ch2_boss">? HINT</button>
+          </div>
+          <div class="boss-hud">
+            <div class="boss-hud__timer">LOCKOUT IN: <strong id="ch2BossTimer">01:30</strong></div>
+            <div class="boss-hud__tasks">TASKS: <strong id="ch2BossTaskCount">0</strong> / 2</div>
+          </div>
+          <div class="tutor-panel" id="tutor-ch2_boss" hidden></div>
+          <div class="boss-grid">
+            <div class="boss-panel" data-boss="rotate">
+              <h3 class="boss-panel__title">🔑 Rotate Password</h3>
+              <p class="boss-panel__desc">Select a new password for the compromised admin account:</p>
+              <div class="boss-option-list" id="ch2BossPasswordOptions"></div>
+              <span class="boss-panel__status" id="ch2StatusRotate">Pending</span>
+            </div>
+            <div class="boss-panel" data-boss="mfa">
+              <h3 class="boss-panel__title">📱 Enforce MFA</h3>
+              <p class="boss-mini-sms">"Read code <strong>847291</strong> aloud to verify your identity."</p>
+              <div class="boss-option-list" id="ch2BossMfaOptions"></div>
+              <span class="boss-panel__status" id="ch2StatusMfa">Pending</span>
+            </div>
+          </div>
+          <div class="feedback" id="feedback-ch2_boss" hidden></div>
+        </div>
+      </section>
+
+      <!-- Ch8: Backup Recovery -->
+      <section class="screen" data-screen="backup">
+        <div class="room-shell room-theme room-theme--backup">
+          <p class="room-theme__tag">[ SYSTEM: BACKUP VAULT ]</p>
+          <div class="act-banner chapter-banner" data-chapter-banner></div>
+          <div class="room-toolbar">
+            <div class="level-header">
+              <span class="level-badge room-badge" data-room="backup">Chapter 8 — Room 22</span>
+              <h2>Backup Recovery</h2>
+              <p class="level-desc"><span class="level-theme">Restore Point</span> — Ransomware encrypted live systems. Select the last known clean backup.</p>
+            </div>
+            <button class="btn btn--hint" data-hint-room="backup">? HINT</button>
+          </div>
+          <div class="tutor-panel" id="tutor-backup" hidden></div>
+          <div class="backup-list">
+            <div class="backup-entry"><code>backup_2024-05-28</code><span>Clean · verified</span></div>
+            <div class="backup-entry backup-entry--good"><code>backup_2024-06-01</code><span>Clean · last pre-infection snapshot</span></div>
+            <div class="backup-entry backup-entry--bad"><code>backup_2024-06-04</code><span>⚠ Encrypted files detected</span></div>
+            <div class="backup-entry backup-entry--bad"><code>backup_2024-06-05</code><span>🔴 Ransom note present</span></div>
+          </div>
+          <p class="log-prompt">Which backup should you restore from?</p>
+          <div class="option-grid" id="backupOptions"></div>
+          <div class="feedback" id="feedback-backup" hidden></div>
+          <button class="btn btn--primary btn--pixel" id="btn-backup" disabled>RESTORE</button>
         </div>
       </section>
 

@@ -6,6 +6,7 @@
 
   const REQUIRED_PHISHING_FLAGS = 3;
   const PHISHING_FLAG_KEYS = new Set(['sender', 'link', 'urgency']);
+  const PHISHING_DECOY_FLAGS = new Set(['greeting', 'body', 'signoff', 'attachment']);
 
   const PASSWORDS = [
     { id: 'a', text: 'password123', correct: false, ctx: 'password123' },
@@ -71,6 +72,42 @@
     { id: 'other', text: 'https://secure-paypal.com/auth', correct: false },
   ];
   const CH1_BOSS_TIME_SEC = 90;
+  const CH2_BOSS_TIME_SEC = 90;
+  const CH2_BOSS_PASSWORD_OPTIONS = [
+    { id: 'weak', text: 'Admin2024!', correct: false },
+    { id: 'strong', text: 'k9#mP2$vL8@xQ4!nR', correct: true },
+    { id: 'medium', text: 'Summer2024!', correct: false },
+  ];
+  const CH2_BOSS_MFA_OPTIONS = [
+    { id: 'share', text: 'Read the code aloud to the agent', correct: false },
+    { id: 'ignore', text: 'Never share MFA codes — hang up', correct: true },
+    { id: 'text', text: 'Text the code to verify faster', correct: false },
+  ];
+  const DB_FORENSICS_OPTIONS = [
+    { id: 'a', text: 'EXP-4412 — jsmith (12 records)', correct: false, ctx: 'default' },
+    { id: 'b', text: 'EXP-4419 — svc-backup (52,840 records to external IP)', correct: true, ctx: 'correct' },
+    { id: 'c', text: 'EXP-4420 — mwilson (3 records)', correct: false, ctx: 'default' },
+    { id: 'd', text: 'EXP-4421 — etl-nightly (8,200 records)', correct: false, ctx: 'default' },
+  ];
+  const SIEM_OPTIONS = [
+    { id: 'a', text: 'Single failed login attempt', correct: false, ctx: 'default' },
+    { id: 'b', text: 'Brute force → impossible travel → large outbound transfer', correct: true, ctx: 'correct' },
+    { id: 'c', text: 'Printer offline on Floor 3', correct: false, ctx: 'default' },
+    { id: 'd', text: 'Password expiry reminder email', correct: false, ctx: 'default' },
+  ];
+  const INSIDER_OPTIONS = [
+    { id: 'a', text: 'Alice Chen — normal activity', correct: false, ctx: 'default' },
+    { id: 'b', text: 'Bob Martinez — 2.4 GB at 3 AM with USB', correct: true, ctx: 'correct' },
+    { id: 'c', text: 'Carol Reed — on vacation', correct: false, ctx: 'default' },
+    { id: 'd', text: 'Dave Park — lunch break browsing', correct: false, ctx: 'default' },
+  ];
+  const BACKUP_OPTIONS = [
+    { id: 'a', text: 'backup_2024-05-28', correct: false, ctx: 'old' },
+    { id: 'b', text: 'backup_2024-06-01', correct: true, ctx: 'correct' },
+    { id: 'c', text: 'backup_2024-06-04', correct: false, ctx: 'infected' },
+    { id: 'd', text: 'backup_2024-06-05', correct: false, ctx: 'infected' },
+  ];
+  const STEGO_PAYLOAD = 'EXFIL: DEPLOY RANSOMWARE 0600';
 
   let currentScreen = 'intro';
   let hintLevels = {};
@@ -81,6 +118,14 @@
   let ch1BossTimerId = null;
   let ch1BossSecondsLeft = CH1_BOSS_TIME_SEC;
   let ch1BossTasks = new Set();
+  let ch2BossTimerId = null;
+  let ch2BossSecondsLeft = CH2_BOSS_TIME_SEC;
+  let ch2BossTasks = new Set();
+  let stegoFound = false;
+  let selectedDbForensics = null;
+  let selectedSiem = null;
+  let selectedInsider = null;
+  let selectedBackup = null;
   let selectedPassword = null;
   let selectedSql = null;
   let selectedIp = null;
@@ -117,7 +162,7 @@
 
     const lines = [
       { html: '<span class="prompt">&gt;</span> LOADING SECURE_TRAINING_ROOM.EXE' },
-      { html: '<span class="prompt">&gt;</span> CAMPAIGN MODE: 9 CHAPTERS / 27 MISSIONS', cls: 'boot-line--ok' },
+      { html: '<span class="prompt">&gt;</span> CAMPAIGN MODE: 9 CHAPTERS / 17 MISSIONS', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> CHECKING FIREWALL... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> CONNECTING TO MAINFRAME... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
       { html: '<span class="prompt">&gt;</span> THREAT LEVEL: CRITICAL', cls: 'boot-line--warn' },
@@ -174,6 +219,11 @@
     bind(document.getElementById('btn-logs'), 'click', submitLogs);
     bind(document.getElementById('btn-social'), 'click', submitSocial);
     bind(document.getElementById('btn-mfa'), 'click', submitMfa);
+    bind(document.getElementById('btn-steganography'), 'click', submitSteganography);
+    bind(document.getElementById('btn-db_forensics'), 'click', submitDbForensics);
+    bind(document.getElementById('btn-siem'), 'click', submitSiem);
+    bind(document.getElementById('btn-insider'), 'click', submitInsider);
+    bind(document.getElementById('btn-backup'), 'click', submitBackup);
     bind(document.getElementById('btn-quiz'), 'click', submitQuiz);
 
     bind(document.getElementById('cipherAnswer'), 'keydown', (e) => {
@@ -196,6 +246,11 @@
     initSql();
     initSocial();
     initMfa();
+    initSteganography();
+    initDbForensics();
+    initSiem();
+    initInsider();
+    initBackup();
   }
 
   async function startGame() {
@@ -308,6 +363,9 @@
     if (currentScreen === 'ch1_boss' && screenId !== 'ch1_boss') {
       stopCh1BossTimer();
     }
+    if (currentScreen === 'ch2_boss' && screenId !== 'ch2_boss') {
+      stopCh2BossTimer();
+    }
     const wasInGame = currentScreen !== 'intro' && currentScreen !== 'gameover';
     currentScreen = screenId;
     document.querySelectorAll('.screen').forEach((el) => {
@@ -327,6 +385,8 @@
       GameState.enterRoom(screenId);
       if (screenId === 'ransomware') initBossRoom();
       if (screenId === 'ch1_boss') initCh1BossRoom();
+      if (screenId === 'ch2_boss') initCh2BossRoom();
+      if (screenId === 'steganography') initSteganography();
     }
     updateProgress();
     updateHud();
@@ -452,7 +512,7 @@
     document.getElementById('tutor-phishing').hidden = true;
 
     document.querySelectorAll('[data-screen="phishing"] .phishing-target').forEach((el) => {
-      el.classList.remove('phishing-target--found');
+      el.classList.remove('phishing-target--found', 'phishing-target--decoy');
       el.onclick = onPhishingClick;
       el.onkeydown = (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -463,10 +523,11 @@
     });
   }
 
-  function onPhishingClick(e) {
+  async function onPhishingClick(e) {
     e.preventDefault();
     const flag = this.dataset.flag;
     if (!flag || this.classList.contains('phishing-target--found')) return;
+    if (this.classList.contains('phishing-target--decoy')) return;
 
     AudioFX.click();
 
@@ -484,10 +545,13 @@
           showFeedback('feedback-phishing', 'All 3 red flags found!', 'success');
         }
       }
-    } else if (flag === 'attachment') {
-      showTutor('phishing', 'Good eye — .exe attachments are dangerous, but this room needs 3 core flags: sender, link, and urgency.');
+    } else if (PHISHING_DECOY_FLAGS.has(flag)) {
+      this.classList.add('phishing-target--decoy');
+      const msg = await TutorClient.explain('phishing', flag);
+      showTutor('phishing', msg);
+      showFeedback('feedback-phishing', msg, 'info');
     } else {
-      handleMistake('phishing', 'wrong_click');
+      await handleMistake('phishing', 'wrong_click');
     }
   }
 
@@ -666,6 +730,236 @@
         await handleMistake('ch1_boss', 'boss_timeout');
       }
     }, 1000);
+  }
+
+  // --- Chapter 2 Boss ---
+  function stopCh2BossTimer() {
+    if (ch2BossTimerId) {
+      clearInterval(ch2BossTimerId);
+      ch2BossTimerId = null;
+    }
+  }
+
+  function updateCh2BossTimerUI() {
+    const el = document.getElementById('ch2BossTimer');
+    if (el) el.textContent = GameState.formatTime(ch2BossSecondsLeft);
+  }
+
+  function updateCh2BossTaskUI() {
+    const countEl = document.getElementById('ch2BossTaskCount');
+    if (countEl) countEl.textContent = String(ch2BossTasks.size);
+
+    if (ch2BossTasks.has('rotate')) {
+      document.querySelector('[data-screen="ch2_boss"] [data-boss="rotate"]')?.classList.add('boss-panel--done');
+      const s = document.getElementById('ch2StatusRotate');
+      if (s) s.textContent = '✓ Rotated';
+    }
+    if (ch2BossTasks.has('mfa')) {
+      document.querySelector('[data-screen="ch2_boss"] [data-boss="mfa"]')?.classList.add('boss-panel--done');
+      const s = document.getElementById('ch2StatusMfa');
+      if (s) s.textContent = '✓ MFA enforced';
+    }
+  }
+
+  async function completeCh2BossTask(task) {
+    if (ch2BossTasks.has(task)) return;
+    ch2BossTasks.add(task);
+    AudioFX.flagFound();
+    updateCh2BossTaskUI();
+    if (ch2BossTasks.size >= 2) {
+      stopCh2BossTimer();
+      AudioFX.submit();
+      await completeRoom('ch2_boss');
+    }
+  }
+
+  function initCh2BossRoom() {
+    stopCh2BossTimer();
+    ch2BossSecondsLeft = CH2_BOSS_TIME_SEC;
+    ch2BossTasks = new Set();
+    hideFeedback('feedback-ch2_boss');
+    document.getElementById('tutor-ch2_boss').hidden = true;
+
+    document.querySelectorAll('[data-screen="ch2_boss"] .boss-panel').forEach((p) => {
+      p.classList.remove('boss-panel--done');
+    });
+    const rStatus = document.getElementById('ch2StatusRotate');
+    const mStatus = document.getElementById('ch2StatusMfa');
+    if (rStatus) rStatus.textContent = 'Pending';
+    if (mStatus) mStatus.textContent = 'Pending';
+
+    initBossOptions('ch2BossPasswordOptions', CH2_BOSS_PASSWORD_OPTIONS, async (id) => {
+      if (ch2BossTasks.has('rotate')) return;
+      const opt = CH2_BOSS_PASSWORD_OPTIONS.find((o) => o.id === id);
+      if (opt?.correct) {
+        await completeCh2BossTask('rotate');
+      } else {
+        await handleMistake('ch2_boss', 'weak_password');
+      }
+    });
+
+    initBossOptions('ch2BossMfaOptions', CH2_BOSS_MFA_OPTIONS, async (id) => {
+      if (ch2BossTasks.has('mfa')) return;
+      const opt = CH2_BOSS_MFA_OPTIONS.find((o) => o.id === id);
+      if (opt?.correct) {
+        await completeCh2BossTask('mfa');
+      } else {
+        await handleMistake('ch2_boss', 'share_code');
+      }
+    });
+
+    updateCh2BossTimerUI();
+    updateCh2BossTaskUI();
+
+    ch2BossTimerId = setInterval(async () => {
+      ch2BossSecondsLeft -= 1;
+      updateCh2BossTimerUI();
+      if (ch2BossSecondsLeft <= 0) {
+        stopCh2BossTimer();
+        showFeedback('feedback-ch2_boss', 'Credentials still compromised — attacker pivoted deeper!', 'error');
+        await handleMistake('ch2_boss', 'boss_timeout');
+      }
+    }, 1000);
+  }
+
+  // --- Steganography ---
+  function initSteganography() {
+    stegoFound = false;
+    hideFeedback('feedback-steganography');
+    document.getElementById('tutor-steganography').hidden = true;
+    document.getElementById('btn-steganography').disabled = true;
+    const dataEl = document.getElementById('stegoData');
+    const statusEl = document.querySelector('.stego-readout__status');
+    if (dataEl) {
+      dataEl.hidden = true;
+      dataEl.textContent = '';
+    }
+    if (statusEl) statusEl.textContent = 'AWAITING SCAN…';
+
+    document.querySelectorAll('.stego-hotspot').forEach((el) => {
+      el.classList.remove('stego-hotspot--found');
+      const scan = async (e) => {
+        e.preventDefault();
+        if (el.classList.contains('stego-hotspot--found')) return;
+        AudioFX.click();
+        el.classList.add('stego-hotspot--found');
+        const region = el.dataset.stego;
+        if (region === 'payload') {
+          stegoFound = true;
+          if (statusEl) statusEl.textContent = 'PAYLOAD DETECTED';
+          if (dataEl) {
+            dataEl.hidden = false;
+            dataEl.textContent = STEGO_PAYLOAD;
+          }
+          document.getElementById('btn-steganography').disabled = false;
+          AudioFX.flagFound();
+        } else {
+          if (statusEl) statusEl.textContent = 'No payload in this region — try elsewhere.';
+          showFeedback('feedback-steganography', 'Nothing hidden here. Attackers often hide data in least-significant bits at image edges.', 'info');
+        }
+      };
+      el.onclick = scan;
+      el.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          scan(e);
+        }
+      };
+    });
+  }
+
+  async function submitSteganography() {
+    AudioFX.submit();
+    if (stegoFound) {
+      await completeRoom('steganography');
+    } else {
+      showFeedback('feedback-steganography', 'Find the hidden payload first.', 'error');
+    }
+  }
+
+  function initGenericOptionRoom(roomId, containerId, options) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const btn = document.getElementById('btn-' + roomId);
+    if (btn) btn.disabled = true;
+    hideFeedback('feedback-' + roomId);
+    const tutor = document.getElementById('tutor-' + roomId);
+    if (tutor) tutor.hidden = true;
+
+    initOptionRoom(containerId, options, (id, btnEl, cont) => {
+      if (roomId === 'db_forensics') selectedDbForensics = id;
+      else if (roomId === 'siem') selectedSiem = id;
+      else if (roomId === 'insider') selectedInsider = id;
+      else if (roomId === 'backup') selectedBackup = id;
+      cont.querySelectorAll('.option-btn').forEach((el) => el.classList.remove('option-btn--selected'));
+      btnEl.classList.add('option-btn--selected');
+      if (btn) btn.disabled = false;
+      hideFeedback('feedback-' + roomId);
+    });
+  }
+
+  function initDbForensics() {
+    selectedDbForensics = null;
+    initGenericOptionRoom('db_forensics', 'dbForensicsOptions', DB_FORENSICS_OPTIONS);
+  }
+
+  async function submitDbForensics() {
+    AudioFX.submit();
+    const chosen = DB_FORENSICS_OPTIONS.find((o) => o.id === selectedDbForensics);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('db_forensics');
+    } else {
+      await handleMistake('db_forensics', chosen.ctx);
+    }
+  }
+
+  function initSiem() {
+    selectedSiem = null;
+    initGenericOptionRoom('siem', 'siemOptions', SIEM_OPTIONS);
+  }
+
+  async function submitSiem() {
+    AudioFX.submit();
+    const chosen = SIEM_OPTIONS.find((o) => o.id === selectedSiem);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('siem');
+    } else {
+      await handleMistake('siem', chosen.ctx);
+    }
+  }
+
+  function initInsider() {
+    selectedInsider = null;
+    initGenericOptionRoom('insider', 'insiderOptions', INSIDER_OPTIONS);
+  }
+
+  async function submitInsider() {
+    AudioFX.submit();
+    const chosen = INSIDER_OPTIONS.find((o) => o.id === selectedInsider);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('insider');
+    } else {
+      await handleMistake('insider', chosen.ctx);
+    }
+  }
+
+  function initBackup() {
+    selectedBackup = null;
+    initGenericOptionRoom('backup', 'backupOptions', BACKUP_OPTIONS);
+  }
+
+  async function submitBackup() {
+    AudioFX.submit();
+    const chosen = BACKUP_OPTIONS.find((o) => o.id === selectedBackup);
+    if (!chosen) return;
+    if (chosen.correct) {
+      await completeRoom('backup');
+    } else {
+      await handleMistake('backup', chosen.ctx);
+    }
   }
 
   // --- Password ---

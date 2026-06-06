@@ -340,6 +340,30 @@ const AudioFX = (() => {
         setTimeout(() => tone(220, 0.08, 'sawtooth', 0.07), 90);
         setTimeout(() => sweep(200, 880, 0.3, 0.06), 180);
         break;
+      case 'ch2_boss':
+        arpeggio([330, 440, 554, 659], 0.09, 'square', 0.08);
+        setTimeout(() => tone(880, 0.2, 'sine', 0.09), 320);
+        break;
+      case 'steganography':
+        tone(440, 0.06, 'sine', 0.07);
+        setTimeout(() => tone(554, 0.06, 'sine', 0.07), 80);
+        setTimeout(() => tone(880, 0.15, 'square', 0.08), 180);
+        break;
+      case 'db_forensics':
+        arpeggio([392, 494, 587, 698], 0.08, 'square', 0.07);
+        break;
+      case 'siem':
+        sweep(660, 330, 0.2, 0.06);
+        setTimeout(() => arpeggio([523, 659, 784], 0.1, 'triangle', 0.08), 200);
+        break;
+      case 'insider':
+        tone(220, 0.1, 'sawtooth', 0.06);
+        setTimeout(() => tone(330, 0.12, 'sawtooth', 0.07), 120);
+        break;
+      case 'backup':
+        arpeggio([392, 523, 659], 0.1, 'sine', 0.08);
+        setTimeout(() => tone(784, 0.2, 'sine', 0.09), 350);
+        break;
       case 'ransomware':
         // Mainframe core restored — big finish
         sweep(80, 520, 0.4, 0.07);

@@ -15,6 +15,9 @@ const Achievements = (() => {
     { id: 'zero_trust', icon: '📱', title: 'Zero Trust Agent', desc: 'Complete the MFA Lockdown mission.' },
     { id: 'cyber_escape_champion', icon: '🏅', title: 'Cyber Escape Champion', desc: 'Complete the full playable campaign and stop the ransomware.' },
     { id: 'chapter_one_clear', icon: '📧', title: 'Email Contained', desc: 'Defeat the Chapter 1 boss before the timer expires.' },
+    { id: 'credential_lockdown', icon: '🔒', title: 'Credential Lockdown', desc: 'Defeat the Chapter 2 boss before the timer expires.' },
+    { id: 'stego_hunter', icon: '🖼️', title: 'Stego Hunter', desc: 'Extract a hidden payload from the steganography lab.' },
+    { id: 'backup_hero', icon: '💾', title: 'Backup Hero', desc: 'Select the correct clean backup before the final boss.' },
     { id: 'no_hints', icon: '💡', title: 'No Help Needed', desc: 'Complete the campaign without using any hints.' },
     { id: 'perfect_quiz', icon: '📝', title: 'Quiz Master', desc: 'Score 5/5 on the final debrief quiz.' },
     { id: 'flawless', icon: '✨', title: 'Flawless Run', desc: 'Complete with zero mistakes.' },
@@ -62,6 +65,15 @@ const Achievements = (() => {
         break;
       case 'ch1_boss':
         unlock('chapter_one_clear');
+        break;
+      case 'ch2_boss':
+        unlock('credential_lockdown');
+        break;
+      case 'steganography':
+        unlock('stego_hunter');
+        break;
+      case 'backup':
+        unlock('backup_hero');
         break;
       case 'password':
         if ((s.roomMistakes.password || 0) === 0) unlock('password_master');

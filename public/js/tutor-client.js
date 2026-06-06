@@ -53,6 +53,36 @@ const TutorClient = (() => {
       'Legitimate support never asks you to read codes aloud.',
       'Ignore unsolicited MFA requests.',
     ],
+    ch2_boss: [
+      'Pick the longest random password — not a seasonal phrase.',
+      'Never share MFA codes, even with someone claiming to be IT.',
+      'Complete both tasks before the 90-second timer expires.',
+    ],
+    steganography: [
+      'Hidden data is often stored in least-significant bits.',
+      'Scan the corners and edges — not the obvious sky area.',
+      'Look for abnormal pixel regions in an otherwise normal photo.',
+    ],
+    db_forensics: [
+      'Exfiltration shows large exports to external IPs.',
+      'Service accounts exporting at 2 AM are suspicious.',
+      'Compare record counts — thousands vs dozens matters.',
+    ],
+    siem: [
+      'Correlate alerts: brute force, then login, then data transfer.',
+      'Ignore benign alerts like printer offline.',
+      'Impossible travel means two logins from distant locations too fast.',
+    ],
+    insider: [
+      'Insiders often act off-hours with USB devices.',
+      'Large downloads outside job role are red flags.',
+      'Vacation with no logins is normal — not suspicious.',
+    ],
+    backup: [
+      'Restore from the last backup before infection spread.',
+      'Backups with encrypted files or ransom notes are compromised.',
+      'Pick the most recent clean snapshot, not the oldest.',
+    ],
     ransomware: [
       'Never pay ransomware — it funds criminals.',
       'Disconnect from the network to stop spread.',
@@ -65,6 +95,11 @@ const TutorClient = (() => {
       sender: 'This sender is suspicious because the domain does not match the real organization.',
       link: 'This link is suspicious because the domain does not match the real organization.',
       urgency: 'False urgency tricks you into acting before verifying the request.',
+      greeting: 'This greeting looks normal. Phishing red flags are usually the sender, fake link, or urgency — not a plain "Hello".',
+      body: 'Generic warning text can appear in real emails too. Focus on the spoofed sender, suspicious link, and pressure to act fast.',
+      signoff: '"Corporate IT" sounds official but anyone can write that. Verify through official channels instead.',
+      attachment: '.exe attachments are dangerous in real life — but this room wants the sender, link, and urgency flags first.',
+      wrong_click: 'That is not one of the three core phishing indicators for this exercise.',
       default: 'Look for spoofed senders, fake links, and pressure tactics.',
     },
     attachment: {
@@ -99,6 +134,34 @@ const TutorClient = (() => {
     mfa: {
       share_code: 'Never share MFA codes — attackers use them to bypass your second factor.',
       default: 'MFA codes are for your eyes only. Real IT never asks you to read them aloud.',
+    },
+    ch2_boss: {
+      weak_password: 'Weak passwords let attackers back in immediately after rotation.',
+      share_code: 'Social engineers trick you into sharing MFA codes over the phone.',
+      boss_timeout: 'Rotate credentials and enforce MFA before the attacker reuses stolen access.',
+      default: 'Strong passwords plus MFA lock out credential-based attacks.',
+    },
+    steganography: {
+      wrong_region: 'Steganography hides data in subtle pixel changes — often at image edges.',
+      default: 'Attackers embed commands in innocent files using steganographic techniques.',
+    },
+    db_forensics: {
+      correct: 'Mass export to an external IP from a service account is classic data exfiltration.',
+      default: 'Look for unusual volume, odd timing, and external destinations.',
+    },
+    siem: {
+      correct: 'Brute force followed by impossible travel and outbound transfer indicates breach.',
+      default: 'SIEM value comes from correlating related alerts into an attack timeline.',
+    },
+    insider: {
+      correct: 'Off-hours bulk downloads with removable media are classic insider indicators.',
+      default: 'Insider threats often blend in — look for activity outside normal role and hours.',
+    },
+    backup: {
+      infected: 'Restoring from an infected backup re-deploys ransomware.',
+      old: 'Older backups work but you lose more data — pick the latest clean snapshot.',
+      correct: 'Restore from the last verified backup before encryption began.',
+      default: 'Always validate backup integrity before restoring production systems.',
     },
     ransomware: {
       pay: 'Paying ransomware does not guarantee recovery and funds criminals.',
