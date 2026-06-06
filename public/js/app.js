@@ -163,6 +163,7 @@
     if (dysEl) {
       dysEl.addEventListener('change', () => {
         ProfileSave.saveSettings({ dyslexiaMode: dysEl.checked });
+        ReadAloud.updateVoicePickerVisibility(dysEl.checked);
         syncReadAloudUi();
         if (dysEl.checked) repeatReadAloud();
         else ReadAloud.stop();
@@ -184,6 +185,10 @@
     if (diffEl) diffEl.value = settings.difficulty || 'standard';
     if (fxEl) fxEl.checked = !!settings.disableHijackEffects;
     if (dysEl) dysEl.checked = !!settings.dyslexiaMode;
+    ReadAloud.bindVoicePicker((voiceUri) => {
+      ProfileSave.saveSettings({ readAloudVoice: voiceUri || '' });
+    });
+    ReadAloud.updateVoicePickerVisibility(!!settings.dyslexiaMode);
     syncReadAloudUi();
 
     const saved = ProfileSave.loadCampaign();
@@ -364,6 +369,7 @@
       difficulty,
       disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
       dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
+      readAloudVoice: document.getElementById('readAloudVoice')?.value || '',
     });
     syncReadAloudUi();
 
@@ -422,6 +428,7 @@
       difficulty: saved.difficulty || 'standard',
       disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
       dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
+      readAloudVoice: document.getElementById('readAloudVoice')?.value || '',
     });
     syncReadAloudUi();
 
