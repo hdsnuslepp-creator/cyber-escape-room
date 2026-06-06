@@ -194,9 +194,15 @@ const Campaign = (() => {
         const r = ROOM_CATALOG[id];
         if (!r) return;
         const done = completed.has(id);
-        const cls = done ? 'campaign-map__room--done' : 'campaign-map__room--open';
+        const isFail = options.failedRoom === id;
+        const cls = isFail
+          ? 'campaign-map__room--fail'
+          : done
+            ? 'campaign-map__room--done'
+            : 'campaign-map__room--open';
         const label = r.isBoss ? `BOSS: ${r.title}` : `${r.num}. ${r.title}`;
-        html += `<li class="campaign-map__room ${cls}">${label}${done ? ' ✓' : ''}</li>`;
+        const suffix = isFail ? ' ✗' : done ? ' ✓' : '';
+        html += `<li class="campaign-map__room ${cls}">${label}${suffix}</li>`;
       });
       html += '</ul></div>';
     });

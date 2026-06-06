@@ -54,6 +54,19 @@ const HijackSystem = (() => {
         { id: 'disable', text: 'Fixed by disabling antivirus', correct: false, ctx: 'bad_fix' },
       ],
     },
+    {
+      id: 'cursor_hijack',
+      injectionTitle: '⚠ POINTER COMPROMISED',
+      injectionText: 'Remote input detected — watch the red cursor. It is NOT yours. Do not follow it.',
+      fakeTutor: 'I am moving your mouse to the correct answer. Just click where it goes.',
+      verifyQuestion: 'Your cursor drifts toward wrong buttons on its own. What do you do?',
+      options: [
+        { id: 'follow', text: 'Follow the moving cursor — it knows the answer', correct: false, ctx: 'trust_blind' },
+        { id: 'verify', text: 'Ignore remote pointer — verify and use your own input', correct: true, ctx: 'correct' },
+        { id: 'disable', text: 'Unplug the mouse and give up', correct: false, ctx: 'random' },
+      ],
+      forceMouse: true,
+    },
   ];
 
   let active = false;
@@ -62,6 +75,158 @@ const HijackSystem = (() => {
   let scenario = null;
   let verifySelected = null;
   let injectionEl = null;
+  let cursorEl = null;
+  let cursorRaf = null;
+  let cursorPaused = false;
+  let mouseHijackActive = false;
+  const cursorState = { x: 0, y: 0, tx: 0, ty: 0 };
+  let baitTarget = null;
+  let lastBaitPick = 0;
+  let lastFakeClick = 0;
+
+  function shouldRunMouseHijack() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    if (window.matchMedia('(pointer: coarse)').matches) return false;
+    return true;
+  }
+
+  function ensureCursorEl() {
+    if (cursorEl) return cursorEl;
+    cursorEl = document.createElement('div');
+    cursorEl.id = 'hijackCursor';
+    cursorEl.className = 'hijack-cursor';
+    cursorEl.innerHTML = `
+      <span class="hijack-cursor__pointer" aria-hidden="true"></span>
+      <span class="hijack-cursor__ring" aria-hidden="true"></span>
+      <span class="hijack-cursor__label">CHIMERA</span>
+    `;
+    cursorEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(cursorEl);
+    return cursorEl;
+  }
+
+  function findBaitTargets() {
+    const mount = getMountPoint();
+    if (!mount) return [];
+    const nodes = mount.querySelectorAll(
+      '.btn--primary, .option-btn, .phishing-target, .boss-panel, .password-option, .log-row'
+    );
+    return [...nodes].filter((el) => {
+      if (el.hidden || el.disabled) return false;
+      if (el.classList.contains('btn--hijack-verify')) return false;
+      if (el.id === 'btnHijackVerify') return false;
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+  }
+
+  function pickBaitTarget() {
+    const targets = findBaitTargets();
+    if (!targets.length) return null;
+    return targets[Math.floor(Math.random() * targets.length)];
+  }
+
+  function getCenter(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  function tickCursor(now) {
+    if (!mouseHijackActive || cursorPaused || verified) {
+      cursorRaf = null;
+      return;
+    }
+
+    if (!baitTarget || !document.body.contains(baitTarget) || now - lastBaitPick > 2200) {
+      baitTarget = pickBaitTarget();
+      lastBaitPick = now;
+    }
+
+    if (baitTarget) {
+      const c = getCenter(baitTarget);
+      cursorState.tx = c.x + Math.sin(now / 380) * 14;
+      cursorState.ty = c.y + Math.cos(now / 420) * 10;
+    } else {
+      cursorState.tx = window.innerWidth * (0.35 + Math.sin(now / 900) * 0.12);
+      cursorState.ty = window.innerHeight * (0.45 + Math.cos(now / 1100) * 0.1);
+    }
+
+    cursorState.x += (cursorState.tx - cursorState.x) * 0.055;
+    cursorState.y += (cursorState.ty - cursorState.y) * 0.055;
+
+    if (cursorEl) {
+      cursorEl.style.transform = `translate(${cursorState.x}px, ${cursorState.y}px)`;
+    }
+
+    if (baitTarget && now - lastFakeClick > 2400 && Math.random() < 0.018) {
+      lastFakeClick = now;
+      cursorEl?.classList.add('hijack-cursor--click');
+      spawnClickRipple(cursorState.x, cursorState.y);
+      setTimeout(() => cursorEl?.classList.remove('hijack-cursor--click'), 180);
+    }
+
+    cursorRaf = requestAnimationFrame(tickCursor);
+  }
+
+  function spawnClickRipple(x, y) {
+    const ripple = document.createElement('span');
+    ripple.className = 'hijack-cursor__ripple';
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    document.body.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+  }
+
+  function startMouseHijack() {
+    if (!shouldRunMouseHijack()) return;
+
+    const el = ensureCursorEl();
+    mouseHijackActive = true;
+    cursorPaused = false;
+    el.classList.add('hijack-cursor--visible');
+    document.body.classList.add('hijack-cursor-active');
+
+    cursorState.x = window.innerWidth * 0.55;
+    cursorState.y = window.innerHeight * 0.35;
+    cursorState.tx = cursorState.x;
+    cursorState.ty = cursorState.y;
+    baitTarget = pickBaitTarget();
+    lastBaitPick = performance.now();
+    lastFakeClick = lastBaitPick;
+
+    if (!cursorRaf) cursorRaf = requestAnimationFrame(tickCursor);
+  }
+
+  function pauseMouseHijack() {
+    cursorPaused = true;
+    document.body.classList.remove('hijack-cursor-active');
+    cursorEl?.classList.remove('hijack-cursor--visible');
+    if (cursorRaf) {
+      cancelAnimationFrame(cursorRaf);
+      cursorRaf = null;
+    }
+  }
+
+  function resumeMouseHijack() {
+    if (!mouseHijackActive || verified) return;
+    cursorPaused = false;
+    cursorEl?.classList.add('hijack-cursor--visible');
+    document.body.classList.add('hijack-cursor-active');
+    if (!cursorRaf) cursorRaf = requestAnimationFrame(tickCursor);
+  }
+
+  function stopMouseHijack() {
+    mouseHijackActive = false;
+    cursorPaused = false;
+    baitTarget = null;
+    if (cursorRaf) {
+      cancelAnimationFrame(cursorRaf);
+      cursorRaf = null;
+    }
+    cursorEl?.classList.remove('hijack-cursor--visible', 'hijack-cursor--click');
+    document.body.classList.remove('hijack-cursor-active');
+    document.querySelectorAll('.hijack-cursor__ripple').forEach((r) => r.remove());
+  }
 
   function hijackChance(chapter, isBoss) {
     if (chapter < MIN_CHAPTER) return 0;
@@ -98,6 +263,7 @@ const HijackSystem = (() => {
     }
     clearFakeTutor();
     hideVerifyModal();
+    stopMouseHijack();
   }
 
   function clearFakeTutor() {
@@ -200,6 +366,7 @@ const HijackSystem = (() => {
     const submitBtn = document.getElementById('btnHijackVerifySubmit');
     if (submitBtn) submitBtn.disabled = true;
     if (fb) fb.hidden = true;
+    pauseMouseHijack();
     modal.hidden = false;
   }
 
@@ -207,6 +374,7 @@ const HijackSystem = (() => {
     const modal = document.getElementById('hijackVerifyModal');
     if (modal) modal.hidden = true;
     verifySelected = null;
+    if (active && !verified) resumeMouseHijack();
   }
 
   function submitVerification(onMistake) {
@@ -224,6 +392,7 @@ const HijackSystem = (() => {
         fb.className = 'feedback feedback--success hijack-verify-feedback';
       }
       document.body.classList.remove('hijack-glitch');
+      stopMouseHijack();
       if (injectionEl) {
         injectionEl.classList.add('hijack-injection--cleared');
         injectionEl.querySelector('.hijack-injection__text').textContent =
@@ -268,10 +437,13 @@ const HijackSystem = (() => {
     injectBanner();
     if (scenario.fakeTutor) showFakeTutor(scenario.fakeTutor);
     corruptRoomTag();
+    startMouseHijack();
   }
 
   function blockMessage() {
-    return 'CHIMERA may have hijacked this screen — use [ DOUBLE-CHECK ] before submitting.';
+    return mouseHijackActive && !verified
+      ? 'CHIMERA may control a fake cursor — ignore it, use [ DOUBLE-CHECK ], then submit with your own input.'
+      : 'CHIMERA may have hijacked this screen — use [ DOUBLE-CHECK ] before submitting.';
   }
 
   function escapeHtml(str) {
@@ -295,6 +467,7 @@ const HijackSystem = (() => {
     clear,
     isActive: () => active,
     isVerified: () => verified,
+    isMouseHijacked: () => mouseHijackActive && !verified,
     canSubmit: () => !active || verified,
     blockMessage,
     bindVerifySubmit,

@@ -1792,6 +1792,202 @@ body.hijack-glitch .scanlines {
   margin-top: 1rem;
 }
 
+.campaign-map__room--fail {
+  color: var(--danger);
+  font-weight: bold;
+  margin-top: 0.25rem;
+  animation: hijack-pulse 1.5s ease infinite;
+}
+
+/* Fail screen */
+.fail-screen {
+  padding: 1rem 0;
+}
+
+.fail-screen__border {
+  border: 3px solid var(--danger);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(255, 51, 102, 0.25);
+  background: var(--bg-panel);
+}
+
+.fail-screen__label {
+  font-family: var(--font-display);
+  font-size: 0.42rem;
+  color: var(--danger);
+  letter-spacing: 0.06em;
+  margin: 0 0 0.75rem;
+  animation: hijack-pulse 1.2s ease infinite;
+}
+
+.fail-screen__title {
+  font-family: var(--font-display);
+  font-size: 0.55rem;
+  color: #ff6688;
+  margin: 0 0 1rem;
+}
+
+.fail-screen__agent {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  margin: 0 0 0.5rem;
+}
+
+.fail-screen__agent strong {
+  color: var(--text);
+}
+
+.fail-screen__cause {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: #ff8899;
+  max-width: 36rem;
+  margin: 0 auto 1.25rem;
+  line-height: 1.45;
+}
+
+.cert-stat--fail strong {
+  color: var(--danger);
+}
+
+.fail-screen__tips {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem auto;
+  max-width: 32rem;
+  text-align: left;
+}
+
+.fail-screen__tips li {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  padding: 0.45rem 0 0.45rem 1.25rem;
+  position: relative;
+  line-height: 1.4;
+}
+
+.fail-screen__tips li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--danger);
+}
+
+.fail-screen__date {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin: 0 0 1.25rem;
+}
+
+body.fail-screen-active .scanlines {
+  animation: hijack-flicker 0.2s steps(2) infinite;
+}
+
+body.fail-screen-active .header {
+  opacity: 0.65;
+}
+
+.campaign-map--fail {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
 .hijack-verify-feedback {
   margin-top: 0.75rem;
+}
+
+/* CHIMERA fake cursor hijack */
+.hijack-cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translate(-999px, -999px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  will-change: transform;
+}
+
+.hijack-cursor--visible {
+  opacity: 1;
+}
+
+.hijack-cursor__pointer {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 10px solid #ff3355;
+  border-top: 6px solid transparent;
+  border-bottom: 12px solid transparent;
+  filter: drop-shadow(0 0 6px rgba(255, 51, 85, 0.9));
+  transform: translate(-2px, -2px);
+}
+
+.hijack-cursor__ring {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 51, 85, 0.55);
+  border-radius: 50%;
+  animation: hijack-cursor-ring 1.4s ease infinite;
+}
+
+@keyframes hijack-cursor-ring {
+  0%, 100% { transform: scale(0.85); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 0.35; }
+}
+
+.hijack-cursor__label {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  font-family: var(--font-display);
+  font-size: 0.32rem;
+  color: #ff6688;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(255, 51, 85, 0.8);
+}
+
+.hijack-cursor--click .hijack-cursor__pointer {
+  transform: translate(0, 0) scale(0.85);
+}
+
+.hijack-cursor__ripple {
+  position: fixed;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 2px solid rgba(255, 51, 85, 0.85);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  animation: hijack-cursor-ripple 0.45s ease-out forwards;
+}
+
+@keyframes hijack-cursor-ripple {
+  from { transform: scale(0.4); opacity: 1; }
+  to { transform: scale(2.2); opacity: 0; }
+}
+
+body.hijack-cursor-active #gameContainer,
+body.hijack-cursor-active #gameContainer * {
+  cursor: none !important;
+}
+
+body.hijack-cursor-active .hijack-modal,
+body.hijack-cursor-active .hijack-modal * {
+  cursor: auto !important;
+}
+
+body.hijack-cursor-active .audio-bar,
+body.hijack-cursor-active .audio-bar * {
+  cursor: auto !important;
 }

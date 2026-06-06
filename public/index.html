@@ -82,7 +82,7 @@
           <p class="chapter-card__tagline" id="chapterTagline">"Something got through."</p>
           <div class="chapter-card__rooms" id="chapterRoomList"></div>
           <p class="chapter-card__note">Full campaign: 56 missions across 14 chapters — no skips.</p>
-          <p class="chapter-card__note chapter-card__hijack-warn" id="chapterHijackWarn" hidden>From Chapter 5 onward, CHIMERA may hijack your screen — always double-check urgent overrides.</p>
+          <p class="chapter-card__note chapter-card__hijack-warn" id="chapterHijackWarn" hidden>From Chapter 5 onward, CHIMERA may hijack your screen — fake cursors, urgent overrides, compromised tutor. Double-check everything.</p>
           <button type="button" class="btn btn--primary btn--pixel" id="btnChapterContinue">[ ENTER CHAPTER ]</button>
         </div>
       </section>
@@ -667,12 +667,23 @@ AND password = '" + password + "'"</code></pre>
         </div>
       </section>
 
-      <!-- Game Over -->
+      <!-- Game Over / Fail Screen -->
       <section class="screen" data-screen="gameover">
-        <div class="gameover-card">
-          <h2>System Locked</h2>
-          <p>You ran out of lives. Review the lessons and try again.</p>
-          <button class="btn btn--primary" id="btnRetry">Try Again</button>
+        <div class="fail-screen">
+          <div class="fail-screen__border">
+            <p class="fail-screen__label">⚠ SYSTEM COMPROMISED</p>
+            <h2 class="fail-screen__title">Mission Failed</h2>
+            <p class="fail-screen__agent">Operative: <strong id="failAgentName">Agent</strong></p>
+            <p class="fail-screen__cause" id="failCause"></p>
+            <div class="certificate__stats" id="failStats"></div>
+            <div class="campaign-map-wrap">
+              <h3 class="campaign-map__heading">Campaign Progress — Failure Point</h3>
+              <div class="campaign-map campaign-map--fail" id="failCampaignMap"></div>
+            </div>
+            <ul class="fail-screen__tips" id="failTips"></ul>
+            <p class="fail-screen__date" id="failDate"></p>
+            <button class="btn btn--primary btn--pixel" id="btnRetry">TRY AGAIN</button>
+          </div>
         </div>
       </section>
     </main>

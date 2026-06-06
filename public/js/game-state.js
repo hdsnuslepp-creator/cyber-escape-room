@@ -28,6 +28,7 @@ const GameState = (() => {
     timerInterval: null,
     elapsedSeconds: 0,
     gameOver: false,
+    lastFailedRoom: null,
     quizScore: null,
     timeBonus: 0,
     hijacksCleared: 0,
@@ -142,7 +143,10 @@ const GameState = (() => {
       state.lives = Math.max(0, state.lives - 1);
       state.score = Math.max(0, state.score - MISTAKE_PENALTY);
       state.roomMistakes[roomId] = (state.roomMistakes[roomId] || 0) + 1;
-      if (state.lives <= 0) state.gameOver = true;
+      if (state.lives <= 0) {
+        state.gameOver = true;
+        state.lastFailedRoom = roomId;
+      }
       return state.lives <= 0;
     },
 

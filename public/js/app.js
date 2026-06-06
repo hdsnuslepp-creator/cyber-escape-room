@@ -451,6 +451,7 @@
     }
     updateProgress();
     updateHud();
+    document.body.classList.toggle('fail-screen-active', screenId === 'gameover');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -524,6 +525,7 @@
     if (dead) {
       GameState.stopTimer();
       AudioFX.gameOver();
+      renderGameOver(roomId);
       setTimeout(() => showScreen('gameover'), 1200);
     }
     return dead;
@@ -1562,6 +1564,49 @@
     } catch {
       /* works offline without server */
     }
+  }
+
+  function renderGameOver(failedRoomId) {
+    const s = GameState.getState();
+    const roomId = failedRoomId || s.lastFailedRoom || currentScreen;
+    const room = Campaign.getRoom(roomId);
+    const totalRooms = GameState.ROOMS.length;
+    const cleared = s.completedRooms.length;
+
+    document.getElementById('failAgentName').textContent = s.studentName || 'Agent';
+    document.getElementById('failDate').textContent = new Date().toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+
+    const chimeraLine = room.chapter >= 5
+      ? ' CHIMERA may have exploited rushed decisions — double-check next time.'
+      : '';
+    document.getElementById('failCause').textContent =
+      `All lives lost during "${room.title}" (${room.actTitle || room.label}).${chimeraLine}`;
+
+    document.getElementById('failStats').innerHTML = `
+      <div class="cert-stat cert-stat--fail"><span>Score</span><strong>${s.score}</strong></div>
+      <div class="cert-stat cert-stat--fail"><span>Time</span><strong>${GameState.formatTime(s.elapsedSeconds)}</strong></div>
+      <div class="cert-stat cert-stat--fail"><span>Missions Cleared</span><strong>${cleared} / ${totalRooms}</strong></div>
+      <div class="cert-stat cert-stat--fail"><span>Mistakes</span><strong>${s.mistakes}</strong></div>
+      <div class="cert-stat cert-stat--fail"><span>Hints Used</span><strong>${s.hintsUsed.length}</strong></div>
+      <div class="cert-stat cert-stat--fail"><span>Hijacks Cleared</span><strong>${s.hijacksCleared || 0}</strong></div>
+    `;
+
+    const mapEl = document.getElementById('failCampaignMap');
+    if (mapEl) {
+      mapEl.innerHTML = Campaign.renderCampaignMap(s.completedRooms, { failedRoom: roomId });
+    }
+
+    const tips = [
+      'Pause before clicking — urgency is a common attack pattern.',
+      'Use hints when stuck; each mistake costs a life.',
+      'Verify sender, links, and pressure tactics on every email exercise.',
+    ];
+    if (room.chapter >= 5) {
+      tips.unshift('Ignore the red CHIMERA cursor — it is fake. Use your own mouse and double-check before submitting.');
+    }
+    document.getElementById('failTips').innerHTML = tips.map((t) => `<li>${escapeHtml(t)}</li>`).join('');
   }
 
   function renderCertificate() {
