@@ -306,7 +306,33 @@
       document.getElementById('hudTime').textContent = formatted;
     });
 
-    showChapterIntro(1);
+    const startChapter = getStartChapterFromUrl();
+    if (startChapter > 1) {
+      skipProgressToChapter(startChapter);
+      showChapterIntro(startChapter);
+    } else {
+      showChapterIntro(1);
+    }
+  }
+
+  function getStartChapterFromUrl() {
+    const raw = new URLSearchParams(location.search).get('chapter');
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 1 || n > Campaign.CHAPTERS.length) return 1;
+    return n;
+  }
+
+  function skipProgressToChapter(chapterId) {
+    const firstRoom = Campaign.getChapterFirstRoom(chapterId);
+    if (!firstRoom) return;
+    const idx = GameState.ROOMS.indexOf(firstRoom);
+    if (idx <= 0) return;
+    GameState.ROOMS.slice(0, idx).forEach((roomId) => {
+      if (!GameState.getState().completedRooms.includes(roomId)) {
+        GameState.completeRoom(roomId);
+      }
+    });
+    updateProgress();
   }
 
   function showChapterIntro(chapterId) {
