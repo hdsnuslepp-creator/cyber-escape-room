@@ -115,34 +115,34 @@ const LEVEL_SUMMARIES = {
 
 const QUIZ_BANK = [
   {
-    question: 'What is the best way to verify a suspicious email link?',
-    options: ['Click it quickly', 'Hover to inspect the URL', 'Forward to colleagues', 'Reply and ask'],
+    question: 'You get a sketchy email link. Best move?',
+    options: ['Click to see if it\'s real', 'Check the URL before clicking', 'Forward to everyone', 'Reply to the sender'],
     correct: 1,
-    explanation: 'Hovering reveals the real destination without visiting the site.',
+    explanation: 'Inspect the link first — hover or verify through official channels.',
   },
   {
-    question: 'Which password property matters most against brute force?',
-    options: ['Contains a symbol', 'Length and randomness', 'Starts with uppercase', 'Has numbers only'],
+    question: 'Which password stops brute-force attacks best?',
+    options: ['Short with symbols', 'Long and random', 'Your pet\'s name + 1', 'Same as last year'],
     correct: 1,
-    explanation: 'Long, random passwords exponentially increase guessing time.',
+    explanation: 'Length and randomness beat predictable patterns every time.',
   },
   {
-    question: 'How do you defend against SQL injection?',
-    options: ['Escape HTML', 'Use parameterized queries', 'Add a firewall', 'Encrypt passwords only'],
-    correct: 1,
-    explanation: 'Prepared statements separate code from data, blocking injection.',
+    question: 'How do you block SQL injection?',
+    options: ['Use parameterized queries', 'Make the font bigger', 'Add more ads', 'Delete the database'],
+    correct: 0,
+    explanation: 'Prepared statements keep user input out of executable SQL.',
   },
   {
-    question: 'What log pattern suggests brute force?',
-    options: ['One failed login', 'Many failures from one IP', 'Successful login at 9 AM', 'Logout events'],
+    question: 'Logs show 50 failed logins from one IP in 2 minutes. That means…',
+    options: ['Normal behavior', 'Likely brute-force attack', 'Someone forgot once', 'Printer offline'],
     correct: 1,
-    explanation: 'Rapid repeated failures from the same IP indicate automated guessing.',
+    explanation: 'Rapid repeated failures from one IP = automated guessing.',
   },
   {
-    question: 'A caller claiming to be IT asks for your password. You should:',
-    options: ['Give it to help them', 'Hang up and verify via official IT', 'Email it instead', 'Share your MFA code'],
+    question: '"IT" calls and asks for your password. You should…',
+    options: ['Give it — they sound official', 'Hang up and verify through real IT', 'Email it instead', 'Read them your MFA code'],
     correct: 1,
-    explanation: 'Never share credentials. Contact IT through known official channels.',
+    explanation: 'Never share credentials. Call IT back on a number you trust.',
   },
 ];
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cyber Escape Room</title>
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/pixel-theme.css?v=5">
+  <link rel="stylesheet" href="css/pixel-theme.css?v=7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -653,14 +653,30 @@ AND password = '" + password + "'"</code></pre>
 
       <!-- Quiz -->
       <section class="screen" data-screen="quiz">
-        <div class="level-header">
-          <span class="level-badge">Final Debrief</span>
-          <h2>Campaign Debrief Quiz</h2>
-          <p class="level-desc">Answer 5 questions to complete your operative evaluation.</p>
+        <div class="quiz-arena" id="quizArena">
+          <div class="quiz-arena__fx" id="quizFx" aria-hidden="true"></div>
+          <div class="quiz-arena__flash" id="quizFlash" aria-hidden="true"></div>
+          <div class="quiz-arena__header">
+            <p class="quiz-arena__label"><span class="quiz-arena__bolt" aria-hidden="true">⚡</span> LIGHTNING DEBRIEF</p>
+            <p class="quiz-arena__tagline">Quick-fire security check — 3 questions, one at a time</p>
+            <div class="quiz-arena__dots" id="quizProgress" aria-label="Quiz progress"></div>
+            <div class="quiz-arena__meta">
+              <span id="quizCounter" class="quiz-arena__counter">Round 1 / 3</span>
+              <div class="quiz-arena__timer-wrap">
+                <span class="quiz-arena__timer-ring" id="quizTimerRing" aria-hidden="true"></span>
+                <span class="quiz-arena__timer" id="quizTimer">18</span>
+              </div>
+            </div>
+          </div>
+          <div class="quiz-arena__card" id="quizCard">
+            <p class="quiz-arena__prompt" id="quizPrompt"></p>
+            <div class="quiz-arena__options" id="quizOptions"></div>
+            <p class="quiz-arena__explain" id="quizExplain" hidden></p>
+          </div>
+          <p class="quiz-arena__score-pop" id="quizScorePop" hidden aria-hidden="true">+25</p>
+          <p class="quiz-arena__streak" id="quizStreak" hidden></p>
+          <div class="feedback quiz-arena__feedback" id="feedback-quiz" hidden></div>
         </div>
-        <div id="quizContainer"></div>
-        <div class="feedback" id="feedback-quiz" hidden></div>
-        <button class="btn btn--primary btn--pixel" id="btn-quiz" disabled>SUBMIT QUIZ</button>
       </section>
 
       <!-- Certificate -->
@@ -768,6 +784,6 @@ AND password = '" + password + "'"</code></pre>
   <script src="js/read-aloud.js?v=5"></script>
   <script src="js/hijack-system.js"></script>
   <script src="js/tutor-client.js"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/app.js?v=7"></script>
 </body>
 </html>

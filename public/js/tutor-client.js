@@ -188,12 +188,48 @@ const TutorClient = (() => {
   }
 
   const LOCAL_QUIZ = [
-    { question: 'What is the best way to verify a suspicious email link?', options: ['Click it quickly', 'Hover to inspect the URL', 'Forward to colleagues', 'Reply and ask'], correct: 1 },
-    { question: 'Which password property matters most against brute force?', options: ['Contains a symbol', 'Length and randomness', 'Starts with uppercase', 'Has numbers only'], correct: 1 },
-    { question: 'How do you defend against SQL injection?', options: ['Escape HTML', 'Use parameterized queries', 'Add a firewall', 'Encrypt passwords only'], correct: 1 },
-    { question: 'What log pattern suggests brute force?', options: ['One failed login', 'Many failures from one IP', 'Successful login at 9 AM', 'Logout events'], correct: 1 },
-    { question: 'A caller claiming to be IT asks for your password. You should:', options: ['Give it to help them', 'Hang up and verify via official IT', 'Email it instead', 'Share your MFA code'], correct: 1 },
+    {
+      question: 'You get a sketchy email link. Best move?',
+      options: ['Click to see if it\'s real', 'Check the URL before clicking', 'Forward to everyone', 'Reply to the sender'],
+      correct: 1,
+      explanation: 'Inspect the link first — hover or verify through official channels.',
+    },
+    {
+      question: 'Which password stops brute-force attacks best?',
+      options: ['Short with symbols', 'Long and random', 'Your pet\'s name + 1', 'Same as last year'],
+      correct: 1,
+      explanation: 'Length and randomness beat predictable patterns every time.',
+    },
+    {
+      question: 'How do you block SQL injection?',
+      options: ['Use parameterized queries', 'Make the font bigger', 'Add more ads', 'Delete the database'],
+      correct: 0,
+      explanation: 'Prepared statements keep user input out of executable SQL.',
+    },
+    {
+      question: 'Logs show 50 failed logins from one IP in 2 minutes. That means…',
+      options: ['Normal behavior', 'Likely brute-force attack', 'Someone forgot once', 'Printer offline'],
+      correct: 1,
+      explanation: 'Rapid repeated failures from one IP = automated guessing.',
+    },
+    {
+      question: '"IT" calls and asks for your password. You should…',
+      options: ['Give it — they sound official', 'Hang up and verify through real IT', 'Email it instead', 'Read them your MFA code'],
+      correct: 1,
+      explanation: 'Never share credentials. Call IT back on a number you trust.',
+    },
   ];
+
+  const QUIZ_ROUND_COUNT = 3;
+
+  function shuffleQuiz(arr) {
+    const pool = [...arr];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool;
+  }
 
   return {
     async explain(roomId, context) {
@@ -226,15 +262,16 @@ const TutorClient = (() => {
 
     async fetchQuiz() {
       const url = AppConfig.apiUrl('/ai/quiz');
+      let all = LOCAL_QUIZ.map((q, id) => ({ id, ...q }));
       if (url) {
         try {
           const res = await fetch(url);
-          if (res.ok) return res.json();
+          if (res.ok) all = await res.json();
         } catch {
           /* use local quiz */
         }
       }
-      return LOCAL_QUIZ.map((q, id) => ({ id, ...q }));
+      return shuffleQuiz(all).slice(0, QUIZ_ROUND_COUNT);
     },
   };
 })();

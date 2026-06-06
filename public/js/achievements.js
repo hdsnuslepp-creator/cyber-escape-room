@@ -20,7 +20,7 @@ const Achievements = (() => {
     { id: 'backup_hero', icon: '💾', title: 'Backup Hero', desc: 'Select the correct clean backup before the final boss.' },
     { id: 'hijack_hunter', icon: '🛡️', title: 'Hijack Hunter', desc: 'Correctly double-check 5 CHIMERA UI hijacks.' },
     { id: 'no_hints', icon: '💡', title: 'No Help Needed', desc: 'Complete the campaign without using any hints.' },
-    { id: 'perfect_quiz', icon: '📝', title: 'Quiz Master', desc: 'Score 5/5 on the final debrief quiz.' },
+    { id: 'perfect_quiz', icon: '📝', title: 'Quiz Master', desc: 'Perfect score on the Lightning Debrief.' },
     { id: 'flawless', icon: '✨', title: 'Flawless Run', desc: 'Complete with zero mistakes.' },
     { id: 'speed_demon', icon: '⚡', title: 'Speed Demon', desc: 'Escape in under 10 minutes.' },
   ];

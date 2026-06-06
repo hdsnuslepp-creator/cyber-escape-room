@@ -138,6 +138,12 @@
   let bossTasksComplete = new Set();
   let quizData = [];
   let quizAnswers = {};
+  let quizCurrentIndex = 0;
+  let quizLocked = false;
+  let quizStreak = 0;
+  let quizTimerId = null;
+  let quizSecondsLeft = 0;
+  const QUIZ_SECONDS_PER_ROUND = 18;
   let campaignAdvanceTimer = null;
   let completingRoom = false;
   let pendingBriefRoomId = null;
@@ -239,7 +245,9 @@
       return;
     }
     if (currentScreen === 'quiz') {
-      ReadAloud.announceQuiz(quizData);
+      if (quizData[quizCurrentIndex]) {
+        ReadAloud.announceQuiz([quizData[quizCurrentIndex]]);
+      }
       return;
     }
     if (GameState.ROOMS.includes(currentScreen)) {
@@ -299,7 +307,7 @@
   function buildProgressBar() {
     progressBar.innerHTML = Campaign.CHAPTERS.map((ch) =>
       `<div class="progress-step progress-step--chapter" data-chapter="${ch.id}" title="Chapter ${ch.id}: ${ch.title}"><span>${ch.id}</span></div>`
-    ).join('') + '<div class="progress-step progress-step--chapter" data-room="quiz" title="Final Debrief Quiz"><span>Q</span></div>';
+    ).join('') + '<div class="progress-step progress-step--chapter" data-room="quiz" title="Lightning Debrief"><span>Q</span></div>';
   }
 
   function bind(el, event, handler) {
@@ -335,7 +343,6 @@
     bind(document.getElementById('btn-siem'), 'click', submitSiem);
     bind(document.getElementById('btn-insider'), 'click', submitInsider);
     bind(document.getElementById('btn-backup'), 'click', submitBackup);
-    bind(document.getElementById('btn-quiz'), 'click', submitQuiz);
 
     bind(document.getElementById('cipherAnswer'), 'keydown', (e) => {
       if (e.key.length === 1) AudioFX.type();
@@ -686,6 +693,9 @@
 
   function showScreen(screenId, opts = {}) {
     ReadAloud.stop();
+    if (currentScreen === 'quiz' && screenId !== 'quiz') {
+      stopQuizTimer();
+    }
     if (currentScreen === 'ransomware' && screenId !== 'ransomware') {
       stopBossTimer();
     }
@@ -749,12 +759,8 @@
         ReadAloud.hintTapToRead('Tap READ to hear the chapter intro.');
       }
     } else if (screenId === 'quiz') {
-      if (ReadAloud.isEnabled() && ReadAloud.shouldAutoRead()) {
-        setTimeout(() => {
-          if (currentScreen === 'quiz') ReadAloud.announceQuiz(quizData);
-        }, 400);
-      } else if (ReadAloud.isEnabled()) {
-        ReadAloud.hintTapToRead('Tap READ to hear the quiz questions.');
+      if (ReadAloud.isEnabled() && !ReadAloud.shouldAutoRead()) {
+        ReadAloud.hintTapToRead('Tap READ to hear this round.');
       }
     } else if (GameState.ROOMS.includes(screenId)) {
       scheduleRoomReadAloud(screenId);
@@ -1809,49 +1815,295 @@
     }, 1000);
   }
 
-  // --- Quiz ---
-  async function startQuiz() {
-    quizData = await TutorClient.fetchQuiz();
-    quizAnswers = {};
-    renderQuiz();
-    showScreen('quiz');
+  // --- Lightning Debrief Quiz ---
+  function stopQuizTimer() {
+    if (quizTimerId) {
+      clearInterval(quizTimerId);
+      quizTimerId = null;
+    }
   }
 
-  function renderQuiz() {
-    const container = document.getElementById('quizContainer');
-    container.innerHTML = quizData.map((q, qi) => `
-      <div class="quiz-question" data-q="${qi}">
-        <p class="quiz-question__text">${qi + 1}. ${escapeHtml(q.question)}</p>
-        <div class="quiz-options">
-          ${q.options.map((opt, oi) => `
-            <button type="button" class="quiz-option" data-q="${qi}" data-o="${oi}">${escapeHtml(opt)}</button>
-          `).join('')}
-        </div>
-      </div>
-    `).join('');
+  function quizFlash(kind) {
+    const flash = document.getElementById('quizFlash');
+    if (!flash) return;
+    flash.classList.remove('quiz-arena__flash--correct', 'quiz-arena__flash--wrong');
+    void flash.offsetWidth;
+    flash.classList.add(kind === 'correct' ? 'quiz-arena__flash--correct' : 'quiz-arena__flash--wrong');
+  }
 
-    container.querySelectorAll('.quiz-option').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        AudioFX.click();
-        const qi = btn.dataset.q;
-        quizAnswers[qi] = parseInt(btn.dataset.o, 10);
-        container.querySelectorAll(`.quiz-option[data-q="${qi}"]`).forEach((el) => el.classList.remove('quiz-option--selected'));
-        btn.classList.add('quiz-option--selected');
-        if (Object.keys(quizAnswers).length === quizData.length) {
-          document.getElementById('btn-quiz').disabled = false;
+  function burstQuizFx(kind) {
+    const fx = document.getElementById('quizFx');
+    if (!fx) return;
+    const colors = kind === 'correct'
+      ? ['#00ff88', '#ffcc00', '#00e5ff', '#88ffcc']
+      : ['#ff3355', '#ff6644', '#ff8899'];
+    const count = kind === 'correct' ? 14 : 8;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('span');
+      p.className = 'quiz-arena__particle';
+      p.style.setProperty('--qx', `${(Math.random() - 0.5) * 220}px`);
+      p.style.setProperty('--qy', `${-30 - Math.random() * 140}px`);
+      p.style.setProperty('--qr', `${Math.random() * 360}deg`);
+      p.style.background = colors[i % colors.length];
+      p.style.animationDelay = `${i * 25}ms`;
+      fx.appendChild(p);
+      p.addEventListener('animationend', () => p.remove());
+    }
+  }
+
+  function popQuizScore() {
+    const pop = document.getElementById('quizScorePop');
+    if (!pop) return;
+    pop.hidden = false;
+    pop.classList.remove('quiz-arena__score-pop--show');
+    void pop.offsetWidth;
+    pop.classList.add('quiz-arena__score-pop--show');
+    setTimeout(() => {
+      pop.classList.remove('quiz-arena__score-pop--show');
+      pop.hidden = true;
+    }, 900);
+  }
+
+  function playQuizIntro() {
+    const arena = document.getElementById('quizArena');
+    if (!arena) return;
+    arena.classList.remove('quiz-arena--boot');
+    void arena.offsetWidth;
+    arena.classList.add('quiz-arena--boot');
+    setTimeout(() => arena.classList.remove('quiz-arena--boot'), 1000);
+  }
+
+  function updateQuizTimerUi() {
+    const el = document.getElementById('quizTimer');
+    const ring = document.getElementById('quizTimerRing');
+    const pct = Math.max(0, (quizSecondsLeft / QUIZ_SECONDS_PER_ROUND) * 100);
+    if (el) {
+      el.textContent = String(quizSecondsLeft);
+      el.classList.toggle('quiz-arena__timer--urgent', quizSecondsLeft <= 5);
+      el.classList.toggle('quiz-arena__timer--tick', true);
+      clearTimeout(el._tickTimer);
+      el._tickTimer = setTimeout(() => el.classList.remove('quiz-arena__timer--tick'), 180);
+    }
+    if (ring) ring.style.setProperty('--quiz-progress', `${pct}%`);
+  }
+
+  function startQuizTimer() {
+    stopQuizTimer();
+    quizSecondsLeft = QUIZ_SECONDS_PER_ROUND;
+    updateQuizTimerUi();
+    quizTimerId = setInterval(() => {
+      quizSecondsLeft -= 1;
+      updateQuizTimerUi();
+      if (quizSecondsLeft <= 0) {
+        stopQuizTimer();
+        if (!quizLocked) handleQuizTimeout();
+      }
+    }, 1000);
+  }
+
+  function renderQuizProgress() {
+    const dots = document.getElementById('quizProgress');
+    if (!dots) return;
+    dots.innerHTML = quizData.map((_, i) => {
+      let cls = 'quiz-arena__dot';
+      if (i < quizCurrentIndex) cls += ' quiz-arena__dot--done';
+      else if (i === quizCurrentIndex) cls += ' quiz-arena__dot--current';
+      const ans = quizAnswers[i];
+      if (ans !== undefined && ans === quizData[i].correct) cls += ' quiz-arena__dot--correct';
+      else if (ans !== undefined && ans !== quizData[i].correct) cls += ' quiz-arena__dot--wrong';
+      return `<span class="${cls}" style="animation-delay:${i * 80}ms" aria-hidden="true"></span>`;
+    }).join('');
+    const counter = document.getElementById('quizCounter');
+    if (counter) {
+      counter.textContent = `Round ${quizCurrentIndex + 1} / ${quizData.length}`;
+      counter.classList.remove('quiz-arena__counter--pulse');
+      void counter.offsetWidth;
+      counter.classList.add('quiz-arena__counter--pulse');
+    }
+  }
+
+  function animateQuizOptionsIn() {
+    const options = document.getElementById('quizOptions');
+    if (!options) return;
+    options.querySelectorAll('.quiz-arena__option').forEach((btn, i) => {
+      btn.style.animationDelay = `${120 + i * 70}ms`;
+      btn.classList.add('quiz-arena__option--in');
+    });
+  }
+
+  function renderQuizQuestion() {
+    const q = quizData[quizCurrentIndex];
+    if (!q) return;
+
+    quizLocked = false;
+    const card = document.getElementById('quizCard');
+    const prompt = document.getElementById('quizPrompt');
+    const options = document.getElementById('quizOptions');
+    const explain = document.getElementById('quizExplain');
+    const streakEl = document.getElementById('quizStreak');
+    const feedback = document.getElementById('feedback-quiz');
+
+    if (card) {
+      card.classList.remove(
+        'quiz-arena__card--correct', 'quiz-arena__card--wrong',
+        'quiz-arena__card--enter', 'quiz-arena__card--exit', 'quiz-arena__card--shake'
+      );
+      void card.offsetWidth;
+      card.classList.add('quiz-arena__card--enter');
+    }
+    if (prompt) {
+      prompt.textContent = q.question;
+      prompt.classList.remove('quiz-arena__prompt--in');
+      void prompt.offsetWidth;
+      prompt.classList.add('quiz-arena__prompt--in');
+    }
+    if (explain) {
+      explain.hidden = true;
+      explain.textContent = '';
+      explain.classList.remove('quiz-arena__explain--in');
+    }
+    if (feedback) feedback.hidden = true;
+    if (streakEl && quizStreak < 2) streakEl.hidden = true;
+
+    if (options) {
+      options.innerHTML = q.options.map((opt, oi) =>
+        `<button type="button" class="quiz-arena__option" data-o="${oi}">${escapeHtml(opt)}</button>`
+      ).join('');
+      options.querySelectorAll('.quiz-arena__option').forEach((btn) => {
+        btn.addEventListener('click', () => handleQuizAnswer(parseInt(btn.dataset.o, 10)));
+      });
+      animateQuizOptionsIn();
+    }
+
+    renderQuizProgress();
+    startQuizTimer();
+
+    if (ReadAloud.isEnabled() && ReadAloud.shouldAutoRead()) {
+      setTimeout(() => {
+        if (currentScreen === 'quiz' && quizCurrentIndex === quizData.indexOf(q)) {
+          ReadAloud.announceQuiz([q]);
+        }
+      }, 350);
+    }
+  }
+
+  function showQuizStreak() {
+    const streakEl = document.getElementById('quizStreak');
+    if (!streakEl || quizStreak < 2) return;
+    streakEl.hidden = false;
+    streakEl.textContent = `🔥 ${quizStreak} IN A ROW!`;
+    streakEl.classList.remove('quiz-arena__streak--pop');
+    void streakEl.offsetWidth;
+    streakEl.classList.add('quiz-arena__streak--pop');
+  }
+
+  function advanceQuizRound() {
+    const card = document.getElementById('quizCard');
+    if (quizCurrentIndex >= quizData.length - 1) {
+      finishQuiz();
+      return;
+    }
+    if (card) {
+      card.classList.add('quiz-arena__card--exit');
+      setTimeout(() => {
+        quizCurrentIndex += 1;
+        renderQuizQuestion();
+      }, 340);
+    } else {
+      quizCurrentIndex += 1;
+      renderQuizQuestion();
+    }
+  }
+
+  function resolveQuizRound(chosenIndex, timedOut = false) {
+    if (quizLocked) return;
+    quizLocked = true;
+    stopQuizTimer();
+
+    const q = quizData[quizCurrentIndex];
+    const correctIndex = q.correct;
+    const isCorrect = !timedOut && chosenIndex === correctIndex;
+    quizAnswers[quizCurrentIndex] = timedOut ? -1 : chosenIndex;
+
+    if (isCorrect) {
+      quizStreak += 1;
+      AudioFX.quizCorrect();
+      GameState.addBonus(25);
+      pulseScore();
+      quizFlash('correct');
+      burstQuizFx('correct');
+      popQuizScore();
+    } else {
+      quizStreak = 0;
+      AudioFX.quizWrong();
+      quizFlash('wrong');
+      burstQuizFx('wrong');
+    }
+
+    const card = document.getElementById('quizCard');
+    const explain = document.getElementById('quizExplain');
+    const options = document.getElementById('quizOptions');
+
+    if (card) {
+      card.classList.remove('quiz-arena__card--enter');
+      card.classList.add(isCorrect ? 'quiz-arena__card--correct' : 'quiz-arena__card--wrong');
+      if (!isCorrect) {
+        card.classList.add('quiz-arena__card--shake');
+      }
+    }
+
+    if (options) {
+      options.querySelectorAll('.quiz-arena__option').forEach((btn, oi) => {
+        btn.disabled = true;
+        btn.classList.remove('quiz-arena__option--in');
+        if (oi === correctIndex) {
+          btn.classList.add('quiz-arena__option--correct', 'quiz-arena__option--reveal');
+        } else if (oi === chosenIndex && !isCorrect) {
+          btn.classList.add('quiz-arena__option--wrong', 'quiz-arena__option--reveal');
         }
       });
-    });
+    }
+
+    if (explain) {
+      explain.hidden = false;
+      explain.textContent = timedOut
+        ? `⏱ Time's up! ${q.explanation || 'The safest choice was highlighted in green.'}`
+        : isCorrect
+          ? `✓ Correct! ${q.explanation || ''}`
+          : `✗ Not quite. ${q.explanation || ''}`;
+      explain.classList.add('quiz-arena__explain--in');
+    }
+
+    showQuizStreak();
+    renderQuizProgress();
+
+    setTimeout(() => advanceQuizRound(), isCorrect ? 1400 : 1800);
   }
 
-  async function submitQuiz() {
+  function handleQuizAnswer(optionIndex) {
+    AudioFX.click();
+    resolveQuizRound(optionIndex);
+  }
+
+  function handleQuizTimeout() {
+    resolveQuizRound(-1, true);
+  }
+
+  async function startQuiz() {
+    stopQuizTimer();
+    quizData = await TutorClient.fetchQuiz();
+    quizAnswers = {};
+    quizCurrentIndex = 0;
+    quizLocked = false;
+    quizStreak = 0;
+    showScreen('quiz');
+    playQuizIntro();
+    renderQuizQuestion();
+  }
+
+  async function finishQuiz() {
+    stopQuizTimer();
     AudioFX.submit();
-    quizData.forEach((q, i) => {
-      setTimeout(() => {
-        if (quizAnswers[i] === q.correct) AudioFX.quizCorrect();
-        else AudioFX.quizWrong();
-      }, i * 100);
-    });
 
     let correct = 0;
     quizData.forEach((q, i) => {
@@ -1866,13 +2118,32 @@
     }
     Achievements.checkOnComplete();
     updateHud();
-    if (correct >= 3) AudioFX.success();
 
+    const perfect = correct === quizData.length;
+    const passed = correct >= Math.ceil(quizData.length * 0.67);
+    if (perfect) {
+      AudioFX.success();
+      burstQuizFx('correct');
+      quizFlash('correct');
+    } else if (passed) {
+      AudioFX.roomTransition();
+    }
+
+    const arena = document.getElementById('quizArena');
+    const rank = perfect ? 'OPERATIVE ELITE' : passed ? 'FIELD READY' : 'NEEDS REVIEW';
+    if (arena) {
+      arena.classList.add('quiz-arena--complete', perfect ? 'quiz-arena--complete--perfect' : '');
+    }
+
+    const feedback = document.getElementById('feedback-quiz');
     showFeedback(
       'feedback-quiz',
-      `Quiz: ${correct}/${quizData.length} correct (+${correct * 20} pts)${timeBonus ? ` | Speed bonus: +${timeBonus}` : ''}`,
-      correct >= 3 ? 'success' : 'info'
+      `${rank} — ${correct}/${quizData.length} correct (+${correct * 20} pts)${timeBonus ? ` | Speed bonus: +${timeBonus}` : ''}`,
+      perfect ? 'success' : passed ? 'info' : 'error'
     );
+    if (feedback) {
+      feedback.classList.add('quiz-arena__feedback--reveal');
+    }
 
     GameState.stopTimer();
     await saveResults();
@@ -1887,7 +2158,7 @@
     setTimeout(() => {
       AudioFX.certificate();
       showScreen('certificate');
-    }, 1500);
+    }, 2200);
   }
 
   async function saveResults() {
