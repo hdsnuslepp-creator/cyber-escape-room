@@ -163,6 +163,7 @@
     if (dysEl) {
       dysEl.addEventListener('change', () => {
         ProfileSave.saveSettings({ dyslexiaMode: dysEl.checked });
+        ReadAloud.warmUpSpeech();
         ReadAloud.updateVoicePickerVisibility(dysEl.checked);
         syncReadAloudUi();
         if (dysEl.checked) repeatReadAloud();
@@ -182,7 +183,7 @@
     const diffEl = document.getElementById('difficultySelect');
     const fxEl = document.getElementById('disableHijackFx');
     const dysEl = document.getElementById('dyslexiaMode');
-    if (diffEl) diffEl.value = settings.difficulty || 'standard';
+    if (diffEl) diffEl.value = GameState.normalizeDifficulty(settings.difficulty || 'normal');
     if (fxEl) fxEl.checked = !!settings.disableHijackEffects;
     if (dysEl) dysEl.checked = !!settings.dyslexiaMode;
     ReadAloud.bindVoicePicker((voiceUri) => {
@@ -203,19 +204,29 @@
     const on = ReadAloud.isEnabled();
     const inGame = currentScreen !== 'intro';
     ReadAloud.updateFab(on && inGame);
-    document.querySelectorAll('.btn--read-aloud').forEach((btn) => {
-      btn.hidden = !on || !inGame;
-    });
+    ReadAloud.syncMobileReadButtons(on && inGame);
+    const briefRead = document.getElementById('btnBriefRead');
+    const briefOpen = document.getElementById('missionBriefModal') && !document.getElementById('missionBriefModal').hidden;
+    if (briefRead) briefRead.hidden = !on || !briefOpen;
   }
 
   function scheduleRoomReadAloud(roomId) {
     if (!ReadAloud.isEnabled() || !roomId) return;
+    if (!ReadAloud.shouldAutoRead()) {
+      ReadAloud.hintTapToRead();
+      return;
+    }
     const target = roomId;
     setTimeout(() => {
       if (currentScreen === target && GameState.ROOMS.includes(target)) {
         ReadAloud.announceRoom(target);
       }
     }, 900);
+  }
+
+  function readAloudAfterGesture(fn) {
+    if (!ReadAloud.isEnabled() || ReadAloud.shouldAutoRead()) return;
+    fn();
   }
 
   function repeatReadAloud() {
@@ -364,9 +375,9 @@
       return;
     }
 
-    const difficulty = document.getElementById('difficultySelect')?.value || 'standard';
+    const difficulty = document.getElementById('difficultySelect')?.value || 'normal';
     ProfileSave.saveSettings({
-      difficulty,
+      difficulty: GameState.normalizeDifficulty(difficulty),
       disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
       dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
       readAloudVoice: document.getElementById('readAloudVoice')?.value || '',
@@ -376,6 +387,7 @@
     AudioFX.resume();
     AudioFX.boot();
     AudioFX.startMusic();
+    ReadAloud.warmUpSpeech();
     GameState.reset(name, { difficulty });
     Achievements.reset();
     hintLevels = {};
@@ -414,8 +426,10 @@
     if (startChapter > 1) {
       skipProgressToChapter(startChapter);
       showChapterIntro(startChapter);
+      readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(startChapter)));
     } else {
       showChapterIntro(1);
+      readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(1)));
     }
     persistSave();
   }
@@ -425,7 +439,7 @@
     if (!saved?.studentName) return;
 
     ProfileSave.saveSettings({
-      difficulty: saved.difficulty || 'standard',
+      difficulty: GameState.normalizeDifficulty(saved.difficulty || 'normal'),
       disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
       dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
       readAloudVoice: document.getElementById('readAloudVoice')?.value || '',
@@ -435,6 +449,7 @@
     AudioFX.resume();
     AudioFX.boot();
     AudioFX.startMusic();
+    ReadAloud.warmUpSpeech();
     GameState.restore(saved);
     hintLevels = {};
     foundFlags = new Set();
@@ -471,6 +486,7 @@
     }, elapsed);
     updateHud();
     showChapterIntro(pendingChapterId);
+    readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId)));
   }
 
   function getStartChapterFromUrl() {
@@ -558,6 +574,7 @@
       const nextChapter = pendingChapterId + 1;
       if (nextChapter <= Campaign.CHAPTERS.length) {
         showChapterIntro(nextChapter);
+        readAloudAfterGesture(() => ReadAloud.announceChapter(Campaign.getChapter(nextChapter)));
       }
       return;
     }
@@ -574,6 +591,7 @@
       ? `Objective: ${ch.briefing}`
       : 'Complete the mission without losing all lives.';
     document.getElementById('missionBriefModal').hidden = false;
+    syncReadAloudUi();
     ReadAloud.stop();
     ReadAloud.announceBrief(
       meta.title,
@@ -591,6 +609,7 @@
     if (GameState.getState().completedRooms.includes(roomId)) return;
     refreshRoomChrome(roomId);
     showScreen(roomId);
+    readAloudAfterGesture(() => ReadAloud.announceRoom(roomId));
   }
 
   function retryFailedChapter() {
@@ -726,15 +745,23 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (screenId === 'chapter') {
-      setTimeout(() => {
-        if (currentScreen === 'chapter') {
-          ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId));
-        }
-      }, 400);
+      if (ReadAloud.isEnabled() && ReadAloud.shouldAutoRead()) {
+        setTimeout(() => {
+          if (currentScreen === 'chapter') {
+            ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId));
+          }
+        }, 400);
+      } else if (ReadAloud.isEnabled()) {
+        ReadAloud.hintTapToRead('Tap READ to hear the chapter intro.');
+      }
     } else if (screenId === 'quiz') {
-      setTimeout(() => {
-        if (currentScreen === 'quiz') ReadAloud.announceQuiz(quizData);
-      }, 400);
+      if (ReadAloud.isEnabled() && ReadAloud.shouldAutoRead()) {
+        setTimeout(() => {
+          if (currentScreen === 'quiz') ReadAloud.announceQuiz(quizData);
+        }, 400);
+      } else if (ReadAloud.isEnabled()) {
+        ReadAloud.hintTapToRead('Tap READ to hear the quiz questions.');
+      }
     } else if (GameState.ROOMS.includes(screenId)) {
       scheduleRoomReadAloud(screenId);
     }
@@ -836,7 +863,7 @@
 
   async function useHint(roomId) {
     if (!GameState.hintsAllowed()) {
-      showTutor(roomId, 'Analyst mode — hints disabled. Apply your training.');
+      showTutor(roomId, 'Hard mode — hints disabled. Apply your training.');
       return;
     }
     AudioFX.hint();

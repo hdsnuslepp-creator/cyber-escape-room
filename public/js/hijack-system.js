@@ -237,7 +237,7 @@ const HijackSystem = (() => {
   function hijackChance(chapter, isBoss) {
     if (chapter < MIN_CHAPTER) return 0;
     let base = 0.1 + (chapter - MIN_CHAPTER) * 0.035;
-    if (typeof GameState !== 'undefined' && GameState.getState?.().difficulty === 'analyst') {
+    if (typeof GameState !== 'undefined' && GameState.isHardMode?.()) {
       base += 0.08;
     }
     return Math.min(isBoss ? base + 0.12 : base, 0.55);

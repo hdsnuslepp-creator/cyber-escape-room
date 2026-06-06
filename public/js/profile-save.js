@@ -7,7 +7,7 @@ const ProfileSave = (() => {
   const SETTINGS_KEY = 'cer_settings_v1';
 
   const DEFAULT_SETTINGS = {
-    difficulty: 'standard',
+    difficulty: 'normal',
     disableHijackEffects: false,
     reducedEffects: false,
     dyslexiaMode: false,
@@ -101,6 +101,12 @@ const ProfileSave = (() => {
     }
   }
 
+  function formatDifficultyLabel(difficulty) {
+    const legacy = { casual: 'easy', standard: 'normal', analyst: 'hard' };
+    const key = legacy[difficulty] || difficulty || 'normal';
+    return { easy: 'Easy', normal: 'Normal', hard: 'Hard' }[key] || key;
+  }
+
   function exportCampaignCsv(payload) {
     if (!payload) return '';
     const rows = [
@@ -112,7 +118,7 @@ const ProfileSave = (() => {
       ['Hints', (payload.hintsUsed || []).length],
       ['Hijacks Cleared', payload.hijacksCleared ?? 0],
       ['Rooms Cleared', (payload.completedRooms || []).length],
-      ['Difficulty', payload.difficulty || 'standard'],
+      ['Difficulty', formatDifficultyLabel(payload.difficulty || 'normal')],
     ];
     return rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
   }

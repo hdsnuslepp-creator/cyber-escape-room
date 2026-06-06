@@ -65,9 +65,9 @@
               <div class="input-group input-group--pixel">
                 <label for="difficultySelect">&gt; DIFFICULTY</label>
                 <select id="difficultySelect" class="input input--pixel">
-                  <option value="casual">Casual — 5 lives, hints on</option>
-                  <option value="standard" selected>Standard — 3 lives</option>
-                  <option value="analyst">Analyst — 2 lives, no hints, harder hijacks</option>
+                  <option value="easy">Easy — 5 lives, hints on</option>
+                  <option value="normal" selected>Normal — 3 lives</option>
+                  <option value="hard">Hard — 2 lives, no hints, tougher hijacks</option>
                 </select>
               </div>
               <label class="intro-check">
@@ -82,7 +82,7 @@
                   <select id="readAloudVoice" class="input input--pixel" aria-label="Read-aloud voice"></select>
                   <button type="button" class="btn btn--secondary btn--pixel btn--voice-preview" id="btnVoicePreview">[ PREVIEW ]</button>
                 </div>
-                <p class="read-aloud-voice-note">Uses your browser’s built-in voices. Install more in Windows Settings → Time &amp; language → Speech.</p>
+                <p class="read-aloud-voice-note">Works on phone and desktop. On iPhone, tap READ to hear each question.</p>
               </div>
               <button type="button" class="btn btn--primary btn--pixel" id="btnStart">[ INITIALIZE BREACH ]</button>
               <button type="button" class="btn btn--secondary btn--pixel" id="btnResume" hidden>[ RESUME CAMPAIGN ]</button>
@@ -729,6 +729,7 @@ AND password = '" + password + "'"</code></pre>
   </div>
 
   <button type="button" id="btnReadAloud" class="read-aloud-fab" hidden title="Read current question aloud">🔊 READ</button>
+  <p id="readAloudMobileHint" class="read-aloud-mobile-hint" hidden aria-live="polite"></p>
 
   <div id="achievementToast" class="achievement-toast" hidden>
     <span class="achievement-toast__icon">🏆</span>
@@ -744,7 +745,10 @@ AND password = '" + password + "'"</code></pre>
       <h3 class="brief-modal__title" id="briefTitle"></h3>
       <p class="brief-modal__story" id="briefStory"></p>
       <p class="brief-modal__objective" id="briefObjective"></p>
-      <button type="button" class="btn btn--primary btn--pixel" id="btnBriefStart">[ BEGIN MISSION ]</button>
+      <div class="brief-modal__actions">
+        <button type="button" class="btn btn--secondary btn--pixel btn--read-aloud" id="btnBriefRead" hidden title="Read briefing aloud">🔊 READ</button>
+        <button type="button" class="btn btn--primary btn--pixel" id="btnBriefStart">[ BEGIN MISSION ]</button>
+      </div>
     </div>
   </div>
 
@@ -769,7 +773,7 @@ AND password = '" + password + "'"</code></pre>
   <script src="js/campaign.js"></script>
   <script src="js/game-state.js"></script>
   <script src="js/room-engine.js"></script>
-  <script src="js/read-aloud.js"></script>
+  <script src="js/read-aloud.js?v=3"></script>
   <script src="js/hijack-system.js"></script>
   <script src="js/tutor-client.js"></script>
   <script src="js/app.js"></script>

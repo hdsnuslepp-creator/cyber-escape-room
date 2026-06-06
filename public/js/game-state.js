@@ -7,7 +7,9 @@ const GameState = (() => {
   const MISTAKE_PENALTY = 50;
   const HINT_PENALTY = 25;
   const MAX_LIVES = 3;
-  const DIFFICULTY_LIVES = { casual: 5, standard: 3, analyst: 2 };
+  const DIFFICULTY_LIVES = { easy: 5, normal: 3, hard: 2 };
+  const LEGACY_DIFFICULTY = { casual: 'easy', standard: 'normal', analyst: 'hard' };
+  const DIFFICULTY_LABELS = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
   const TIME_BONUS_FAST = 100;
   const TIME_BONUS_MEDIUM = 50;
   const TIME_FAST_SEC = 600;
@@ -33,7 +35,7 @@ const GameState = (() => {
     quizScore: null,
     timeBonus: 0,
     hijacksCleared: 0,
-    difficulty: 'standard',
+    difficulty: 'normal',
     lastFailedChapter: null,
     pendingChapterId: 1,
   };
@@ -85,8 +87,20 @@ const GameState = (() => {
     return idx >= 0 ? idx + 1 : 1;
   }
 
+  function normalizeDifficulty(difficulty) {
+    return LEGACY_DIFFICULTY[difficulty] || difficulty || 'normal';
+  }
+
+  function getDifficultyLabel(difficulty) {
+    return DIFFICULTY_LABELS[normalizeDifficulty(difficulty)] || 'Normal';
+  }
+
+  function isHardMode(difficulty) {
+    return normalizeDifficulty(difficulty ?? state.difficulty) === 'hard';
+  }
+
   function getMaxLives(difficulty) {
-    return DIFFICULTY_LIVES[difficulty] || MAX_LIVES;
+    return DIFFICULTY_LIVES[normalizeDifficulty(difficulty)] || MAX_LIVES;
   }
 
   function applyTimeBonus() {
@@ -108,11 +122,15 @@ const GameState = (() => {
     MAX_LIVES,
     DIFFICULTY_LIVES,
     getMaxLives,
+    normalizeDifficulty,
+    getDifficultyLabel,
+    isHardMode,
 
     getState: () => ({ ...state }),
 
     reset(name, options = {}) {
-      const difficulty = options.difficulty || ProfileSave?.getSettings?.()?.difficulty || 'standard';
+      const raw = options.difficulty || ProfileSave?.getSettings?.()?.difficulty || 'normal';
+      const difficulty = normalizeDifficulty(raw);
       const maxLives = getMaxLives(difficulty);
       state.studentName = name;
       state.score = START_SCORE;
@@ -154,7 +172,7 @@ const GameState = (() => {
       state.quizScore = saved.quizScore ?? null;
       state.timeBonus = saved.timeBonus ?? 0;
       state.hijacksCleared = saved.hijacksCleared ?? 0;
-      state.difficulty = saved.difficulty || 'standard';
+      state.difficulty = normalizeDifficulty(saved.difficulty || 'normal');
       state.pendingChapterId = saved.pendingChapterId ?? Campaign.getCurrentChapter(state.completedRooms);
       ROOMS.forEach((r) => {
         state.roomMistakes[r] = saved.roomMistakes?.[r] ?? 0;
@@ -206,7 +224,7 @@ const GameState = (() => {
     },
 
     hintsAllowed() {
-      return state.difficulty !== 'analyst';
+      return !isHardMode();
     },
 
     startTimer(onTick, resumeElapsedSeconds) {
