@@ -175,6 +175,7 @@
     updateHud();
     runBootSequence();
     initIntroFromSave();
+    ReadAloud.removeLegacyVoicePicker?.();
   }
 
   function initIntroFromSave() {

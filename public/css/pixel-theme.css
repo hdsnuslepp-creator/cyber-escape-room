@@ -2269,3 +2269,12 @@ body.hijack-cursor-active .audio-bar * {
 .btn--read-aloud {
   margin-left: 0.5rem;
 }
+
+/* Voice picker removed — hide if old cached HTML still loads on mobile */
+.read-aloud-voice-wrap,
+#readAloudVoiceWrap,
+#readAloudVoice,
+#btnVoicePreview,
+.read-aloud-voice-note {
+  display: none !important;
+}

@@ -1,5 +1,5 @@
 /**
- * Read-aloud for dyslexia accessibility — Web Speech API (device default voice).
+ * Read-aloud accessibility — Web Speech API (device default voice).
  * Mobile: iOS requires speech to start from a tap; Android is more permissive.
  */
 const ReadAloud = (() => {
@@ -291,6 +291,24 @@ const ReadAloud = (() => {
     });
   }
 
+  /** Strip voice picker removed in v4 — clears stale cached HTML on mobile. */
+  function removeLegacyVoicePicker() {
+    document.getElementById('readAloudVoiceWrap')?.remove();
+    document.getElementById('btnVoicePreview')?.remove();
+    document.getElementById('readAloudVoice')?.remove();
+    document.querySelectorAll('.read-aloud-voice-wrap, .read-aloud-voice-row, .read-aloud-voice-note').forEach((el) => {
+      el.remove();
+    });
+  }
+
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', removeLegacyVoicePicker);
+    } else {
+      removeLegacyVoicePicker();
+    }
+  }
+
   return {
     isSupported,
     isEnabled,
@@ -311,5 +329,6 @@ const ReadAloud = (() => {
     updateFab,
     bindFab,
     syncMobileReadButtons,
+    removeLegacyVoicePicker,
   };
 })();
