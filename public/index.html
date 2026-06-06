@@ -62,7 +62,22 @@
                 <label for="studentName">&gt; ENTER AGENT CODENAME</label>
                 <input type="text" id="studentName" class="input input--pixel" placeholder="agent_codename..." maxlength="60" autocomplete="name">
               </div>
+              <div class="input-group input-group--pixel">
+                <label for="difficultySelect">&gt; DIFFICULTY</label>
+                <select id="difficultySelect" class="input input--pixel">
+                  <option value="casual">Casual — 5 lives, hints on</option>
+                  <option value="standard" selected>Standard — 3 lives</option>
+                  <option value="analyst">Analyst — 2 lives, no hints, harder hijacks</option>
+                </select>
+              </div>
+              <label class="intro-check">
+                <input type="checkbox" id="disableHijackFx"> Disable CHIMERA visual effects (cursor/banners still block submit)
+              </label>
+              <label class="intro-check">
+                <input type="checkbox" id="dyslexiaMode"> Dyslexia support — read questions and options aloud
+              </label>
               <button type="button" class="btn btn--primary btn--pixel" id="btnStart">[ INITIALIZE BREACH ]</button>
+              <button type="button" class="btn btn--secondary btn--pixel" id="btnResume" hidden>[ RESUME CAMPAIGN ]</button>
               <a href="game.html" class="btn btn--secondary btn--pixel btn--game-link">[ PLAY LOCKDOWN PROTOCOL ]</a>
               <p class="intro-mode-note">Training mode: 14-chapter / 56-room campaign &nbsp;|&nbsp; Game mode: Lockdown Protocol</p>
               <div class="leaderboard-panel leaderboard-panel--pixel">
@@ -80,10 +95,16 @@
           <p class="chapter-card__label" id="chapterLabel">Chapter 1</p>
           <h2 class="chapter-card__title" id="chapterTitle">The Email</h2>
           <p class="chapter-card__tagline" id="chapterTagline">"Something got through."</p>
+          <div class="chapter-card__intro" id="chapterIntro"></div>
+          <p class="chapter-card__briefing" id="chapterBriefing"></p>
+          <ul class="chapter-card__objectives" id="chapterObjectives"></ul>
           <div class="chapter-card__rooms" id="chapterRoomList"></div>
           <p class="chapter-card__note">Full campaign: 56 missions across 14 chapters — no skips.</p>
           <p class="chapter-card__note chapter-card__hijack-warn" id="chapterHijackWarn" hidden>From Chapter 5 onward, CHIMERA may hijack your screen — fake cursors, urgent overrides, compromised tutor. Double-check everything.</p>
-          <button type="button" class="btn btn--primary btn--pixel" id="btnChapterContinue">[ ENTER CHAPTER ]</button>
+          <div class="chapter-card__actions">
+            <button type="button" class="btn btn--primary btn--pixel" id="btnChapterContinue">[ ENTER CHAPTER ]</button>
+            <a href="game.html" class="btn btn--secondary btn--pixel" id="chapterGameLink">[ LOCKDOWN PROTOCOL ]</a>
+          </div>
         </div>
       </section>
 
@@ -621,6 +642,7 @@ AND password = '" + password + "'"</code></pre>
               <p class="level-desc" id="engineRoomDesc"></p>
             </div>
             <button type="button" class="btn btn--hint" id="btn-engine-hint">? HINT</button>
+            <button type="button" class="btn btn--hint btn--read-aloud" id="btn-engine-read" hidden title="Read question aloud">🔊 READ</button>
           </div>
           <div class="tutor-panel" id="tutor-engine" hidden></div>
           <div id="engineRoomBody"></div>
@@ -662,6 +684,7 @@ AND password = '" + password + "'"</code></pre>
             </div>
             <p class="certificate__date" id="certDate"></p>
             <button class="btn btn--primary" id="btnPrint">Print Certificate</button>
+            <button class="btn btn--secondary" id="btnExportResults">Export CSV</button>
             <button class="btn btn--secondary" id="btnRestart">Play Again</button>
           </div>
         </div>
@@ -682,7 +705,10 @@ AND password = '" + password + "'"</code></pre>
             </div>
             <ul class="fail-screen__tips" id="failTips"></ul>
             <p class="fail-screen__date" id="failDate"></p>
-            <button class="btn btn--primary btn--pixel" id="btnRetry">TRY AGAIN</button>
+            <div class="fail-screen__actions">
+              <button class="btn btn--primary btn--pixel" id="btnRetryChapter">RETRY CHAPTER</button>
+              <button class="btn btn--secondary btn--pixel" id="btnRetry">FULL RESTART</button>
+            </div>
           </div>
         </div>
       </section>
@@ -694,11 +720,23 @@ AND password = '" + password + "'"</code></pre>
     </footer>
   </div>
 
+  <button type="button" id="btnReadAloud" class="read-aloud-fab" hidden title="Read current question aloud">🔊 READ</button>
+
   <div id="achievementToast" class="achievement-toast" hidden>
     <span class="achievement-toast__icon">🏆</span>
     <div>
       <strong id="achievementTitle">Achievement</strong>
       <p id="achievementDesc">Unlocked!</p>
+    </div>
+  </div>
+
+  <div id="missionBriefModal" class="brief-modal" hidden>
+    <div class="brief-modal__panel">
+      <p class="brief-modal__label">MISSION BRIEFING</p>
+      <h3 class="brief-modal__title" id="briefTitle"></h3>
+      <p class="brief-modal__story" id="briefStory"></p>
+      <p class="brief-modal__objective" id="briefObjective"></p>
+      <button type="button" class="btn btn--primary btn--pixel" id="btnBriefStart">[ BEGIN MISSION ]</button>
     </div>
   </div>
 
@@ -716,12 +754,14 @@ AND password = '" + password + "'"</code></pre>
   </div>
 
   <script src="js/config.js"></script>
+  <script src="js/profile-save.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/achievements.js"></script>
   <script src="js/rooms-data.js"></script>
   <script src="js/campaign.js"></script>
   <script src="js/game-state.js"></script>
   <script src="js/room-engine.js"></script>
+  <script src="js/read-aloud.js"></script>
   <script src="js/hijack-system.js"></script>
   <script src="js/tutor-client.js"></script>
   <script src="js/app.js"></script>

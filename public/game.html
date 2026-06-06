@@ -1,28 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cyber Escape: Lockdown Protocol</title>
-  <link rel="stylesheet" href="css/game.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-</head>
-<body class="game-body crt-screen">
-  <div class="scanlines" aria-hidden="true"></div>
-  <div class="crt-vignette" aria-hidden="true"></div>
-
-  <div id="phaser-root">
-    <div class="game-topbar">
-      <span>CYBER ESCAPE: LOCKDOWN PROTOCOL</span>
-      <a href="index.html">[ TRAINING MODE ]</a>
-    </div>
-    <div id="game-canvas-wrap" tabindex="0" aria-label="Game canvas — click here then use WASD or arrow keys to move"></div>
-    <p class="game-hint-bar">WASD / Arrows — move &nbsp;•&nbsp; Pick up KEY (bottom-right) &nbsp;•&nbsp; Then [ E ] at DOOR</p>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
-  <script src="js/phaser-game.js?v=5"></script>
-</body>
-</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Escape: Lockdown Protocol</title>
+  <link rel="stylesheet" href="css/game.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    .touch-dpad {
+      position: fixed;
+      left: 1rem;
+      bottom: 1rem;
+      z-index: 10000;
+      display: grid;
+      grid-template-columns: 48px 48px 48px;
+      grid-template-rows: 48px 48px 48px;
+      gap: 4px;
+      touch-action: none;
+      user-select: none;
+    }
+    .touch-dpad button {
+      width: 48px;
+      height: 48px;
+      border: 2px solid #00ffcc;
+      background: rgba(10, 14, 23, 0.85);
+      color: #00ffcc;
+      font-family: 'VT323', monospace;
+      font-size: 1.4rem;
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 0;
+    }
+    .touch-dpad button:active,
+    .touch-dpad button.dpad-active {
+      background: rgba(0, 255, 204, 0.25);
+      color: #00ff66;
+    }
+    .touch-dpad__up { grid-column: 2; grid-row: 1; }
+    .touch-dpad__left { grid-column: 1; grid-row: 2; }
+    .touch-dpad__mid { grid-column: 2; grid-row: 2; opacity: 0.35; pointer-events: none; }
+    .touch-dpad__right { grid-column: 3; grid-row: 2; }
+    .touch-dpad__down { grid-column: 2; grid-row: 3; }
+    @media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+      .touch-dpad { display: none; }
+    }
+  </style>
+</head>
+<body class="game-body crt-screen">
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="crt-vignette" aria-hidden="true"></div>
+
+  <div id="phaser-root">
+    <div class="game-topbar">
+      <span>CYBER ESCAPE: LOCKDOWN PROTOCOL</span>
+      <a href="index.html">[ TRAINING MODE ]</a>
+    </div>
+    <div id="game-canvas-wrap" tabindex="0" aria-label="Game canvas — click here then use WASD or arrow keys to move"></div>
+    <p class="game-hint-bar" id="game-hint-bar">WASD / Arrows — move &nbsp;•&nbsp; Tap canvas to walk &nbsp;•&nbsp; [ E ] interact &nbsp;•&nbsp; ESC pause</p>
+  </div>
+
+  <div id="touch-dpad" class="touch-dpad" aria-hidden="true">
+    <button type="button" class="touch-dpad__up" data-dir="up" aria-label="Move up">▲</button>
+    <button type="button" class="touch-dpad__left" data-dir="left" aria-label="Move left">◀</button>
+    <span class="touch-dpad__mid" aria-hidden="true">+</span>
+    <button type="button" class="touch-dpad__right" data-dir="right" aria-label="Move right">▶</button>
+    <button type="button" class="touch-dpad__down" data-dir="down" aria-label="Move down">▼</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="js/profile-save.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/phaser-game.js?v=6"></script>
+</body>
+</html>

@@ -26,6 +26,71 @@ const RoomEngine = (() => {
     return d.innerHTML;
   }
 
+  function renderOptions(container, def, btn, feedback) {
+    container.className = 'option-grid';
+    container.innerHTML = '';
+    (def.options || []).forEach((opt) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'option-btn';
+      b.textContent = opt.text;
+      b.addEventListener('click', () => selectOption(opt.id, container, btn, feedback));
+      container.appendChild(b);
+    });
+  }
+
+  function renderToggleUI(container, def, btn, feedback) {
+    container.className = 'engine-toggle-grid';
+    container.innerHTML = (def.options || []).map((opt) =>
+      `<button type="button" class="engine-toggle" data-id="${escapeHtml(opt.id)}">
+        <span class="engine-toggle__led"></span>
+        <span class="engine-toggle__text">${escapeHtml(opt.text)}</span>
+      </button>`
+    ).join('');
+    container.querySelectorAll('.engine-toggle').forEach((el) => {
+      el.addEventListener('click', () => selectOption(opt.id, container, btn, feedback, '.engine-toggle'));
+    });
+  }
+
+  function renderDashboardUI(container, def, btn, feedback) {
+    const alerts = (def.alerts || []).map((a) => `<li class="engine-alert">${escapeHtml(a)}</li>`).join('');
+    container.innerHTML = `
+      <div class="engine-dashboard">
+        <p class="engine-dashboard__label">⚠ LIVE ALERTS</p>
+        <ul class="engine-dashboard__alerts">${alerts}</ul>
+        <div class="option-grid" id="engineDashOptions"></div>
+      </div>`;
+    const opts = container.querySelector('#engineDashOptions');
+    renderOptions(opts, def, btn, feedback);
+  }
+
+  function renderRankedUI(container, def, btn, feedback) {
+    container.className = 'option-grid engine-ranked-grid';
+    container.innerHTML = '';
+    (def.options || []).forEach((opt) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'option-btn engine-ranked-btn';
+      b.dataset.id = opt.id;
+      b.textContent = opt.text;
+      b.addEventListener('click', () => selectOption(opt.id, container, btn, feedback, '.engine-ranked-btn'));
+      container.appendChild(b);
+    });
+  }
+
+  function selectOption(id, container, btn, feedback, selector = '.option-btn') {
+    AudioFX.click();
+    selectedOption = id;
+    container.querySelectorAll(selector).forEach((el) => el.classList.remove('option-btn--selected'));
+    const target = container.querySelector(`[data-id="${id}"]`) ||
+      [...container.querySelectorAll(selector)].find((el) => el.dataset.id === id);
+    if (target) {
+      target.classList.add('option-btn--selected');
+    }
+    if (btn) btn.disabled = false;
+    if (feedback) feedback.hidden = true;
+  }
+
   function mount(roomId, cbs) {
     activeRoomId = roomId;
     selectedOption = null;
@@ -75,36 +140,30 @@ const RoomEngine = (() => {
     body.innerHTML = `
       <div class="scenario-box engine-scenario">${escapeHtml(def.scenario || '')}</div>
       <p class="log-prompt engine-prompt">${escapeHtml(def.prompt || 'Choose the best response:')}</p>
-      <div class="option-grid" id="engineOptions"></div>
+      <div id="engineOptions"></div>
     `;
 
     const container = document.getElementById('engineOptions');
-    container.innerHTML = '';
-    (def.options || []).forEach((opt) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'option-btn';
-      b.textContent = opt.text;
-      b.addEventListener('click', () => {
-        AudioFX.click();
-        selectedOption = opt.id;
-        container.querySelectorAll('.option-btn').forEach((el) => el.classList.remove('option-btn--selected'));
-        b.classList.add('option-btn--selected');
-        if (btn) btn.disabled = false;
-        if (feedback) feedback.hidden = true;
-      });
-      container.appendChild(b);
-    });
+    const uiType = def.uiType || 'options';
+    if (uiType === 'toggle') renderToggleUI(container, def, btn, feedback);
+    else if (uiType === 'dashboard') renderDashboardUI(container, def, btn, feedback);
+    else if (uiType === 'ranked') renderRankedUI(container, def, btn, feedback);
+    else renderOptions(container, def, btn, feedback);
 
     if (btn) {
       btn.disabled = true;
       btn.textContent = def.submitLabel || 'SUBMIT';
+      btn.dataset.originalLabel = def.submitLabel || 'SUBMIT';
     }
     if (feedback) {
       feedback.hidden = true;
       feedback.textContent = '';
     }
     if (tutor) tutor.hidden = true;
+
+    if (typeof HijackSystem !== 'undefined') {
+      HijackSystem.spoofSubmitButton(btn);
+    }
   }
 
   function submit() {

@@ -7,6 +7,7 @@ const GameState = (() => {
   const MISTAKE_PENALTY = 50;
   const HINT_PENALTY = 25;
   const MAX_LIVES = 3;
+  const DIFFICULTY_LIVES = { casual: 5, standard: 3, analyst: 2 };
   const TIME_BONUS_FAST = 100;
   const TIME_BONUS_MEDIUM = 50;
   const TIME_FAST_SEC = 600;
@@ -32,6 +33,9 @@ const GameState = (() => {
     quizScore: null,
     timeBonus: 0,
     hijacksCleared: 0,
+    difficulty: 'standard',
+    lastFailedChapter: null,
+    pendingChapterId: 1,
   };
 
   ROOMS.forEach((r) => {
@@ -81,6 +85,10 @@ const GameState = (() => {
     return idx >= 0 ? idx + 1 : 1;
   }
 
+  function getMaxLives(difficulty) {
+    return DIFFICULTY_LIVES[difficulty] || MAX_LIVES;
+  }
+
   function applyTimeBonus() {
     state.timeBonus = 0;
     if (state.elapsedSeconds <= TIME_FAST_SEC) {
@@ -98,22 +106,30 @@ const GameState = (() => {
     MISTAKE_PENALTY,
     HINT_PENALTY,
     MAX_LIVES,
+    DIFFICULTY_LIVES,
+    getMaxLives,
 
     getState: () => ({ ...state }),
 
-    reset(name) {
+    reset(name, options = {}) {
+      const difficulty = options.difficulty || ProfileSave?.getSettings?.()?.difficulty || 'standard';
+      const maxLives = getMaxLives(difficulty);
       state.studentName = name;
       state.score = START_SCORE;
-      state.lives = MAX_LIVES;
+      state.lives = maxLives;
       state.mistakes = 0;
       state.hintsUsed = [];
       state.currentRoomIndex = 0;
       state.completedRooms = [];
       state.elapsedSeconds = 0;
       state.gameOver = false;
+      state.lastFailedRoom = null;
+      state.lastFailedChapter = null;
       state.quizScore = null;
       state.timeBonus = 0;
       state.hijacksCleared = 0;
+      state.difficulty = difficulty;
+      state.pendingChapterId = 1;
       ROOMS.forEach((r) => {
         state.roomMistakes[r] = 0;
         state.roomHints[r] = 0;
@@ -122,8 +138,81 @@ const GameState = (() => {
       });
     },
 
-    startTimer(onTick) {
-      state.startTime = Date.now();
+    restore(saved) {
+      if (!saved?.studentName) return false;
+      state.studentName = saved.studentName;
+      state.score = saved.score ?? START_SCORE;
+      state.lives = saved.lives ?? getMaxLives(saved.difficulty);
+      state.mistakes = saved.mistakes ?? 0;
+      state.hintsUsed = saved.hintsUsed || [];
+      state.currentRoomIndex = saved.currentRoomIndex ?? 0;
+      state.completedRooms = saved.completedRooms || [];
+      state.elapsedSeconds = saved.elapsedSeconds ?? 0;
+      state.gameOver = false;
+      state.lastFailedRoom = null;
+      state.lastFailedChapter = saved.lastFailedChapter ?? null;
+      state.quizScore = saved.quizScore ?? null;
+      state.timeBonus = saved.timeBonus ?? 0;
+      state.hijacksCleared = saved.hijacksCleared ?? 0;
+      state.difficulty = saved.difficulty || 'standard';
+      state.pendingChapterId = saved.pendingChapterId ?? Campaign.getCurrentChapter(state.completedRooms);
+      ROOMS.forEach((r) => {
+        state.roomMistakes[r] = saved.roomMistakes?.[r] ?? 0;
+        state.roomHints[r] = saved.roomHints?.[r] ?? 0;
+        state.roomTimes[r] = saved.roomTimes?.[r] ?? 0;
+        state.roomEnterAt[r] = saved.roomEnterAt?.[r] ?? 0;
+      });
+      return true;
+    },
+
+    serialize() {
+      return {
+        studentName: state.studentName,
+        score: state.score,
+        lives: state.lives,
+        mistakes: state.mistakes,
+        hintsUsed: state.hintsUsed,
+        currentRoomIndex: state.currentRoomIndex,
+        completedRooms: [...state.completedRooms],
+        elapsedSeconds: state.elapsedSeconds,
+        quizScore: state.quizScore,
+        timeBonus: state.timeBonus,
+        hijacksCleared: state.hijacksCleared,
+        difficulty: state.difficulty,
+        lastFailedChapter: state.lastFailedChapter,
+        pendingChapterId: state.pendingChapterId,
+        roomMistakes: { ...state.roomMistakes },
+        roomHints: { ...state.roomHints },
+        roomTimes: { ...state.roomTimes },
+        roomEnterAt: { ...state.roomEnterAt },
+      };
+    },
+
+    retryChapter(chapterId) {
+      const ids = Campaign.CHAPTER_ROOMS[chapterId] || [];
+      state.completedRooms = state.completedRooms.filter((id) => !ids.includes(id));
+      state.lives = getMaxLives(state.difficulty);
+      state.gameOver = false;
+      state.lastFailedRoom = null;
+      state.lastFailedChapter = null;
+      state.pendingChapterId = chapterId;
+      const first = Campaign.getChapterFirstRoom(chapterId);
+      if (first) state.currentRoomIndex = ROOMS.indexOf(first);
+      return first;
+    },
+
+    setPendingChapter(chapterId) {
+      state.pendingChapterId = chapterId;
+    },
+
+    hintsAllowed() {
+      return state.difficulty !== 'analyst';
+    },
+
+    startTimer(onTick, resumeElapsedSeconds) {
+      const offset = Math.max(0, resumeElapsedSeconds ?? state.elapsedSeconds ?? 0);
+      state.elapsedSeconds = offset;
+      state.startTime = Date.now() - offset * 1000;
       if (state.timerInterval) clearInterval(state.timerInterval);
       state.timerInterval = setInterval(() => {
         state.elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
@@ -146,6 +235,7 @@ const GameState = (() => {
       if (state.lives <= 0) {
         state.gameOver = true;
         state.lastFailedRoom = roomId;
+        state.lastFailedChapter = Campaign.getRoom(roomId).chapter || null;
       }
       return state.lives <= 0;
     },

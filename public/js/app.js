@@ -140,6 +140,7 @@
   let quizAnswers = {};
   let campaignAdvanceTimer = null;
   let completingRoom = false;
+  let pendingBriefRoomId = null;
 
   const gameHeader = document.getElementById('gameHeader');
   const progressBar = document.getElementById('progressBar');
@@ -153,11 +154,97 @@
     HijackSystem.bindVerifySubmit((ctx) => {
       if (GameState.ROOMS.includes(currentScreen)) handleMistake(currentScreen, ctx);
     });
+    ReadAloud.bindFab(repeatReadAloud);
+    bind(document.getElementById('btn-engine-read'), 'click', () => {
+      AudioFX.click();
+      if (RoomEngine.isEngineRoom(currentScreen)) ReadAloud.announceRoom(currentScreen);
+    });
+    const dysEl = document.getElementById('dyslexiaMode');
+    if (dysEl) {
+      dysEl.addEventListener('change', () => {
+        ProfileSave.saveSettings({ dyslexiaMode: dysEl.checked });
+        syncReadAloudUi();
+        if (dysEl.checked) repeatReadAloud();
+        else ReadAloud.stop();
+      });
+    }
     buildProgressBar();
     bindGlobalEvents();
     initRooms();
     updateHud();
     runBootSequence();
+    initIntroFromSave();
+  }
+
+  function initIntroFromSave() {
+    const settings = ProfileSave.getSettings();
+    const diffEl = document.getElementById('difficultySelect');
+    const fxEl = document.getElementById('disableHijackFx');
+    const dysEl = document.getElementById('dyslexiaMode');
+    if (diffEl) diffEl.value = settings.difficulty || 'standard';
+    if (fxEl) fxEl.checked = !!settings.disableHijackEffects;
+    if (dysEl) dysEl.checked = !!settings.dyslexiaMode;
+    syncReadAloudUi();
+
+    const saved = ProfileSave.loadCampaign();
+    const resumeBtn = document.getElementById('btnResume');
+    if (resumeBtn && saved?.studentName && (saved.completedRooms || []).length > 0) {
+      resumeBtn.hidden = false;
+      resumeBtn.textContent = `[ RESUME: ${saved.studentName.toUpperCase()} — CH.${saved.pendingChapterId || Campaign.getCurrentChapter(saved.completedRooms)} ]`;
+    }
+  }
+
+  function syncReadAloudUi() {
+    const on = ReadAloud.isEnabled();
+    const inGame = currentScreen !== 'intro';
+    ReadAloud.updateFab(on && inGame);
+    document.querySelectorAll('.btn--read-aloud').forEach((btn) => {
+      btn.hidden = !on || !inGame;
+    });
+  }
+
+  function scheduleRoomReadAloud(roomId) {
+    if (!ReadAloud.isEnabled() || !roomId) return;
+    const target = roomId;
+    setTimeout(() => {
+      if (currentScreen === target && GameState.ROOMS.includes(target)) {
+        ReadAloud.announceRoom(target);
+      }
+    }, 900);
+  }
+
+  function repeatReadAloud() {
+    if (!ReadAloud.isEnabled()) return;
+    const briefModal = document.getElementById('missionBriefModal');
+    if (briefModal && !briefModal.hidden && pendingBriefRoomId) {
+      const meta = Campaign.getRoom(pendingBriefRoomId);
+      const ch = Campaign.getChapter(meta.chapter);
+      ReadAloud.announceBrief(
+        meta.title,
+        meta.story || meta.goal || '',
+        ch?.briefing ? `Objective: ${ch.briefing}` : 'Complete the mission without losing all lives.'
+      );
+      return;
+    }
+    if (currentScreen === 'quiz') {
+      ReadAloud.announceQuiz(quizData);
+      return;
+    }
+    if (GameState.ROOMS.includes(currentScreen)) {
+      ReadAloud.announceRoom(currentScreen);
+      return;
+    }
+    if (currentScreen === 'chapter') {
+      ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId));
+    }
+  }
+
+  function persistSave() {
+    const s = GameState.getState();
+    if (!s.studentName) return;
+    const data = GameState.serialize();
+    data.pendingChapterId = pendingChapterId;
+    ProfileSave.saveCampaign(data);
   }
 
   function runBootSequence() {
@@ -198,10 +285,9 @@
   }
 
   function buildProgressBar() {
-    progressBar.innerHTML = GameState.ROOMS.map((r) => {
-      const c = Campaign.getRoom(r);
-      return `<div class="progress-step" data-room="${r}" title="${c.actTitle} — ${c.title}"></div>`;
-    }).join('') + '<div class="progress-step" data-room="quiz" title="Final Debrief Quiz"></div>';
+    progressBar.innerHTML = Campaign.CHAPTERS.map((ch) =>
+      `<div class="progress-step progress-step--chapter" data-chapter="${ch.id}" title="Chapter ${ch.id}: ${ch.title}"><span>${ch.id}</span></div>`
+    ).join('') + '<div class="progress-step progress-step--chapter" data-room="quiz" title="Final Debrief Quiz"><span>Q</span></div>';
   }
 
   function bind(el, event, handler) {
@@ -210,10 +296,14 @@
 
   function bindGlobalEvents() {
     bind(document.getElementById('btnStart'), 'click', startGame);
+    bind(document.getElementById('btnResume'), 'click', resumeGame);
     bind(document.getElementById('btnChapterContinue'), 'click', enterChapter);
-    bind(document.getElementById('btnRestart'), 'click', () => location.reload());
-    bind(document.getElementById('btnRetry'), 'click', () => location.reload());
+    bind(document.getElementById('btnBriefStart'), 'click', confirmMissionBrief);
+    bind(document.getElementById('btnRestart'), 'click', () => { ProfileSave.clearCampaign(); location.reload(); });
+    bind(document.getElementById('btnRetry'), 'click', () => { ProfileSave.clearCampaign(); location.reload(); });
+    bind(document.getElementById('btnRetryChapter'), 'click', retryFailedChapter);
     bind(document.getElementById('btnPrint'), 'click', () => window.print());
+    bind(document.getElementById('btnExportResults'), 'click', exportResultsCsv);
 
     document.querySelectorAll('[data-hint-room]').forEach((btn) => {
       btn.addEventListener('click', () => useHint(btn.dataset.hintRoom));
@@ -269,10 +359,18 @@
       return;
     }
 
+    const difficulty = document.getElementById('difficultySelect')?.value || 'standard';
+    ProfileSave.saveSettings({
+      difficulty,
+      disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
+      dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
+    });
+    syncReadAloudUi();
+
     AudioFX.resume();
     AudioFX.boot();
     AudioFX.startMusic();
-    GameState.reset(name);
+    GameState.reset(name, { difficulty });
     Achievements.reset();
     hintLevels = {};
     foundFlags = new Set();
@@ -313,6 +411,59 @@
     } else {
       showChapterIntro(1);
     }
+    persistSave();
+  }
+
+  function resumeGame() {
+    const saved = ProfileSave.loadCampaign();
+    if (!saved?.studentName) return;
+
+    ProfileSave.saveSettings({
+      difficulty: saved.difficulty || 'standard',
+      disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
+      dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
+    });
+    syncReadAloudUi();
+
+    AudioFX.resume();
+    AudioFX.boot();
+    AudioFX.startMusic();
+    GameState.restore(saved);
+    hintLevels = {};
+    foundFlags = new Set();
+    selectedPassword = null;
+    selectedSql = null;
+    selectedIp = null;
+    selectedSocial = null;
+    selectedMfa = null;
+    attachmentFlags = new Set();
+    selectedFakeLogin = null;
+    stopBossTimer();
+    stopCh1BossTimer();
+    stopCh2BossTimer();
+    HijackSystem.clear();
+    completingRoom = false;
+    if (campaignAdvanceTimer) {
+      clearTimeout(campaignAdvanceTimer);
+      campaignAdvanceTimer = null;
+    }
+    stegoFound = false;
+    selectedDbForensics = null;
+    selectedSiem = null;
+    selectedInsider = null;
+    selectedBackup = null;
+
+    gameHeader.classList.remove('header--intro');
+    progressBar.classList.remove('header__progress--idle');
+    initRooms();
+
+    pendingChapterId = saved.pendingChapterId || Campaign.getCurrentChapter(saved.completedRooms);
+    const elapsed = saved.elapsedSeconds ?? 0;
+    GameState.startTimer((_, formatted) => {
+      document.getElementById('hudTime').textContent = formatted;
+    }, elapsed);
+    updateHud();
+    showChapterIntro(pendingChapterId);
   }
 
   function getStartChapterFromUrl() {
@@ -344,6 +495,24 @@
     document.getElementById('chapterTitle').textContent = ch.title;
     document.getElementById('chapterTagline').textContent = `"${ch.tagline}"`;
 
+    const introEl = document.getElementById('chapterIntro');
+    const briefEl = document.getElementById('chapterBriefing');
+    const objEl = document.getElementById('chapterObjectives');
+    if (introEl) introEl.textContent = ch.intro || '';
+    if (briefEl) briefEl.textContent = ch.briefing ? `Focus: ${ch.briefing}` : '';
+    if (objEl) {
+      objEl.innerHTML = (ch.objectives || []).map((o) => `<li>${escapeHtml(o)}</li>`).join('');
+    }
+
+    const gameLink = document.getElementById('chapterGameLink');
+    if (gameLink && chapterId === 1) {
+      gameLink.href = 'game.html?chapter=1';
+      gameLink.hidden = false;
+    } else if (gameLink) {
+      gameLink.hidden = chapterId > 1;
+    }
+
+    GameState.setPendingChapter(chapterId);
     const completed = new Set(GameState.getState().completedRooms);
     const entries = Object.entries(Campaign.ROOM_CATALOG)
       .filter(([, r]) => r.chapter === chapterId && (r.num > 0 || r.isBoss))
@@ -365,16 +534,83 @@
     const hijackWarn = document.getElementById('chapterHijackWarn');
     if (hijackWarn) hijackWarn.hidden = chapterId < HijackSystem.MIN_CHAPTER;
 
+    persistSave();
     showScreen('chapter');
+  }
+
+  function getNextIncompleteRoomInChapter(chapterId) {
+    const completed = new Set(GameState.getState().completedRooms);
+    const ids = Campaign.CHAPTER_ROOMS[chapterId] || [];
+    return ids.find((id) => !completed.has(id)) || null;
   }
 
   function enterChapter() {
     AudioFX.click();
-    const roomId = Campaign.getChapterFirstRoom(pendingChapterId);
-    if (roomId) {
-      refreshRoomChrome(roomId);
-      showScreen(roomId);
+    const roomId = getNextIncompleteRoomInChapter(pendingChapterId);
+    if (!roomId) {
+      const nextChapter = pendingChapterId + 1;
+      if (nextChapter <= Campaign.CHAPTERS.length) {
+        showChapterIntro(nextChapter);
+      }
+      return;
     }
+    showMissionBrief(roomId);
+  }
+
+  function showMissionBrief(roomId) {
+    pendingBriefRoomId = roomId;
+    const meta = Campaign.getRoom(roomId);
+    const ch = Campaign.getChapter(meta.chapter);
+    document.getElementById('briefTitle').textContent = meta.title;
+    document.getElementById('briefStory').textContent = meta.story || meta.goal || '';
+    document.getElementById('briefObjective').textContent = ch?.briefing
+      ? `Objective: ${ch.briefing}`
+      : 'Complete the mission without losing all lives.';
+    document.getElementById('missionBriefModal').hidden = false;
+    ReadAloud.stop();
+    ReadAloud.announceBrief(
+      meta.title,
+      meta.story || meta.goal || '',
+      document.getElementById('briefObjective').textContent
+    );
+  }
+
+  function confirmMissionBrief() {
+    AudioFX.click();
+    document.getElementById('missionBriefModal').hidden = true;
+    const roomId = pendingBriefRoomId;
+    pendingBriefRoomId = null;
+    if (!roomId) return;
+    if (GameState.getState().completedRooms.includes(roomId)) return;
+    refreshRoomChrome(roomId);
+    showScreen(roomId);
+  }
+
+  function retryFailedChapter() {
+    const s = GameState.getState();
+    const chapterId = s.lastFailedChapter || Campaign.getRoom(s.lastFailedRoom || '').chapter || pendingChapterId;
+    if (!chapterId) return;
+    AudioFX.click();
+    GameState.retryChapter(chapterId);
+    pendingChapterId = chapterId;
+    document.body.classList.remove('fail-screen-active');
+    const elapsed = s.elapsedSeconds ?? 0;
+    GameState.startTimer((_, formatted) => {
+      document.getElementById('hudTime').textContent = formatted;
+    }, elapsed);
+    persistSave();
+    showChapterIntro(chapterId);
+  }
+
+  function exportResultsCsv() {
+    const payload = { ...GameState.getResultsPayload(), difficulty: GameState.getState().difficulty };
+    const csv = ProfileSave.exportCampaignCsv(payload);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `cyber-escape-${(payload.studentName || 'agent').replace(/\W+/g, '_')}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   function refreshRoomChrome(roomId) {
@@ -429,6 +665,7 @@
   }
 
   function showScreen(screenId, opts = {}) {
+    ReadAloud.stop();
     if (currentScreen === 'ransomware' && screenId !== 'ransomware') {
       stopBossTimer();
     }
@@ -477,30 +714,54 @@
     }
     updateProgress();
     updateHud();
+    syncReadAloudUi();
     document.body.classList.toggle('fail-screen-active', screenId === 'gameover');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (screenId === 'chapter') {
+      setTimeout(() => {
+        if (currentScreen === 'chapter') {
+          ReadAloud.announceChapter(Campaign.getChapter(pendingChapterId));
+        }
+      }, 400);
+    } else if (screenId === 'quiz') {
+      setTimeout(() => {
+        if (currentScreen === 'quiz') ReadAloud.announceQuiz(quizData);
+      }, 400);
+    } else if (GameState.ROOMS.includes(screenId)) {
+      scheduleRoomReadAloud(screenId);
+    }
   }
 
   function getProgressIndex() {
+    return Campaign.getChapterProgressIndex(GameState.getState().completedRooms);
+  }
+
+  function getActiveChapterStep() {
     if (currentScreen === 'gameover' || currentScreen === 'intro') return -1;
-    if (currentScreen === 'chapter') {
-      const nextRoom = Campaign.getChapterFirstRoom(pendingChapterId);
-      return nextRoom ? GameState.ROOMS.indexOf(nextRoom) : 0;
+    if (currentScreen === 'quiz') return Campaign.CHAPTERS.length;
+    if (currentScreen === 'certificate') return Campaign.CHAPTERS.length + 1;
+    if (currentScreen === 'chapter') return pendingChapterId;
+    if (GameState.ROOMS.includes(currentScreen)) {
+      return Campaign.getRoom(currentScreen).chapter || pendingChapterId;
     }
-    const roomIdx = GameState.ROOMS.indexOf(currentScreen);
-    if (roomIdx >= 0) return roomIdx;
-    if (currentScreen === 'quiz') return GameState.ROOMS.length;
-    if (currentScreen === 'certificate') return GameState.ROOMS.length + 1;
-    return 0;
+    return pendingChapterId;
   }
 
   function updateProgress() {
-    const idx = getProgressIndex();
+    const chaptersComplete = getProgressIndex();
+    const activeChapter = getActiveChapterStep();
 
     progressBar.querySelectorAll('.progress-step').forEach((step, i) => {
       step.classList.remove('progress-step--complete', 'progress-step--current');
-      if (i < idx) step.classList.add('progress-step--complete');
-      else if (i === idx) step.classList.add('progress-step--current');
+      const chNum = step.dataset.chapter ? parseInt(step.dataset.chapter, 10) : null;
+      if (step.dataset.room === 'quiz') {
+        if (currentScreen === 'quiz') step.classList.add('progress-step--current');
+        else if (chaptersComplete >= Campaign.CHAPTERS.length) step.classList.add('progress-step--complete');
+        return;
+      }
+      if (chNum <= chaptersComplete) step.classList.add('progress-step--complete');
+      else if (chNum === activeChapter) step.classList.add('progress-step--current');
     });
   }
 
@@ -513,8 +774,14 @@
 
   function updateHud() {
     const s = GameState.getState();
+    const maxLives = GameState.getMaxLives(s.difficulty);
     document.getElementById('hudScore').textContent = s.score;
-    document.getElementById('hudLives').textContent = '♥'.repeat(s.lives) + '♡'.repeat(GameState.MAX_LIVES - s.lives);
+    document.getElementById('hudLives').textContent = '♥'.repeat(s.lives) + '♡'.repeat(Math.max(0, maxLives - s.lives));
+    document.querySelectorAll('[data-hint-room]').forEach((btn) => {
+      btn.hidden = !GameState.hintsAllowed();
+    });
+    const engineHint = document.getElementById('btn-engine-hint');
+    if (engineHint) engineHint.hidden = !GameState.hintsAllowed();
   }
 
   function showFeedback(id, msg, type) {
@@ -551,13 +818,20 @@
     if (dead) {
       GameState.stopTimer();
       AudioFX.gameOver();
+      persistSave();
       renderGameOver(roomId);
       setTimeout(() => showScreen('gameover'), 1200);
+    } else {
+      persistSave();
     }
     return dead;
   }
 
   async function useHint(roomId) {
+    if (!GameState.hintsAllowed()) {
+      showTutor(roomId, 'Analyst mode — hints disabled. Apply your training.');
+      return;
+    }
     AudioFX.hint();
     const level = hintLevels[roomId] || 0;
     hintLevels[roomId] = level + 1;
@@ -604,39 +878,49 @@
     if (blockIfHijacked(roomId)) return;
     if (completingRoom || GameState.getState().completedRooms.includes(roomId)) return;
     completingRoom = true;
-    const submitBtn = document.getElementById('btn-' + roomId);
-    if (submitBtn) submitBtn.disabled = true;
-    if (RoomEngine.isEngineRoom(roomId)) {
-      const eb = document.getElementById('btn-engine');
-      if (eb) eb.disabled = true;
+    try {
+      const submitBtn = document.getElementById('btn-' + roomId);
+      if (submitBtn) submitBtn.disabled = true;
+      if (RoomEngine.isEngineRoom(roomId)) {
+        const eb = document.getElementById('btn-engine');
+        if (eb) eb.disabled = true;
+      }
+
+      AudioFX.roomComplete(roomId);
+      GameState.completeRoom(roomId);
+      ProfileSave.syncTrainingRoomClear(roomId);
+      persistSave();
+      Achievements.checkAfterRoom(roomId);
+      const stats = GameState.getResultsPayload().roomStats;
+      const summary = await TutorClient.summary(roomId, stats);
+      showTutor(roomId, summary);
+      showFeedback(feedbackElId(roomId), summary + ' Mission complete!', 'success');
+
+      await advanceCampaign(roomId);
+    } finally {
+      completingRoom = false;
     }
-
-    AudioFX.roomComplete(roomId);
-    GameState.completeRoom(roomId);
-    Achievements.checkAfterRoom(roomId);
-    const stats = GameState.getResultsPayload().roomStats;
-    const summary = await TutorClient.summary(roomId, stats);
-    showTutor(roomId, summary);
-    showFeedback(feedbackElId(roomId), summary + ' Mission complete!', 'success');
-
-    completingRoom = false;
-    await advanceCampaign(roomId);
   }
 
   async function advanceCampaign(fromRoomId) {
     const next = Campaign.getNextStep(fromRoomId);
     if (campaignAdvanceTimer) clearTimeout(campaignAdvanceTimer);
-    campaignAdvanceTimer = setTimeout(async () => {
-      campaignAdvanceTimer = null;
-      if (next?.type === 'chapter') {
-        showChapterIntro(next.chapterId);
-      } else if (next?.type === 'quiz') {
-        await startQuiz();
-      } else if (typeof next === 'string') {
-        refreshRoomChrome(next);
-        showScreen(next);
-      }
-    }, 2000);
+    return new Promise((resolve) => {
+      campaignAdvanceTimer = setTimeout(async () => {
+        campaignAdvanceTimer = null;
+        if (next?.type === 'chapter') {
+          showChapterIntro(next.chapterId);
+        } else if (next?.type === 'quiz') {
+          await startQuiz();
+        } else if (typeof next === 'string') {
+          if (!GameState.getState().completedRooms.includes(next)) {
+            refreshRoomChrome(next);
+            showMissionBrief(next);
+          }
+        }
+        resolve();
+      }, 2000);
+    });
   }
 
   // --- Phishing ---

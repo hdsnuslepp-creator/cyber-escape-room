@@ -3,20 +3,90 @@
  */
 const Campaign = (() => {
   const CHAPTERS = [
-    { id: 1, title: 'The Email', tagline: 'Something got through.', boss: { id: 'ch1_boss', title: 'Stop the Initial Compromise' } },
-    { id: 2, title: 'The Breach', tagline: 'The attacker is inside.', boss: { id: 'ch2_boss', title: 'Lock the Attacker Out' } },
-    { id: 3, title: 'Dark Signals', tagline: 'Someone is communicating inside the network.', boss: { id: 'ch3_boss', title: 'Reveal Attacker Plans' } },
-    { id: 4, title: 'Database Under Siege', tagline: 'Customer data is at risk.', boss: { id: 'ch4_boss', title: 'Save the Customer Database' } },
-    { id: 5, title: 'Threat Hunter', tagline: 'Find the attacker.', boss: { id: 'ch5_boss', title: 'Track Attacker Location' } },
-    { id: 6, title: 'Human Firewall', tagline: "The weakest link isn't technology.", boss: { id: 'ch6_boss', title: 'Unmask the Mole' } },
-    { id: 7, title: 'Red Alert', tagline: 'The attack escalates.', boss: { id: 'ch7_boss', title: 'Prevent Total Compromise' } },
-    { id: 8, title: 'Ransomware Crisis', tagline: 'Everything depends on you.', boss: { id: 'ransomware', title: 'Stop the Ransomware' } },
-    { id: 9, title: 'Cloud Zero Trust', tagline: 'Misconfigs expose the crown jewels.', boss: { id: 'ch9_boss', title: 'Lock the Cloud Perimeter' } },
-    { id: 10, title: 'Supply Chain', tagline: 'Trust no installer.', boss: { id: 'ch10_boss', title: 'Restore Trusted Delivery' } },
-    { id: 11, title: 'ICS / OT', tagline: 'When cyber hits physical.', boss: { id: 'ch11_boss', title: 'Protect Critical Infrastructure' } },
-    { id: 12, title: 'AI Threats', tagline: 'Synthetic deception.', boss: { id: 'ch12_boss', title: 'Stop AI-Driven Fraud' } },
-    { id: 13, title: 'Digital Forensics', tagline: 'Every byte tells a story.', boss: { id: 'ch13_boss', title: 'Build the Case' } },
-    { id: 14, title: 'Operation Chimera', tagline: 'Project Chimera ends here.', boss: { id: 'ch14_boss', title: 'Stop Project Chimera' } },
+    {
+      id: 1, title: 'The Email', tagline: 'Something got through.', boss: { id: 'ch1_boss', title: 'Stop the Initial Compromise' },
+      intro: 'Monday, 08:47. SOC pings you: an employee clicked a link. The breach starts with one email — contain it before credentials leak.',
+      briefing: 'Master the three pillars of email defense: sender identity, malicious links, and urgency manipulation.',
+      objectives: ['Spot phishing red flags', 'Sandbox risky attachments', 'Identify typosquatted login pages'],
+    },
+    {
+      id: 2, title: 'The Breach', tagline: 'The attacker is inside.', boss: { id: 'ch2_boss', title: 'Lock the Attacker Out' },
+      intro: 'Valid credentials were stolen. The adversary is moving through accounts. Rotate, enforce MFA, and cut access before lateral movement.',
+      briefing: 'Strong passwords and MFA are your last line when phishing succeeds.',
+      objectives: ['Choose strong passwords', 'Protect MFA codes', 'Audit leaked credentials'],
+    },
+    {
+      id: 3, title: 'Dark Signals', tagline: 'Someone is communicating inside the network.', boss: { id: 'ch3_boss', title: 'Reveal Attacker Plans' },
+      intro: 'Encrypted chatter and hidden payloads appear on the wire. Decode signals and find covert channels before ransomware deploys.',
+      briefing: 'Attackers hide commands in ciphers, images, and DNS — learn to uncover them.',
+      objectives: ['Decode Caesar ciphers', 'Find steganographic data', 'Spot DNS dead drops'],
+    },
+    {
+      id: 4, title: 'Database Under Siege', tagline: 'Customer data is at risk.', boss: { id: 'ch4_boss', title: 'Save the Customer Database' },
+      intro: 'SQL injection foothold confirmed. Export jobs are running. Patch queries, trace exfiltration, and revoke exposed API keys.',
+      briefing: 'Web apps and cloud keys are direct paths to your crown jewels.',
+      objectives: ['Fix SQL injection', 'Trace data theft', 'Respond to leaked API keys'],
+    },
+    {
+      id: 5, title: 'Threat Hunter', tagline: 'Find the attacker.', boss: { id: 'ch5_boss', title: 'Track Attacker Location' },
+      intro: 'CHIMERA leaves traces in logs and netflow. From here the adversary may hijack your training UI — trust nothing you did not verify.',
+      briefing: 'Correlate logs, SIEM alerts, and network beacons to hunt the intruder.',
+      objectives: ['Analyze auth logs', 'Correlate SIEM alerts', 'Classify C2 traffic'],
+    },
+    {
+      id: 6, title: 'Human Firewall', tagline: "The weakest link isn't technology.", boss: { id: 'ch6_boss', title: 'Unmask the Mole' },
+      intro: 'Vishing calls, insider uploads, and a tailgater at the lobby. People are the attack surface — verify humans like you verify systems.',
+      briefing: 'Social engineering bypasses every firewall if staff trust the wrong voice.',
+      objectives: ['Handle vishing safely', 'Detect insider exfil', 'Respond to physical threats'],
+    },
+    {
+      id: 7, title: 'Red Alert', tagline: 'The attack escalates.', boss: { id: 'ch7_boss', title: 'Prevent Total Compromise' },
+      intro: 'Malware detonates. PsExec and credential dumps spread east-west. Execute IR playbooks and segment before total compromise.',
+      briefing: 'Containment beats cleanup — act on the playbook, not panic.',
+      objectives: ['Classify malware behavior', 'Spot lateral movement', 'Execute IR first steps'],
+    },
+    {
+      id: 8, title: 'Ransomware Crisis', tagline: 'Everything depends on you.', boss: { id: 'ransomware', title: 'Stop the Ransomware' },
+      intro: 'Encryptors hit the mainframe. Backups may be poisoned. Recover clean snapshots and complete five containment tasks under pressure.',
+      briefing: 'Never pay. Isolate, restore, and report — speed saves the organization.',
+      objectives: ['Pick clean backups', 'Recover decryption paths', 'Stop the final encryptor'],
+    },
+    {
+      id: 9, title: 'Cloud Zero Trust', tagline: 'Misconfigs expose the crown jewels.', boss: { id: 'ch9_boss', title: 'Lock the Cloud Perimeter' },
+      intro: 'Public buckets and over-privileged IAM accounts appear in CSPM scans. Assume breach — enforce zero trust in the cloud.',
+      briefing: 'Misconfiguration is the #1 cloud breach vector.',
+      objectives: ['Fix exposed storage', 'Apply least privilege', 'Respond to policy tampering'],
+    },
+    {
+      id: 10, title: 'Supply Chain', tagline: 'Trust no installer.', boss: { id: 'ch10_boss', title: 'Restore Trusted Delivery' },
+      intro: 'A poisoned dependency and stolen code-signing cert hit the pipeline. Verify software before it reaches production.',
+      briefing: 'You inherit your vendors\' security — and their mistakes.',
+      objectives: ['Respond to dependency hijacks', 'Contain signed malware', 'Detect vendor BEC'],
+    },
+    {
+      id: 11, title: 'ICS / OT', tagline: 'When cyber hits physical.', boss: { id: 'ch11_boss', title: 'Protect Critical Infrastructure' },
+      intro: 'PLC writes and safety overrides threaten the plant floor. OT safety beats IT speed — fail-safe first.',
+      briefing: 'Industrial systems need different playbooks than office IT.',
+      objectives: ['Investigate SCADA alerts', 'Restore PLC logic', 'Reject safety bypass social engineering'],
+    },
+    {
+      id: 12, title: 'AI Threats', tagline: 'Synthetic deception.', boss: { id: 'ch12_boss', title: 'Stop AI-Driven Fraud' },
+      intro: 'Deepfake executives request wire transfers. Prompt injections poison internal chatbots. Verify identity out-of-band.',
+      briefing: 'AI scales fraud — human verification still wins.',
+      objectives: ['Verify synthetic comms', 'Authenticate video calls', 'Harden LLM gateways'],
+    },
+    {
+      id: 13, title: 'Digital Forensics', tagline: 'Every byte tells a story.', boss: { id: 'ch13_boss', title: 'Build the Case' },
+      intro: 'Legal needs an airtight timeline. Acquire memory, correlate events, and hunt persistence artifacts before logs rotate.',
+      briefing: 'Preserve evidence chain — prosecution depends on your work.',
+      objectives: ['Analyze memory dumps', 'Build attack timelines', 'Find persistence artifacts'],
+    },
+    {
+      id: 14, title: 'Operation Chimera', tagline: 'Project Chimera ends here.', boss: { id: 'ch14_boss', title: 'Stop Project Chimera' },
+      intro: 'All threads converge. Zero-days, poisoned models, and quantum-era secrets — coordinate every skill to stop CHIMERA for good.',
+      briefing: 'The final operation. No hints. No trust. Verify everything.',
+      objectives: ['Mitigate zero-days', 'Recover AI integrity', 'Plan post-quantum protection'],
+    },
   ];
 
   /** 4 missions per chapter × 14 = 56 rooms */
@@ -215,6 +285,21 @@ const Campaign = (() => {
       && state.mistakes === 0;
   }
 
+  function getChapterProgressIndex(completedRooms) {
+    const completed = new Set(completedRooms || []);
+    let lastDone = 0;
+    CHAPTERS.forEach((ch) => {
+      const ids = CHAPTER_ROOMS[ch.id] || [];
+      if (ids.every((id) => completed.has(id))) lastDone = ch.id;
+    });
+    return lastDone;
+  }
+
+  function getCurrentChapter(completedRooms) {
+    const done = getChapterProgressIndex(completedRooms);
+    return Math.min(done + 1, CHAPTERS.length);
+  }
+
   return {
     CHAPTERS,
     ROOM_CATALOG,
@@ -228,5 +313,7 @@ const Campaign = (() => {
     getChapterFirstRoom,
     renderCampaignMap,
     canUnlockSecret,
+    getChapterProgressIndex,
+    getCurrentChapter,
   };
 })();

@@ -85,6 +85,7 @@ const HijackSystem = (() => {
   let lastFakeClick = 0;
 
   function shouldRunMouseHijack() {
+    if (!hijackEffectsEnabled()) return false;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
     if (window.matchMedia('(pointer: coarse)').matches) return false;
     return true;
@@ -228,10 +229,18 @@ const HijackSystem = (() => {
     document.querySelectorAll('.hijack-cursor__ripple').forEach((r) => r.remove());
   }
 
+  function hijackEffectsEnabled() {
+    if (typeof ProfileSave !== 'undefined' && ProfileSave.getSettings().disableHijackEffects) return false;
+    return true;
+  }
+
   function hijackChance(chapter, isBoss) {
     if (chapter < MIN_CHAPTER) return 0;
-    const base = 0.1 + (chapter - MIN_CHAPTER) * 0.035;
-    return Math.min(isBoss ? base + 0.12 : base, 0.48);
+    let base = 0.1 + (chapter - MIN_CHAPTER) * 0.035;
+    if (typeof GameState !== 'undefined' && GameState.getState?.().difficulty === 'analyst') {
+      base += 0.08;
+    }
+    return Math.min(isBoss ? base + 0.12 : base, 0.55);
   }
 
   function pickScenario(chapter) {
@@ -262,8 +271,48 @@ const HijackSystem = (() => {
       injectionEl = null;
     }
     clearFakeTutor();
+    restoreRoomTag();
+    restoreSpoofedButtons();
     hideVerifyModal();
     stopMouseHijack();
+  }
+
+  let spoofedButtons = [];
+
+  function restoreSpoofedButtons() {
+    spoofedButtons.forEach(({ btn, label }) => {
+      if (btn && label) {
+        btn.textContent = label;
+        btn.classList.remove('btn--hijack-spoof');
+      }
+    });
+    spoofedButtons = [];
+  }
+
+  function spoofSubmitButton(btn) {
+    if (!active || verified || !btn || !hijackEffectsEnabled()) return;
+    if (scenario?.id !== 'fake_submit' && Math.random() > 0.45) return;
+    const original = btn.dataset.originalLabel || btn.textContent;
+    btn.dataset.originalLabel = original;
+    btn.textContent = '⚠ SUBMIT NOW — URGENT';
+    btn.classList.add('btn--hijack-spoof');
+    spoofedButtons.push({ btn, label: original });
+  }
+
+  function spoofLegacySubmitButtons() {
+    if (!active || verified || !hijackEffectsEnabled()) return;
+    const mount = getMountPoint();
+    if (!mount) return;
+    mount.querySelectorAll('.btn--primary.btn--pixel').forEach((btn) => {
+      if (btn.id === 'btnHijackVerify' || btn.classList.contains('btn--hijack-verify')) return;
+      if (Math.random() > 0.35) return;
+      const original = btn.dataset.originalLabel || btn.textContent;
+      if (!original || original.includes('SUBMIT NOW')) return;
+      btn.dataset.originalLabel = original;
+      btn.textContent = '⚠ SUBMIT NOW';
+      btn.classList.add('btn--hijack-spoof');
+      spoofedButtons.push({ btn, label: original });
+    });
   }
 
   function clearFakeTutor() {
@@ -368,6 +417,10 @@ const HijackSystem = (() => {
     if (fb) fb.hidden = true;
     pauseMouseHijack();
     modal.hidden = false;
+    if (typeof ReadAloud !== 'undefined') {
+      ReadAloud.stop();
+      ReadAloud.announceVerify(scenario.verifyQuestion, scenario.options.map((o) => o.text));
+    }
   }
 
   function hideVerifyModal() {
@@ -400,6 +453,7 @@ const HijackSystem = (() => {
       }
       clearFakeTutor();
       restoreRoomTag();
+      restoreSpoofedButtons();
       updateHudBadge(true);
       GameState.recordHijackCleared();
       setTimeout(hideVerifyModal, 900);
@@ -427,23 +481,29 @@ const HijackSystem = (() => {
     roomId = id;
     scenario = pickScenario(chapter);
 
-    document.body.classList.add('hijack-glitch');
+    document.body.classList.toggle('hijack-glitch', hijackEffectsEnabled());
     document.getElementById('gameContainer')?.classList.add('hijack-active');
     updateHudBadge(true);
 
-    if (typeof AudioFX !== 'undefined' && AudioFX.alarm) AudioFX.alarm();
-    else if (typeof AudioFX !== 'undefined') AudioFX.error();
+    if (hijackEffectsEnabled()) {
+      if (typeof AudioFX !== 'undefined' && AudioFX.alarm) AudioFX.alarm();
+      else if (typeof AudioFX !== 'undefined') AudioFX.error();
+    }
 
     injectBanner();
     if (scenario.fakeTutor) showFakeTutor(scenario.fakeTutor);
     corruptRoomTag();
-    startMouseHijack();
+    if (hijackEffectsEnabled()) {
+      startMouseHijack();
+      setTimeout(spoofLegacySubmitButtons, 600);
+    }
   }
 
   function blockMessage() {
-    return mouseHijackActive && !verified
-      ? 'CHIMERA may control a fake cursor — ignore it, use [ DOUBLE-CHECK ], then submit with your own input.'
-      : 'CHIMERA may have hijacked this screen — use [ DOUBLE-CHECK ] before submitting.';
+    if (mouseHijackActive && !verified && hijackEffectsEnabled()) {
+      return 'CHIMERA may control a fake cursor — ignore it, use [ DOUBLE-CHECK ], then submit with your own input.';
+    }
+    return 'CHIMERA may have hijacked this screen — use [ DOUBLE-CHECK ] before submitting.';
   }
 
   function escapeHtml(str) {
@@ -472,5 +532,6 @@ const HijackSystem = (() => {
     blockMessage,
     bindVerifySubmit,
     MIN_CHAPTER,
+    spoofSubmitButton,
   };
 })();

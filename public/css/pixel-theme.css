@@ -1900,6 +1900,204 @@ body.fail-screen-active .header {
   margin-top: 0.75rem;
 }
 
+/* Chapter intros & mission brief */
+.chapter-card__intro {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  color: var(--text);
+  line-height: 1.5;
+  max-width: 36rem;
+  margin: 0 auto 0.75rem;
+  text-align: left;
+}
+
+.chapter-card__briefing {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--cyan);
+  margin: 0 0 0.75rem;
+}
+
+.chapter-card__objectives {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto 1rem;
+  max-width: 28rem;
+  text-align: left;
+}
+
+.chapter-card__objectives li {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  padding: 0.25rem 0 0.25rem 1.1rem;
+  position: relative;
+}
+
+.chapter-card__objectives li::before {
+  content: '▸';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.chapter-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.intro-check {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin: 0.5rem 0 0.75rem;
+  text-align: left;
+}
+
+.brief-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 1rem;
+}
+
+.brief-modal[hidden] { display: none !important; }
+
+.brief-modal__panel {
+  width: min(480px, 100%);
+  border: 3px solid var(--cyan);
+  background: var(--bg-panel);
+  padding: 1.25rem;
+  box-shadow: 0 0 32px rgba(0, 204, 255, 0.2);
+}
+
+.brief-modal__label {
+  font-family: var(--font-display);
+  font-size: 0.4rem;
+  color: var(--cyan);
+  margin: 0 0 0.5rem;
+}
+
+.brief-modal__title {
+  font-family: var(--font-display);
+  font-size: 0.48rem;
+  color: var(--text);
+  margin: 0 0 0.75rem;
+}
+
+.brief-modal__story,
+.brief-modal__objective {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-dim);
+  margin: 0 0 0.75rem;
+}
+
+.fail-screen__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.progress-step--chapter {
+  min-width: 1.1rem;
+  flex: 1;
+  max-width: 1.75rem;
+}
+
+.progress-step--chapter span {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: inherit;
+}
+
+/* Engine room UI variants */
+.engine-toggle-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.engine-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 2px solid var(--border, #334);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.engine-toggle--selected,
+.engine-toggle.option-btn--selected {
+  border-color: var(--accent);
+  background: rgba(0, 255, 102, 0.08);
+}
+
+.engine-toggle__led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #556677;
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.engine-toggle.option-btn--selected .engine-toggle__led {
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.engine-dashboard {
+  border: 2px solid var(--danger);
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 51, 102, 0.06);
+}
+
+.engine-dashboard__label {
+  font-family: var(--font-display);
+  font-size: 0.38rem;
+  color: var(--danger);
+  margin: 0 0 0.5rem;
+}
+
+.engine-dashboard__alerts {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+}
+
+.engine-alert {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: #ff8899;
+  padding: 0.25rem 0;
+}
+
+.engine-ranked-grid .option-btn {
+  text-align: left;
+}
+
+.btn--hijack-spoof {
+  border-color: var(--danger) !important;
+  color: #ff8899 !important;
+  animation: hijack-pulse 0.8s ease infinite;
+}
+
 /* CHIMERA fake cursor hijack */
 .hijack-cursor {
   position: fixed;
@@ -1990,4 +2188,30 @@ body.hijack-cursor-active .hijack-modal * {
 body.hijack-cursor-active .audio-bar,
 body.hijack-cursor-active .audio-bar * {
   cursor: auto !important;
+}
+
+.read-aloud-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 5.5rem;
+  z-index: 9000;
+  padding: 0.65rem 0.85rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  line-height: 1.4;
+  color: var(--pixel-cyan, #00e5ff);
+  background: rgba(8, 12, 24, 0.92);
+  border: 2px solid var(--pixel-cyan, #00e5ff);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.35);
+  cursor: pointer;
+}
+
+.read-aloud-fab:hover,
+.read-aloud-fab:focus-visible {
+  background: rgba(0, 229, 255, 0.12);
+  outline: none;
+}
+
+.btn--read-aloud {
+  margin-left: 0.5rem;
 }
