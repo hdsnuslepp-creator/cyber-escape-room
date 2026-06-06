@@ -164,7 +164,6 @@
       dysEl.addEventListener('change', () => {
         ProfileSave.saveSettings({ dyslexiaMode: dysEl.checked });
         ReadAloud.warmUpSpeech();
-        ReadAloud.updateVoicePickerVisibility(dysEl.checked);
         syncReadAloudUi();
         if (dysEl.checked) repeatReadAloud();
         else ReadAloud.stop();
@@ -186,10 +185,6 @@
     if (diffEl) diffEl.value = GameState.normalizeDifficulty(settings.difficulty || 'normal');
     if (fxEl) fxEl.checked = !!settings.disableHijackEffects;
     if (dysEl) dysEl.checked = !!settings.dyslexiaMode;
-    ReadAloud.bindVoicePicker((voiceUri) => {
-      ProfileSave.saveSettings({ readAloudVoice: voiceUri || '' });
-    });
-    ReadAloud.updateVoicePickerVisibility(!!settings.dyslexiaMode);
     syncReadAloudUi();
 
     const saved = ProfileSave.loadCampaign();
@@ -380,7 +375,6 @@
       difficulty: GameState.normalizeDifficulty(difficulty),
       disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
       dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
-      readAloudVoice: document.getElementById('readAloudVoice')?.value || '',
     });
     syncReadAloudUi();
 
@@ -442,7 +436,6 @@
       difficulty: GameState.normalizeDifficulty(saved.difficulty || 'normal'),
       disableHijackEffects: !!document.getElementById('disableHijackFx')?.checked,
       dyslexiaMode: !!document.getElementById('dyslexiaMode')?.checked,
-      readAloudVoice: document.getElementById('readAloudVoice')?.value || '',
     });
     syncReadAloudUi();
 

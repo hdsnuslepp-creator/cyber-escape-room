@@ -74,16 +74,8 @@
                 <input type="checkbox" id="disableHijackFx"> Disable CHIMERA visual effects (cursor/banners still block submit)
               </label>
               <label class="intro-check">
-                <input type="checkbox" id="dyslexiaMode"> Dyslexia support — read questions and options aloud
+                <input type="checkbox" id="dyslexiaMode"> Dyslexia support — read questions and options aloud (uses your device voice)
               </label>
-              <div class="input-group input-group--pixel read-aloud-voice-wrap" id="readAloudVoiceWrap" hidden>
-                <label for="readAloudVoice">&gt; READ-ALOUD VOICE</label>
-                <div class="read-aloud-voice-row">
-                  <select id="readAloudVoice" class="input input--pixel" aria-label="Read-aloud voice"></select>
-                  <button type="button" class="btn btn--secondary btn--pixel btn--voice-preview" id="btnVoicePreview">[ PREVIEW ]</button>
-                </div>
-                <p class="read-aloud-voice-note">Works on phone and desktop. On iPhone, tap READ to hear each question.</p>
-              </div>
               <button type="button" class="btn btn--primary btn--pixel" id="btnStart">[ INITIALIZE BREACH ]</button>
               <button type="button" class="btn btn--secondary btn--pixel" id="btnResume" hidden>[ RESUME CAMPAIGN ]</button>
               <a href="game.html" class="btn btn--secondary btn--pixel btn--game-link">[ PLAY LOCKDOWN PROTOCOL ]</a>
@@ -773,7 +765,7 @@ AND password = '" + password + "'"</code></pre>
   <script src="js/campaign.js"></script>
   <script src="js/game-state.js"></script>
   <script src="js/room-engine.js"></script>
-  <script src="js/read-aloud.js?v=3"></script>
+  <script src="js/read-aloud.js?v=4"></script>
   <script src="js/hijack-system.js"></script>
   <script src="js/tutor-client.js"></script>
   <script src="js/app.js"></script>

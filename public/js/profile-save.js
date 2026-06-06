@@ -11,7 +11,6 @@ const ProfileSave = (() => {
     disableHijackEffects: false,
     reducedEffects: false,
     dyslexiaMode: false,
-    readAloudVoice: '',
   };
 
   function readJson(key, fallback) {

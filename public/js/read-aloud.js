@@ -1,17 +1,12 @@
 /**
- * Read-aloud for dyslexia accessibility — Web Speech API.
+ * Read-aloud for dyslexia accessibility — Web Speech API (device default voice).
  * Mobile: iOS requires speech to start from a tap; Android is more permissive.
  */
 const ReadAloud = (() => {
   let queueTimer = null;
   let queueId = 0;
-  let cachedVoices = [];
-  let voicesBound = false;
   let warmedUp = false;
-  let voiceLoadAttempts = 0;
-  let voicePollTimer = null;
   let fabPulseTimer = null;
-  const MAX_VOICE_ATTEMPTS = 30;
 
   function isSupported() {
     return typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -30,7 +25,6 @@ const ReadAloud = (() => {
     return window.matchMedia?.('(max-width: 640px)')?.matches ?? false;
   }
 
-  /** Delayed auto-read works on desktop/Android; iOS needs a direct tap. */
   function shouldAutoRead() {
     return !isIOS();
   }
@@ -58,181 +52,28 @@ const ReadAloud = (() => {
     }
   }
 
-  function isEnglishVoice(voice) {
-    const lang = (voice.lang || '').toLowerCase().replace('_', '-');
-    const name = (voice.name || '').toLowerCase();
-    if (lang.startsWith('en')) return true;
-    if (!lang && /english|zira|david|mark|aria|jenny|guy|sonia|susan|hazel|george|samantha|alex|fred|victoria|karen|moira|tessa|daniel|fiona|natasha|william|libby|ryan|thomas|olivia|mia|nancy|andrew|emma|brian|siri|com\.apple/i.test(name)) {
-      return true;
-    }
-    return false;
-  }
-
-  function loadVoices() {
-    if (!isSupported()) return [];
-    const all = window.speechSynthesis.getVoices();
-    let voices = all.filter(isEnglishVoice);
-    if (!voices.length && all.length) voices = [...all];
-    voices.sort((a, b) => {
-      if (a.default !== b.default) return a.default ? -1 : 1;
-      if (a.localService !== b.localService) return a.localService ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-    cachedVoices = voices;
-    return cachedVoices;
-  }
-
-  function platformVoiceHint(voices) {
-    if (!isSupported()) {
-      return 'Read-aloud is not supported in this browser. Try Chrome, Edge, or Safari on your phone.';
-    }
-    if (isIOS()) {
-      return voices.length
-        ? `${voices.length} voice${voices.length === 1 ? '' : 's'} available. On iPhone/iPad, tap READ to hear each question — auto-read may not work. Change voice in Settings → Accessibility → Spoken Content → Voices.`
-        : 'Uses your iPhone\'s built-in voice. Tap Preview or READ after each tap. Change voice in Settings → Accessibility → Spoken Content → Voices.';
-    }
-    if (/Android/i.test(navigator.userAgent)) {
-      return voices.length
-        ? `${voices.length} voice${voices.length === 1 ? '' : 's'} available. Install more in Android Settings → Accessibility → Text-to-speech.`
-        : 'Uses your phone\'s text-to-speech. Tap Preview or READ if nothing plays automatically.';
-    }
-    if (voices.length) {
-      return `${voices.length} voice${voices.length === 1 ? '' : 's'} available. Install more in Windows Settings → Time & language → Speech.`;
-    }
-    return 'No voices loaded yet — tap Preview or start the game. On desktop, install voices in system speech settings, then refresh.';
-  }
-
-  function updateVoiceStatus(voices) {
-    const note = document.querySelector('.read-aloud-voice-note');
-    if (!note) return;
-    note.textContent = platformVoiceHint(voices);
-  }
-
-  function populateVoiceSelect(selectEl) {
-    if (!selectEl || !isSupported()) return;
-    const voices = loadVoices();
-    const saved = ProfileSave?.getSettings?.()?.readAloudVoice;
-    const prev = selectEl.value || saved;
-    selectEl.innerHTML = '';
-
-    if (isIOS() && !voices.length) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = 'Device default voice (iPhone/iPad)';
-      selectEl.appendChild(opt);
-      selectEl.disabled = true;
-      updateVoiceStatus(voices);
-      return;
-    }
-
-    if (!voices.length) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = voiceLoadAttempts >= MAX_VOICE_ATTEMPTS
-        ? 'No voices found — check phone or system speech settings'
-        : 'Loading voices…';
-      selectEl.appendChild(opt);
-      selectEl.disabled = true;
-      updateVoiceStatus(voices);
-      return;
-    }
-
-    selectEl.disabled = false;
-    voices.forEach((voice) => {
-      const opt = document.createElement('option');
-      opt.value = voice.voiceURI;
-      opt.textContent = formatVoiceLabel(voice);
-      selectEl.appendChild(opt);
-    });
-
-    const pick = voices.find((v) => v.voiceURI === prev) || getSelectedVoice();
-    if (pick) selectEl.value = pick.voiceURI;
-    updateVoiceStatus(voices);
-  }
-
-  function scheduleVoiceRefresh() {
-    if (voicePollTimer) return;
-    voiceLoadAttempts = 0;
-
-    const tick = () => {
-      voiceLoadAttempts += 1;
-      const voices = loadVoices();
-      const selectEl = document.getElementById('readAloudVoice');
-      if (selectEl) populateVoiceSelect(selectEl);
-
-      if (voices.length || voiceLoadAttempts >= MAX_VOICE_ATTEMPTS) {
-        voicePollTimer = null;
-        return;
-      }
-      voicePollTimer = setTimeout(tick, 250);
-    };
-
-    tick();
+  function configureUtterance(utter) {
+    utter.lang = 'en-US';
+    utter.rate = isMobile() ? 0.88 : 0.92;
+    utter.pitch = 1;
+    utter.volume = 1;
   }
 
   function warmUpSpeech() {
     if (!isSupported()) return;
     resumeSpeechEngine();
-    loadVoices();
-
-    if (!warmedUp) {
-      warmedUp = true;
-      try {
-        const kick = new SpeechSynthesisUtterance(' ');
-        kick.volume = 0.01;
-        kick.onend = () => window.speechSynthesis.cancel();
-        kick.onerror = () => window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(kick);
-      } catch {
-        /* ignore */
-      }
+    if (warmedUp) return;
+    warmedUp = true;
+    try {
+      window.speechSynthesis.getVoices();
+      const kick = new SpeechSynthesisUtterance(' ');
+      kick.volume = 0.01;
+      kick.onend = () => window.speechSynthesis.cancel();
+      kick.onerror = () => window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(kick);
+    } catch {
+      /* ignore */
     }
-
-    scheduleVoiceRefresh();
-  }
-
-  function bindVoiceEngine() {
-    if (!isSupported() || voicesBound) return;
-    voicesBound = true;
-
-    window.speechSynthesis.addEventListener('voiceschanged', () => {
-      loadVoices();
-      populateVoiceSelect(document.getElementById('readAloudVoice'));
-    });
-
-    scheduleVoiceRefresh();
-  }
-
-  function formatVoiceLabel(voice) {
-    const tag = voice.localService ? '' : ' · online';
-    return `${voice.name} (${voice.lang || 'unknown'})${tag}`;
-  }
-
-  function getSelectedVoice() {
-    const voices = cachedVoices.length ? cachedVoices : loadVoices();
-    const uri = ProfileSave?.getSettings?.()?.readAloudVoice
-      || document.getElementById('readAloudVoice')?.value;
-    if (uri) {
-      const saved = voices.find((v) => v.voiceURI === uri);
-      if (saved) return saved;
-    }
-    return voices.find((v) => v.default && isEnglishVoice(v))
-      || voices.find((v) => v.localService)
-      || voices[0]
-      || null;
-  }
-
-  function configureUtterance(utter) {
-    const voice = getSelectedVoice();
-    if (voice && !isIOS()) {
-      utter.voice = voice;
-      utter.lang = voice.lang || 'en-US';
-    } else {
-      utter.lang = 'en-US';
-    }
-    utter.rate = isMobile() ? 0.88 : 0.92;
-    utter.pitch = 1;
-    utter.volume = 1;
   }
 
   function stop() {
@@ -286,9 +127,7 @@ const ReadAloud = (() => {
       configureUtterance(utter);
       utter.onend = () => {
         if (id !== queueId) return;
-        if (i < lines.length) {
-          queueTimer = setTimeout(next, gap);
-        }
+        if (i < lines.length) queueTimer = setTimeout(next, gap);
       };
       utter.onerror = () => {
         if (id !== queueId) return;
@@ -338,9 +177,7 @@ const ReadAloud = (() => {
     }
 
     const cipherInput = screen.querySelector('#cipherAnswer');
-    if (cipherInput) {
-      parts.push('Type your decoded answer in the text field.');
-    }
+    if (cipherInput) parts.push('Type your decoded answer in the text field.');
 
     return parts;
   }
@@ -420,56 +257,6 @@ const ReadAloud = (() => {
     }
   }
 
-  function updateVoicePickerVisibility(show) {
-    const wrap = document.getElementById('readAloudVoiceWrap');
-    if (wrap) wrap.hidden = !show || !isSupported();
-    if (show && isSupported()) {
-      warmUpSpeech();
-      populateVoiceSelect(document.getElementById('readAloudVoice'));
-    }
-  }
-
-  function previewVoice() {
-    if (!isSupported()) return;
-    warmUpSpeech();
-    resumeSpeechEngine();
-    stop();
-    queueId += 1;
-    const utter = new SpeechSynthesisUtterance(
-      'Mission briefing. Question one. Option one. Verify the sender before you click.'
-    );
-    configureUtterance(utter);
-    utter.onerror = () => populateVoiceSelect(document.getElementById('readAloudVoice'));
-    window.speechSynthesis.speak(utter);
-  }
-
-  function bindVoicePicker(onVoiceChange) {
-    bindVoiceEngine();
-    const selectEl = document.getElementById('readAloudVoice');
-    const previewBtn = document.getElementById('btnVoicePreview');
-    warmUpSpeech();
-    populateVoiceSelect(selectEl);
-
-    if (selectEl && !selectEl.dataset.readBound) {
-      selectEl.dataset.readBound = '1';
-      selectEl.addEventListener('change', () => {
-        warmUpSpeech();
-        if (typeof onVoiceChange === 'function') onVoiceChange(selectEl.value);
-        previewVoice();
-      });
-      selectEl.addEventListener('focus', warmUpSpeech);
-      selectEl.addEventListener('click', warmUpSpeech);
-    }
-
-    if (previewBtn && !previewBtn.dataset.readBound) {
-      previewBtn.dataset.readBound = '1';
-      previewBtn.addEventListener('click', () => {
-        if (typeof AudioFX !== 'undefined') AudioFX.click();
-        previewVoice();
-      });
-    }
-  }
-
   function updateFab(show) {
     const fab = document.getElementById('btnReadAloud');
     if (!fab) return;
@@ -521,10 +308,6 @@ const ReadAloud = (() => {
     warmUpSpeech,
     hintTapToRead,
     clearTapHint,
-    populateVoiceSelect,
-    updateVoicePickerVisibility,
-    previewVoice,
-    bindVoicePicker,
     updateFab,
     bindFab,
     syncMobileReadButtons,

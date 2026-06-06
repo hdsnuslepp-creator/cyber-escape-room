@@ -2258,10 +2258,6 @@ body.hijack-cursor-active .audio-bar * {
     font-size: 0.82rem;
     bottom: calc(7.75rem + env(safe-area-inset-bottom));
   }
-
-  .btn--voice-preview {
-    width: 100%;
-  }
 }
 
 .read-aloud-fab:hover,
@@ -2272,32 +2268,4 @@ body.hijack-cursor-active .audio-bar * {
 
 .btn--read-aloud {
   margin-left: 0.5rem;
-}
-
-.read-aloud-voice-wrap {
-  margin-top: 0.35rem;
-}
-
-.read-aloud-voice-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: stretch;
-}
-
-.read-aloud-voice-row select {
-  flex: 1 1 12rem;
-  min-width: 0;
-}
-
-.btn--voice-preview {
-  flex: 0 0 auto;
-  align-self: stretch;
-}
-
-.read-aloud-voice-note {
-  margin: 0.35rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  color: rgba(0, 229, 255, 0.65);
 }
