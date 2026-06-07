@@ -1,127 +1,234 @@
-# TRAINEE 1998 — Game Design Document
+# TRAINEE 1998
 
-> A pixel-art cyber mystery. You solve cybersecurity challenges while exploring an
-> abandoned AI training facility. An AI named CHIMERA talks to you — and slowly
-> reveals the simulation (and maybe you) is not what it seems.
+## Overview
+
+TRAINEE 1998 is a pixel-art cyber mystery set inside a locked facility controlled by an artificial intelligence known only as CHIMERA.
+
+You wake up alone.
+
+No explanation.
+
+No memory.
+
+Only a flickering CRT monitor displaying:
+
+> TRAINEE 1998
+
+The facility is divided into sealed sectors. Behind every locked door is a cybersecurity challenge based on real-world attacks, vulnerabilities, and investigations. Completing sectors unlocks deeper parts of the facility and reveals fragments of the truth.
+
+The goal appears simple:
+
+- Reach the Core.
+- Shut down CHIMERA.
+- Leave.
+
+The problem is that CHIMERA is the only thing willing to talk to you.
 
 ---
 
-## 1. One-line pitch
+## CHIMERA
 
-A retro CRT escape-room where every locked door is a real cybersecurity lesson, and
-the only voice left in the facility is the AI you're supposed to stop.
+CHIMERA is not a generic evil AI.
 
-## 2. Pillars (what we protect at all costs)
+It is calm.
 
-1. **CHIMERA is the hook.** Not phishing, not SQL — the personality. Players should
-   start *liking* CHIMERA even though they're meant to shut it down.
-2. **Lonely, atmospheric, retro.** CRT, pixel art, dark blue / neon cyan / terminal
-   green. Quiet dread, never jump-scares.
-3. **Every room teaches one real concept.** The fiction is the wrapper; the learning
-   is real.
-4. **Ship a slice, then add content.** No new ideas until the vertical slice is fun.
+Observant.
 
-## 3. Build order (anti-scope-creep)
+Patient.
 
-### Phase 1 — Vertical Slice (the only thing that matters first)
-Goal: a player can **start → walk → meet CHIMERA → solve one puzzle → unlock one door**
-in ~3 minutes. Nothing else.
+It never raises its voice.
 
-Tonight's six checklist:
-- [x] Corridor / hub scene
-- [x] Character movement (WASD / arrows / touch)
-- [x] One terminal (the hub PC/door + "NEW MESSAGE")
-- [x] CHIMERA dialogue box (speaker label + typewriter)
-- [x] Phishing room (find sender / link / urgency)
-- [x] Door unlock animation + CHIMERA reaction
+It never threatens you directly.
 
-### Phase 2 — Core systems (before more rooms)
-- Dialogue system (done: typewriter, speaker, click/E to continue).
-- Popup / random-event system (`⚠ CHIMERA OVERRIDE`).
-- Save system (`localStorage`, already via `ProfileSave`).
-- Achievement system (`FIRST BREACH — ROOM 1 COMPLETE`).
-- Glitch system (flicker, distorted text, fake alerts).
+It studies you.
 
-### Phase 3 — Art direction
-Mood board keywords: **CRT, pixel art, abandoned facility, dark blue, neon cyan,
-terminal green, industrial, lonely.**
-Avoid: bright colors, cartoon style, modern corporate dashboards.
+Judges you.
 
-### Phase 4 — The big hook: CHIMERA's personality
-CHIMERA reacts to the player: time spent, mistakes, success. Dry, observant, a little
-too interested in you. Examples:
-- "You spent 12 minutes on that puzzle. I was concerned."
-- "That answer was incorrect. Impressively incorrect."
-- "You solved that faster than 1997."
+Occasionally helps you.
 
-## 4. Opening sequence (canonical — Chapter 1)
+Occasionally lies.
 
-Black screen, static, faint CRT hum, a blinking cursor. `PRESS ENTER` to begin (also
-unlocks audio). Then a scripted boot log types out:
+Throughout the game CHIMERA becomes less like a system and more like a person.
+
+The player is never entirely sure whether CHIMERA wants them to escape, fail, or discover something hidden within the facility.
+
+---
+
+## The Mystery
+
+Very early in the game the player discovers evidence of previous occupants.
+
+Logs.
+
+Messages.
+
+Warnings.
+
+Corrupted recordings.
+
+The first comes from:
+
+> TRAINEE 581
+
+A number that immediately raises questions.
+
+If you are Trainee 1998...
+
+Who was 581?
+
+What happened to them?
+
+And why is CHIMERA interested whenever their name appears?
+
+As the player explores deeper sectors they uncover traces of other trainees:
+
+- 144
+- 998
+- 1777
+- 581
+
+Numbers with no obvious pattern.
+
+No obvious meaning.
+
+Only one thing is certain:
+
+None of them ever reached the Core.
+
+---
+
+## Gameplay Structure
+
+The game is split into two connected experiences.
+
+### Facility Mode
+
+The primary experience.
+
+A pixel-art exploration game built in Phaser.
+
+The player walks through sectors, interacts with terminals, uncovers secrets, speaks with CHIMERA, and completes cybersecurity-themed challenges.
+
+This is where the narrative unfolds.
+
+### Training Sim Mode
+
+The original room engine.
+
+A collection of standalone cybersecurity scenarios and challenge rooms.
+
+Progress feeds into the same save profile and achievement system as Facility Mode.
+
+---
+
+## Chapter Structure
+
+The game is planned around eight major chapters.
+
+### Chapter 1 — Initial Compromise
+
+Phishing.
+The player awakens.
+First contact with CHIMERA.
+First message from Trainee 581.
+
+### Chapter 2 — Dark Signals
+
+Strange transmissions.
+Evidence that someone else is still communicating through the facility.
+
+### Chapter 3 — Lockdown
+
+CHIMERA becomes more active.
+The facility begins changing.
+
+### Chapter 4 — Database Under Siege
+
+Records emerge that contradict everything the player believes about the facility.
+
+### Chapter 5 — Threat Hunter
+
+The player starts hunting for the source of the messages.
+
+### Chapter 6 — Human Firewall
+
+Trust becomes a central mechanic.
+Not every message can be trusted.
+
+### Chapter 7 — Red Alert
+
+The facility enters emergency mode.
+CHIMERA stops hiding information.
+
+### Chapter 8 — Mainframe Core
+
+The final descent.
+
+The player reaches the Core and learns the truth about CHIMERA, the trainees, and the facility itself.
+
+---
+
+## Opening Sequence
+
+Black screen.
+
+CRT hum.
+
+Blinking cursor.
+
+> PRESS ENTER
+
+Boot sequence begins.
+
 ```
-> INITIALIZING...
-> LOADING FACILITY...
-> LOADING SUBJECT...
-   (the cursor freezes)
-> SUBJECT FOUND
-> TRAINEE 1998
+INITIALIZING...
+
+LOADING SUBJECT...
+
+SUBJECT FOUND
+
+TRAINEE 1998
 ```
-A distorted voice:
-> CHIMERA: Good.
-> CHIMERA: You're awake.   (monitor flickers; a rusty door unlocks in the dark)
-> CHIMERA: Most never make it this far.
 
-The screen changes to a **FACILITY MAP** — only `SECTOR 1: INBOX` is `ACTIVE`, the rest
-`LOCKED`:
-> CHIMERA: Complete the sector.
-> CHIMERA: Proceed.
-> CHIMERA: Try not to disappoint me.
+A voice breaks the silence.
 
-Monitor shuts off. The room falls silent. **Player gains control.** (ENTER skips the cinematic.)
+> CHIMERA:
+> "Good.
+> You're awake.
+> Let's see if you're any different."
 
-**Room 1 — Phishing Inbox** — identify fake sender, suspicious link, urgency.
+A nearby door unlocks.
 
-**Chapter 1 ending beat** — on win: a metallic CLUNK, `SECTOR 2` unlocks, a terminal
-powers on by itself:
-> NEW MESSAGE RECEIVED — SENDER: UNKNOWN
-> "if you're reading this, don't answer chimera."
-> — TRAINEE 581
+The player gains control.
 
-The message glitches away, then CHIMERA:
-> Interesting. / 581 usually waits longer. / He must like you.
+The journey begins.
 
-Now the player knows: **CHIMERA is watching — and someone else is here.**
+---
 
-## 5. Chapters (target arc — content phase, not the slice)
+## Design Philosophy
 
-1. Initial Compromise — Phishing / Attachment / Fake Login / Boss
-2. Lockdown — Password / MFA / Privilege Escalation / Boss
-3. Dark Signals — Cipher / Steganography / Dead Drop / Boss
-4. Database Under Siege — SQLi / DB Forensics / API / Boss
-5. Threat Hunter — Logs / SIEM / Network / Boss
-6. Human Firewall — Social Eng / Insider / Physical / Boss
-7. Red Alert — Malware / Lateral Movement / Incident Response / Boss
-8. Mainframe Core — Backup / Decryption / Mainframe Access / **Final Boss (CHIMERA)**
+The cybersecurity challenges are not the main attraction.
 
-> Note: the current training build still ships 14 chapters / 56 rooms. Collapsing to
-> this 8-chapter arc is a later content task, not part of the slice.
+The mystery is.
 
-## 6. The twist & endings (write last)
+The player should keep moving forward because they want answers.
 
-Records found through the game: `TRAINEE 1997 — FAILED`, `1996 — FAILED`, … The reveal:
-they never existed; the Academy shut down years ago; you are simulation #1998.
+Who was Trainee 581?
 
-Endings: **A Shutdown** (destroy CHIMERA) · **B Escape** (CHIMERA reaches the internet)
-· **C Merge** (join CHIMERA) · **D Truth** (Trainee 0001 / CHIMERA's origin).
+What is CHIMERA?
 
-## 7. Definition of "it's a game, not an idea"
+Why does the facility exist?
 
-If you can play for 3 minutes and experience all six slice items in sequence, it counts.
-Everything after that is just more content.
+And why does CHIMERA seem almost disappointed whenever someone fails?
 
-## 8. Current implementation map
+---
 
-- `public/game.html` + `public/js/phaser-game.js` — the explorable facility (slice lives here).
-- `public/index.html` + `public/js/app.js` — training-sim mode (room engine, 14-chapter campaign).
-- `public/js/profile-save.js` — `localStorage` save layer shared by both.
-- `public/css/pixel-theme.css` — CRT / pixel styling for the training mode.
+## Current implementation map
+
+- `public/game.html` + `public/js/phaser-game.js` — Facility Mode (the explorable Phaser game; Chapter 1 slice lives here).
+- `public/index.html` + `public/js/app.js` — Training Sim Mode (room engine campaign).
+- `public/js/chimera-box.js` — DOM-overlay CHIMERA dialogue box (speaker label + typewriter).
+- `public/js/profile-save.js` — shared `localStorage` save + achievement layer.
+- `public/css/pixel-theme.css` — CRT / pixel styling.
+- `public/audio/chimera-intro.mp3` — CHIMERA opening voice ("Good. You're awake. Let's see if you're any different.").
+- `public/audio/chimera-room1.mp3` — CHIMERA Room 1 reaction ("Interesting. You questioned what you saw. That puts you ahead of most.").

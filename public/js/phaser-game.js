@@ -24,6 +24,7 @@
     player: { c: 10, r: 5 },
     server: { c: 3, r: 7 },
     key: { c: 14, r: 7 },
+    archive: { c: 9, r: 3 },
   };
 
   const INTERACT_RADIUS = 80;
@@ -638,6 +639,7 @@
     this.nearDoor = false;
     this.nearServer = false;
     this.nearPc = false;
+    this.nearArchive = false;
     this.enteringRoom = false;
 
     resetCamera(this);
@@ -701,6 +703,14 @@
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.serverInteractZone.on('pointerdown', () => this.tryInteract('server'));
+
+    this.archivePos = tilePx(HUB.archive.c, HUB.archive.r);
+    const archXY = tileXY(HUB.archive.c - 1, HUB.archive.r);
+    drawTerminal(this, archXY.x, archXY.y - 8, 'ARCHIVE', 0xff66cc);
+    this.archiveInteractZone = this.add.rectangle(this.archivePos.x, this.archivePos.y, TILE * 2.2, TILE * 1.8, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(15);
+    this.archiveInteractZone.on('pointerdown', () => this.tryInteract('archive'));
 
     this.keyPos = tilePx(HUB.key.c, HUB.key.r);
     this.hasKey = !!this.registry.get('hasKey');
@@ -1130,6 +1140,74 @@
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
   };
 
+  HubScene.prototype.handleArchiveInteract = function () {
+    if (!this.isNearArchive()) {
+      this.flashPrompt('Move closer to the ARCHIVE (top-center)', '#ff3366');
+      return;
+    }
+    sfxClick();
+    this.showArchivePanel();
+  };
+
+  // Discoverable trainee records — seeds the mystery (144 / 998 / 1777 / 581 / 1998)
+  HubScene.prototype.showArchivePanel = function () {
+    this.overrideActive = true;
+
+    const knows581 = (typeof achLoad === 'function') && achLoad().has('signal_581');
+    const firstOpen = !this.registry.get('archiveSeen');
+    this.registry.set('archiveSeen', true);
+
+    const records = [
+      { id: '#0144', status: 'TERMINATED', color: '#7790a0' },
+      { id: '#0998', status: 'FAILED', color: '#7790a0' },
+      { id: '#1777', status: 'FAILED', color: '#7790a0' },
+      { id: '#0581', status: knows581 ? '\u2593\u2593 SIGNAL LOST \u2593\u2593' : '[ REDACTED ]', color: knows581 ? '#ffb000' : '#664455' },
+      { id: '#1998', status: 'ACTIVE  \u25c4 YOU', color: '#00ffcc' },
+    ];
+
+    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
+    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
+    const panel = this.add.rectangle(0, 0, 360, 252, 0x140a16, 0.98).setStrokeStyle(3, 0xff66cc);
+    const head = this.add.text(0, -104, 'TRAINEE RECORDS', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '10px', color: '#ff66cc',
+    }).setOrigin(0.5);
+    const sub = this.add.text(0, -84, 'ARCHIVE \u2014 [CORRUPTED]', {
+      fontFamily: 'VT323, monospace', fontSize: '15px', color: '#9a6a86',
+    }).setOrigin(0.5);
+    c.add([dim, panel, head, sub]);
+
+    records.forEach((rec, i) => {
+      const y = -48 + i * 30;
+      c.add(this.add.text(-150, y, rec.id, {
+        fontFamily: 'VT323, monospace', fontSize: '20px', color: rec.color,
+      }).setOrigin(0, 0.5));
+      c.add(this.add.text(150, y, rec.status, {
+        fontFamily: 'VT323, monospace', fontSize: '18px', color: rec.color,
+      }).setOrigin(1, 0.5));
+    });
+
+    c.add(this.add.text(0, 84, 'NONE REACHED THE CORE.', {
+      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#ff5577',
+    }).setOrigin(0.5));
+
+    const close = () => {
+      sfxClick();
+      c.destroy();
+      this.overrideActive = false;
+      if (firstOpen) {
+        this.chainChimera([
+          'You found the old records.',
+          'Do the numbers trouble you?',
+          'They should.',
+          'None of them were any different.',
+        ]);
+      }
+    };
+    const btn = makeButton(this, 0, 110, '[ CLOSE ]', close, { fontSize: '8px', color: '#ffaad8' });
+    c.add([btn.bg, btn.text]);
+    this.tweens.add({ targets: head, alpha: { from: 1, to: 0.55 }, duration: 600, yoyo: true, repeat: -1 });
+  };
+
   HubScene.prototype.isNear = function (pos, radius) {
     if (!this.player || !pos) return false;
     return Phaser.Math.Distance.Between(this.player.x, this.player.y, pos.x, pos.y) < radius;
@@ -1145,6 +1223,10 @@
 
   HubScene.prototype.isNearPc = function () {
     return this.isNear(this.pcPos, INTERACT_RADIUS);
+  };
+
+  HubScene.prototype.isNearArchive = function () {
+    return this.isNear(this.archivePos, INTERACT_RADIUS);
   };
 
   HubScene.prototype.isNearKey = function () {
@@ -1193,6 +1275,16 @@
     const nearDoor = this.isNearDoor();
     const nearServer = this.isNearServer();
     const nearPc = this.isNearPc();
+    const nearArchive = this.isNearArchive();
+
+    if (target === 'archive' && !nearArchive) {
+      this.flashPrompt('Walk up to the ARCHIVE terminal first', '#ff3366');
+      return;
+    }
+    if (target === 'archive' || (nearArchive && !nearDoor && !nearServer && !nearPc)) {
+      this.handleArchiveInteract();
+      return;
+    }
 
     if (target === 'door' && !nearDoor) {
       this.flashPrompt('Walk up to the DOOR first', '#ff3366');
@@ -1220,7 +1312,7 @@
       return;
     }
 
-    this.flashPrompt('Move closer to KEY, DOOR, SERVER, or LOGIN', '#ff3366');
+    this.flashPrompt('Move closer to KEY, DOOR, SERVER, LOGIN, or ARCHIVE', '#ff3366');
   };
 
   HubScene.prototype.handleDoorInteract = function () {
@@ -1330,12 +1422,14 @@
     this.nearDoor = this.isNearDoor();
     this.nearServer = this.isNearServer();
     this.nearPc = this.isNearPc();
+    this.nearArchive = this.isNearArchive();
     this.nearKey = this.isNearKey();
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       if (this.dialogueBox.visible) {
         this.dialogueBox.dismiss();
       } else if (this.nearKey) this.tryPickupKey(false);
+      else if (this.nearArchive) this.tryInteract('archive');
       else if (this.nearServer) this.tryInteract('server');
       else if (this.nearPc) this.tryInteract('pc');
       else if (this.nearDoor) this.tryInteract('door');
@@ -1347,6 +1441,9 @@
     if (this.nearKey) {
       this.promptText.setText('[ E ] or click KEY — pick up access key');
       this.promptText.setColor('#ffb000');
+    } else if (this.nearArchive) {
+      this.promptText.setText('[ E ] ARCHIVE — trainee records');
+      this.promptText.setColor('#ff66cc');
     } else if (this.nearServer && this.inboxDone && !this.attachmentDone) {
       this.promptText.setText('[ E ] SERVER — Attachment Sandbox');
       this.promptText.setColor('#aa88ff');
