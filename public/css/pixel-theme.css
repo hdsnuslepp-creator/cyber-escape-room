@@ -245,6 +245,17 @@ body::before {
   animation: boot-line-in 0.15s steps(3) forwards, blink 1s step-end infinite;
 }
 
+.boot-line--chimera {
+  color: #ff66cc;
+  text-shadow: 0 0 8px rgba(255, 102, 204, 0.6);
+  letter-spacing: 0.04em;
+}
+
+.boot-chimera {
+  color: #ff8fdc;
+  font-weight: 700;
+}
+
 .intro-actions {
   display: flex;
   flex-direction: column;

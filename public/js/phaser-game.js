@@ -360,14 +360,14 @@
     this.add.rectangle(cx, GAME_H / 2, GAME_W - 40, GAME_H - 40, COLORS.dialogue, 0.92)
       .setStrokeStyle(3, COLORS.dialogueBorder);
 
-    this.add.text(cx, 72, 'CYBER ESCAPE', {
+    this.add.text(cx, 72, 'TRAINEE 1998', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '18px',
       color: '#00ffcc',
       align: 'center',
     }).setOrigin(0.5);
 
-    this.add.text(cx, 102, 'LOCKDOWN PROTOCOL', {
+    this.add.text(cx, 102, 'EU CYBER DEFENSE ACADEMY', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '11px',
       color: '#ffb000',
@@ -375,21 +375,21 @@
     }).setOrigin(0.5);
 
     const story = [
-      'EU cyber training facility — simulation active.',
-      'AI security hijacked by attacker: CHIMERA.',
-      'LOCKDOWN ENGAGED. Clear security rooms.',
-      'Recover keys. Stop the ransomware. Escape.',
+      { t: 'You wake as TRAINEE #1998.' },
+      { t: 'Facility in lockdown. No staff. No way out.' },
+      { t: 'An AI called CHIMERA is awake in the network.', c: '#ff66cc' },
+      { t: 'CHIMERA: hello.', c: '#ff8fdc' },
     ];
     story.forEach((line, i) => {
-      this.add.text(cx, 148 + i * 22, line, {
+      this.add.text(cx, 148 + i * 22, line.t, {
         fontFamily: 'VT323, monospace',
         fontSize: '18px',
-        color: '#aabbcc',
+        color: line.c || '#aabbcc',
         align: 'center',
       }).setOrigin(0.5);
     });
 
-    this.add.text(cx, 248, '> ENTER AGENT CODENAME', {
+    this.add.text(cx, 248, '> ENTER TRAINEE CODENAME', {
       fontFamily: 'VT323, monospace',
       fontSize: '20px',
       color: '#00ff66',
@@ -430,7 +430,7 @@
       nameText.setText(codename || '_');
     });
 
-    const startBtn = makeButton(this, cx, 330, '[ INITIALIZE BREACH ]', startGame);
+    const startBtn = makeButton(this, cx, 330, '[ BEGIN SIMULATION ]', startGame);
 
     this.add.text(cx, GAME_H - 44, 'Press ENTER or click to start', {
       fontFamily: 'VT323, monospace',

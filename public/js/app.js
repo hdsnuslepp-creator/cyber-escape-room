@@ -270,12 +270,12 @@
     }
 
     const lines = [
-      { html: '<span class="prompt">&gt;</span> LOADING SECURE_TRAINING_ROOM.EXE' },
-      { html: '<span class="prompt">&gt;</span> CAMPAIGN MODE: 14 CHAPTERS / 56 MISSIONS', cls: 'boot-line--ok' },
-      { html: '<span class="prompt">&gt;</span> CHECKING FIREWALL... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
-      { html: '<span class="prompt">&gt;</span> CONNECTING TO MAINFRAME... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
-      { html: '<span class="prompt">&gt;</span> THREAT LEVEL: CRITICAL', cls: 'boot-line--warn' },
-      { html: '<span class="prompt">&gt;</span> <span class="blink">BREACH DETECTED — CONTAINMENT REQUIRED</span>', cls: 'boot-line--danger' },
+      { html: '<span class="prompt">&gt;</span> EU CYBER DEFENSE ACADEMY — TRAINING SIM v98' },
+      { html: '<span class="prompt">&gt;</span> WAKING TRAINEE #1998... <span class="boot-ok">OK</span>', cls: 'boot-line--ok' },
+      { html: '<span class="prompt">&gt;</span> SCANNING FACILITY... NO STAFF DETECTED', cls: 'boot-line--warn' },
+      { html: '<span class="prompt">&gt;</span> FACILITY STATUS: <span class="blink">LOCKDOWN</span>', cls: 'boot-line--danger' },
+      { html: '<span class="prompt">&gt;</span> UNKNOWN ENTITY ON THE NETWORK: CHIMERA', cls: 'boot-line--danger' },
+      { html: '<span class="prompt">&gt;</span> <span class="boot-chimera">CHIMERA:</span> hello.', cls: 'boot-line--chimera' },
     ];
 
     let i = 0;
