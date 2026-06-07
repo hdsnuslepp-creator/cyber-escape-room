@@ -734,6 +734,7 @@
     updateHud();
     syncReadAloudUi();
     document.body.classList.toggle('fail-screen-active', screenId === 'gameover');
+    document.body.classList.toggle('app-screen-intro', screenId === 'intro');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
