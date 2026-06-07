@@ -2077,12 +2077,12 @@
   function resetCamera(scene) {
     const cam = scene.cameras.main;
     if (!cam) return;
-    if (cam.fadeEffect) {
-      cam.fadeEffect.stop(true);
-      cam.fadeEffect.reset();
-    }
-    if (cam.flashEffect) {
-      cam.flashEffect.stop(true);
+    // Phaser 3.80 camera effects expose reset()/resetFX(), not stop().
+    if (typeof cam.resetFX === 'function') {
+      cam.resetFX();
+    } else {
+      if (cam.fadeEffect && cam.fadeEffect.reset) cam.fadeEffect.reset();
+      if (cam.flashEffect && cam.flashEffect.reset) cam.flashEffect.reset();
     }
     cam.setAlpha(1);
   }
