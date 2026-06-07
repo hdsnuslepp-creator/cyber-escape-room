@@ -3158,40 +3158,58 @@ body.hijack-cursor-active .audio-bar * {
 
 /* Compact main/intro screen so it fits with minimal scrolling */
 body.app-screen-intro .app {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
 body.app-screen-intro .audio-bar {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
+  padding: 0.4rem 0.75rem;
+}
+
+/* Pre-game HUD (time/score/lives) is not useful before starting */
+.header--intro .hud {
+  display: none;
 }
 
 .header--intro {
-  gap: 0.4rem;
-  margin-bottom: 0.6rem;
-  padding-bottom: 0.45rem;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
 }
 
 .header--intro .header__progress {
   display: none;
 }
 
+.header--intro .header__brand h1 {
+  font-size: 0.95rem;
+}
+
+.header--intro .header__icon {
+  font-size: 1.1rem;
+}
+
+.header--intro .header__subtitle {
+  font-size: 0.72rem;
+}
+
 .screen[data-screen="intro"] .terminal-window__body {
-  padding: 0.85rem 1.1rem;
+  padding: 0.7rem 1rem;
 }
 
 .screen[data-screen="intro"] .boot-sequence {
   min-height: 0;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .screen[data-screen="intro"] .boot-line {
-  font-size: 0.92rem;
-  margin-bottom: 0.12rem;
+  font-size: 0.82rem;
+  margin-bottom: 0.08rem;
 }
 
 .screen[data-screen="intro"] .intro-actions {
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .screen[data-screen="intro"] .intro-hero {
@@ -3204,41 +3222,49 @@ body.app-screen-intro .audio-bar {
 }
 
 .screen[data-screen="intro"] .input-group--pixel label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .screen[data-screen="intro"] .input--pixel {
-  padding: 0.45rem 0.7rem;
-  font-size: 1.05rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 1rem;
+}
+
+.screen[data-screen="intro"] .btn--pixel {
+  padding: 0.55rem 1rem;
 }
 
 .screen[data-screen="intro"] .difficulty-picker {
-  margin-top: 0.2rem;
+  margin-top: 0.15rem;
 }
 
 .screen[data-screen="intro"] .difficulty-card {
-  padding: 0.4rem 0.3rem;
-  gap: 0.2rem;
+  padding: 0.35rem 0.3rem;
+  gap: 0.15rem;
+}
+
+.screen[data-screen="intro"] .difficulty-card__detail {
+  font-size: 0.58rem;
 }
 
 .screen[data-screen="intro"] .intro-check {
   margin: 0;
   font-size: 0.72rem;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .screen[data-screen="intro"] .intro-mode-note {
-  margin-top: 0.25rem;
-  font-size: 0.76rem;
+  margin-top: 0.2rem;
+  font-size: 0.74rem;
 }
 
 .screen[data-screen="intro"] .leaderboard-panel--pixel {
-  margin-top: 0.2rem;
-  padding: 0.55rem 0.7rem;
+  margin-top: 0.15rem;
+  padding: 0.5rem 0.7rem;
 }
 
-/* Very short viewports: trim non-essential intro elements to avoid scrolling */
-@media (max-height: 860px) {
+/* Shorter viewports: trim non-essential intro elements to avoid scrolling */
+@media (max-height: 1024px) {
   .screen[data-screen="intro"] .intro-hero {
     display: none;
   }
