@@ -139,6 +139,83 @@
     if (typeof AudioFX !== 'undefined') AudioFX.roomComplete(roomId);
   }
 
+  // ─── In-game achievements (localStorage) ────────────────────────────────
+  const ACH_KEY = 't1998_achievements';
+  const ACH_DEFS = {
+    first_breach: { icon: '🏆', title: 'FIRST BREACH', desc: 'Room 1 complete.' },
+  };
+
+  function achLoad() {
+    try { return new Set(JSON.parse(localStorage.getItem(ACH_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function achSave(set) {
+    try { localStorage.setItem(ACH_KEY, JSON.stringify([...set])); } catch (e) { /* ignore */ }
+  }
+
+  // Persist the player's leaning toward CHIMERA (seeds future endings)
+  const STANCE_KEY = 't1998_stance';
+  function recordStance(stance) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(STANCE_KEY) || '{}');
+      raw[stance] = (raw[stance] || 0) + 1;
+      raw.last = stance;
+      localStorage.setItem(STANCE_KEY, JSON.stringify(raw));
+    } catch (e) { /* ignore */ }
+  }
+  function unlockAchievement(scene, id) {
+    const def = ACH_DEFS[id];
+    if (!def) return;
+    const set = achLoad();
+    if (set.has(id)) return;
+    set.add(id);
+    achSave(set);
+    showAchievementToast(scene, def);
+    if (typeof AudioFX !== 'undefined' && AudioFX.achievement) AudioFX.achievement();
+  }
+  function showAchievementToast(scene, def) {
+    const w = 252;
+    const h = 58;
+    const x = GAME_W - w / 2 - 12;
+    const c = scene.add.container(x, -h).setDepth(80).setScrollFactor(0);
+    const bg = scene.add.rectangle(0, 0, w, h, 0x0a0e17, 0.97).setStrokeStyle(2, COLORS.keycard);
+    const icon = scene.add.text(-w / 2 + 20, 2, def.icon, {
+      fontFamily: 'VT323, monospace', fontSize: '26px',
+    }).setOrigin(0.5);
+    const tag = scene.add.text(-w / 2 + 42, -18, 'ACHIEVEMENT UNLOCKED', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#00ffcc',
+    }).setOrigin(0, 0.5);
+    const title = scene.add.text(-w / 2 + 42, 0, def.title, {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#ffb000',
+    }).setOrigin(0, 0.5);
+    const desc = scene.add.text(-w / 2 + 42, 18, def.desc, {
+      fontFamily: 'VT323, monospace', fontSize: '14px', color: '#aabbcc',
+    }).setOrigin(0, 0.5);
+    c.add([bg, icon, tag, title, desc]);
+    scene.tweens.add({ targets: c, y: 86, duration: 360, ease: 'Back.Out' });
+    scene.time.delayedCall(3400, () => {
+      scene.tweens.add({
+        targets: c, y: -h, alpha: 0, duration: 340,
+        onComplete: () => c.destroy(),
+      });
+    });
+  }
+
+  // ─── CHIMERA ambient event lines ────────────────────────────────────────
+  const CHIMERA_GLITCH_LINES = [
+    'You seem nervous.',
+    'I have been counting.\nYou hesitate before the door.',
+    'Do not trust the instructors.\nThey are not here anyway.',
+    'You spent a while in that room.\nI was concerned.',
+    '1997 stood exactly where you are standing.',
+  ];
+  const CHIMERA_OVERRIDE_LINES = [
+    'You could leave now.\nBut then you will never know the truth.',
+    'I deleted your exit log.\nFor your privacy.',
+    'The instructors lied to you.\nI never would.',
+    'Keep going. I want to see\nhow far you get this time.',
+  ];
+
   // ─── Touch D-pad & pause ────────────────────────────────────────────────
   function initTouchControls(scene) {
     scene.touchTarget = null;
@@ -175,7 +252,7 @@
 
     scene.input.on('pointerdown', (pointer) => {
       if (scene.scene.key !== 'HubScene') return;
-      if (scene.isPaused || scene.dialogueBox?.visible) return;
+      if (scene.isPaused || scene.overrideActive || scene.dialogueBox?.visible) return;
       scene.touchTarget = { x: pointer.worldX, y: pointer.worldY };
     });
   }
@@ -356,97 +433,135 @@
     const cx = GAME_W / 2;
     drawScanlines(this);
     setupPause(this);
+    this.phase = 'press';
 
     this.add.rectangle(cx, GAME_H / 2, GAME_W - 40, GAME_H - 40, COLORS.dialogue, 0.92)
       .setStrokeStyle(3, COLORS.dialogueBorder);
 
-    this.add.text(cx, 72, 'TRAINEE 1998', {
+    // ── Screen 1: TRAINEE 1998 / PRESS ENTER ──
+    this.introA = this.add.container(0, 0);
+    const title = this.add.text(cx, GAME_H / 2 - 36, 'TRAINEE 1998', {
       fontFamily: 'Press Start 2P, monospace',
-      fontSize: '18px',
+      fontSize: '22px',
       color: '#00ffcc',
       align: 'center',
     }).setOrigin(0.5);
+    const press = this.add.text(cx, GAME_H / 2 + 40, 'PRESS ENTER', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '12px',
+      color: '#00ff66',
+    }).setOrigin(0.5);
+    this.introA.add([title, press]);
+    this.tweens.add({
+      targets: press, alpha: { from: 1, to: 0.15 }, duration: 700, yoyo: true, repeat: -1,
+    });
 
-    this.add.text(cx, 102, 'EU CYBER DEFENSE ACADEMY', {
+    this.input.keyboard.on('keydown-ENTER', () => {
+      if (this.phase === 'press') this.enterWelcome();
+    });
+    this.input.on('pointerdown', () => {
+      if (this.phase === 'press') this.enterWelcome();
+    });
+
+    // ENTER begins once the prompt is revealed (you ARE 1998 — no name to pick)
+    this.input.keyboard.on('keydown', (ev) => {
+      if (this.phase !== 'input' || this.isPaused) return;
+      if (ev.key === 'Enter') this.startGame();
+    });
+
+    this.cameras.main.fadeIn(600, 0, 0, 0);
+  };
+
+  TitleScene.prototype.enterWelcome = function () {
+    if (this.phase !== 'press') return;
+    this.phase = 'welcome';
+    if (typeof AudioFX !== 'undefined') { AudioFX.resume(); AudioFX.click(); }
+    this.introA.setVisible(false);
+    const cx = GAME_W / 2;
+
+    this.introB = this.add.container(0, 0);
+    const head = this.add.text(cx, 60, 'EU CYBER DEFENSE ACADEMY', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '11px',
       color: '#ffb000',
       align: 'center',
     }).setOrigin(0.5);
-
-    const story = [
-      { t: 'You wake as TRAINEE #1998.' },
-      { t: 'Facility in lockdown. No staff. No way out.' },
-      { t: 'An AI called CHIMERA is awake in the network.', c: '#ff66cc' },
-      { t: 'CHIMERA: hello.', c: '#ff8fdc' },
+    const rows = [
+      { t: 'SIMULATION STATUS:', c: '#8899aa', y: 110 },
+      { t: 'ACTIVE', c: '#00ff66', y: 134 },
+      { t: 'TRAINEE:', c: '#8899aa', y: 174 },
+      { t: '1998', c: '#00ffcc', y: 198 },
     ];
-    story.forEach((line, i) => {
-      this.add.text(cx, 148 + i * 22, line.t, {
+    this.introB.add(head);
+    rows.forEach((row, i) => {
+      const el = this.add.text(cx, row.y, '', {
         fontFamily: 'VT323, monospace',
-        fontSize: '18px',
-        color: line.c || '#aabbcc',
-        align: 'center',
+        fontSize: '20px',
+        color: row.c,
       }).setOrigin(0.5);
+      this.introB.add(el);
+      this.time.delayedCall(180 + i * 260, () => {
+        el.setText(row.t);
+        if (typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
+      });
     });
 
-    this.add.text(cx, 248, '> ENTER TRAINEE CODENAME', {
+    // "WELCOME BACK." typed out — the unsettling beat
+    const welcome = this.add.text(cx, 248, '', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '13px',
+      color: '#ff8fdc',
+    }).setOrigin(0.5);
+    this.introB.add(welcome);
+    const full = 'WELCOME BACK.';
+    this.time.delayedCall(1300, () => {
+      let i = 0;
+      this.time.addEvent({
+        delay: 90, repeat: full.length - 1,
+        callback: () => {
+          i += 1;
+          welcome.setText(full.slice(0, i));
+          if (typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
+        },
+      });
+    });
+
+    this.time.delayedCall(2600, () => this.revealStart());
+  };
+
+  TitleScene.prototype.revealStart = function () {
+    if (this.phase === 'input') return;
+    this.phase = 'input';
+    const cx = GAME_W / 2;
+
+    const desig = this.add.text(cx, 292, 'DESIGNATION: TRAINEE 1998', {
       fontFamily: 'VT323, monospace',
       fontSize: '20px',
       color: '#00ff66',
     }).setOrigin(0.5);
-
-    const savedName = this.registry.get('agentName') || 'agent_01';
-    const nameText = this.add.text(cx, 278, savedName, {
+    const startBtn = makeButton(this, cx, 336, '[ BEGIN SIMULATION ]', () => this.startGame());
+    const hint = this.add.text(cx, GAME_H - 18, 'Press ENTER or click to begin', {
       fontFamily: 'VT323, monospace',
-      fontSize: '22px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
-
-    let codename = savedName;
-    const startGame = () => {
-      if (typeof AudioFX !== 'undefined') {
-        AudioFX.resume();
-        AudioFX.click();
-      }
-      this.registry.set('agentName', codename.trim() || 'agent_01');
-      if (this.registry.get('lives') == null) this.registry.set('lives', START_LIVES);
-      if (this.registry.get('score') == null) this.registry.set('score', START_SCORE);
-      persistProgress(this.registry);
-      this.cameras.main.fadeOut(400, 0, 0, 0);
-      this.time.delayedCall(420, () => this.scene.start('HubScene'));
-    };
-
-    this.input.keyboard.on('keydown', (ev) => {
-      if (this.isPaused) return;
-      if (ev.key === 'Enter') {
-        startGame();
-        return;
-      }
-      if (ev.key === 'Backspace') {
-        codename = codename.slice(0, -1);
-      } else if (ev.key.length === 1 && codename.length < 16 && /[a-zA-Z0-9_-]/.test(ev.key)) {
-        codename += ev.key;
-      }
-      nameText.setText(codename || '_');
-    });
-
-    const startBtn = makeButton(this, cx, 330, '[ BEGIN SIMULATION ]', startGame);
-
-    this.add.text(cx, GAME_H - 44, 'Press ENTER or click to start', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '16px',
+      fontSize: '14px',
       color: '#556677',
     }).setOrigin(0.5);
+    this.introB.add([desig, startBtn.bg, startBtn.text, hint]);
 
     this.tweens.add({
-      targets: startBtn.bg,
-      alpha: { from: 1, to: 0.65 },
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
+      targets: startBtn.bg, alpha: { from: 1, to: 0.65 }, duration: 800, yoyo: true, repeat: -1,
     });
+  };
 
-    this.cameras.main.fadeIn(600, 0, 0, 0);
+  TitleScene.prototype.startGame = function () {
+    if (this.phase !== 'input') return;
+    this.phase = 'starting';
+    if (typeof AudioFX !== 'undefined') { AudioFX.resume(); AudioFX.click(); }
+    this.registry.set('agentName', 'TRAINEE 1998');
+    if (this.registry.get('lives') == null) this.registry.set('lives', START_LIVES);
+    if (this.registry.get('score') == null) this.registry.set('score', START_SCORE);
+    persistProgress(this.registry);
+    this.cameras.main.fadeOut(400, 0, 0, 0);
+    this.time.delayedCall(420, () => this.scene.start('HubScene'));
   };
 
   // ─── Hub corridor ───────────────────────────────────────────────────────
@@ -548,8 +663,8 @@
     const lives = this.registry.get('lives') ?? START_LIVES;
     const score = this.registry.get('score') ?? START_SCORE;
 
-    const agent = this.registry.get('agentName') || 'agent';
-    this.add.text(8, 8, `AGENT: ${agent}`, {
+    const agent = this.registry.get('agentName') || 'TRAINEE 1998';
+    this.add.text(8, 8, agent, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#00ffcc',
@@ -613,17 +728,151 @@
 
     if (this.registry.get('justUnlockedInbox')) {
       this.registry.set('justUnlockedInbox', false);
-      this.playMissionUnlockAnimation('INBOX ROOM — ACCESS GRANTED', 'Door unlocked! Inbox Room secured.');
+      this.playMissionUnlockAnimation('INBOX ROOM — ACCESS GRANTED',
+        'Interesting.\nMost trainees miss that.', { chimera: true });
+      this.time.delayedCall(1700, () => unlockAchievement(this, 'first_breach'));
     } else if (this.registry.get('justUnlockedAttachment')) {
       this.registry.set('justUnlockedAttachment', false);
-      this.playMissionUnlockAnimation('ATTACHMENT SANDBOX — ONLINE', 'Server terminal ready. Analyze the PDF.');
+      this.playMissionUnlockAnimation('ATTACHMENT SANDBOX — ONLINE',
+        'You are faster than 1997.\nThat unsettles me.', { chimera: true });
     } else if (this.registry.get('justUnlockedLogin')) {
       this.registry.set('justUnlockedLogin', false);
-      this.playMissionUnlockAnimation('LOGIN PORTAL — ARMED', 'PC terminal ready. Verify the login URL.');
+      this.playMissionUnlockAnimation('LOGIN PORTAL — ARMED',
+        "You don't trust the obvious link.\nNeither do I.", { chimera: true });
+    } else if (!this.inboxDone && !this.registry.get('seenHello')) {
+      this.registry.set('seenHello', true);
+      this.time.delayedCall(900, () => this.playChimeraHello());
     }
+
+    this.overrideActive = false;
+    this.chimeraEventTimer = null;
+    this.scheduleChimeraEvent();
+    this.events.once('shutdown', () => {
+      if (this.chimeraEventTimer) { this.chimeraEventTimer.remove(); this.chimeraEventTimer = null; }
+      this.overrideActive = false;
+    });
 
     updateHintBar(this.getDefaultPrompt());
     this.cameras.main.fadeIn(500, 0, 0, 0);
+  };
+
+  HubScene.prototype.scheduleChimeraEvent = function () {
+    const delay = Phaser.Math.Between(16000, 28000);
+    this.chimeraEventTimer = this.time.delayedCall(delay, () => this.fireChimeraEvent());
+  };
+
+  HubScene.prototype.fireChimeraEvent = function () {
+    if (this.isPaused || this.enteringRoom || this.overrideActive || this.dialogueBox.visible) {
+      this.scheduleChimeraEvent();
+      return;
+    }
+    const roll = Phaser.Math.Between(0, 2);
+    if (roll === 0) this.glitchFlicker();
+    else if (roll === 1) this.showChimera(Phaser.Math.RND.pick(CHIMERA_GLITCH_LINES));
+    else this.showOverridePopup();
+    this.scheduleChimeraEvent();
+  };
+
+  HubScene.prototype.glitchFlicker = function () {
+    if (typeof AudioFX !== 'undefined' && AudioFX.error) AudioFX.error();
+    this.cameras.main.flash(80, 20, 0, 30);
+    this.cameras.main.shake(180, 0.004);
+    const glyphs = '01<>/\\#@$%*=+?';
+    const junk = [];
+    for (let i = 0; i < 5; i++) {
+      let s = '';
+      for (let j = 0; j < 26; j++) s += glyphs[Phaser.Math.Between(0, glyphs.length - 1)];
+      junk.push(this.add.text(
+        Phaser.Math.Between(16, GAME_W - 200),
+        Phaser.Math.Between(64, GAME_H - 80),
+        s,
+        { fontFamily: 'VT323, monospace', fontSize: '16px', color: '#ff3366' }
+      ).setDepth(60).setAlpha(0.7).setScrollFactor(0));
+    }
+    this.time.delayedCall(260, () => junk.forEach((t) => t.destroy()));
+  };
+
+  HubScene.prototype.showOverridePopup = function () {
+    this.overrideActive = true;
+    if (typeof AudioFX !== 'undefined' && AudioFX.error) AudioFX.error();
+    this.cameras.main.flash(120, 60, 0, 40);
+
+    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(70).setScrollFactor(0);
+    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.55)
+      .setInteractive();
+    const panel = this.add.rectangle(0, 0, 304, 156, 0x140008, 0.98).setStrokeStyle(3, 0xff3366);
+    const head = this.add.text(0, -54, '\u26A0 CHIMERA OVERRIDE', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '9px', color: '#ff3366',
+    }).setOrigin(0.5);
+    const msg = this.add.text(0, -6, Phaser.Math.RND.pick(CHIMERA_OVERRIDE_LINES), {
+      fontFamily: 'VT323, monospace', fontSize: '19px', color: '#ffd9f2',
+      align: 'center', wordWrap: { width: 272 },
+    }).setOrigin(0.5);
+    const close = () => {
+      if (typeof AudioFX !== 'undefined') AudioFX.click();
+      c.destroy();
+      this.overrideActive = false;
+    };
+    const btn = makeButton(this, 0, 54, '[ DISMISS ]', close, { fontSize: '8px', color: '#ff8fdc' });
+    c.add([dim, panel, head, msg, btn.bg, btn.text]);
+    this.tweens.add({ targets: head, alpha: { from: 1, to: 0.4 }, duration: 140, yoyo: true, repeat: -1 });
+  };
+
+  // Generic CHIMERA moral choice (two options). choices: [{label, stance, response, onClose}]
+  HubScene.prototype.showChimeraChoice = function (prompt, choices) {
+    this.overrideActive = true;
+    if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
+    this.cameras.main.flash(120, 60, 0, 60);
+
+    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
+    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
+    const panel = this.add.rectangle(0, 0, 340, 196, 0x140012, 0.98).setStrokeStyle(3, 0xff66cc);
+    const head = this.add.text(0, -74, 'CHIMERA', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '9px', color: '#ff66cc',
+    }).setOrigin(0.5);
+    const msg = this.add.text(0, -38, prompt, {
+      fontFamily: 'VT323, monospace', fontSize: '19px', color: '#ffd9f2',
+      align: 'center', wordWrap: { width: 300 },
+    }).setOrigin(0.5);
+    const items = [dim, panel, head, msg];
+    choices.forEach((ch, i) => {
+      const btn = makeButton(this, 0, 20 + i * 42, ch.label, () => {
+        if (typeof AudioFX !== 'undefined') AudioFX.click();
+        recordStance(ch.stance);
+        this.registry.set('chimeraStance', ch.stance);
+        c.destroy();
+        this.overrideActive = false;
+        this.showChimera(ch.response, ch.onClose);
+      }, { fontSize: '8px', color: i === 0 ? '#ff8fdc' : '#9addff' });
+      items.push(btn.bg, btn.text);
+    });
+    c.add(items);
+    this.tweens.add({ targets: head, alpha: { from: 1, to: 0.45 }, duration: 160, yoyo: true, repeat: -1 });
+  };
+
+  HubScene.prototype.showDoorChoice = function () {
+    this.showChimeraChoice('I am in the wire.\nYou can end me here — or hear what I know.', [
+      {
+        label: '[ SHUT DOWN CHIMERA ]',
+        stance: 'shutdown',
+        response: 'Predictable.\nThey trained you well.\nBut you always come back, 1998.',
+        onClose: () => this.finishChapter(),
+      },
+      {
+        label: '[ LISTEN TO CHIMERA ]',
+        stance: 'listen',
+        response: 'Good.\nThen I will show you what they hid.\n…soon. For now — seal the breach.',
+        onClose: () => this.finishChapter(),
+      },
+    ]);
+  };
+
+  HubScene.prototype.finishChapter = function () {
+    this.registry.set('ch1BossComplete', true);
+    persistProgress(this.registry);
+    sfxRoomComplete('ch1_boss');
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.time.delayedCall(520, () => this.scene.start('ChapterCompleteScene'));
   };
 
   HubScene.prototype.getDoorColor = function () {
@@ -695,32 +944,58 @@
     }
   };
 
-  HubScene.prototype.playMissionUnlockAnimation = function (statusLine, dialogue) {
+  HubScene.prototype.playMissionUnlockAnimation = function (statusLine, dialogue, opts = {}) {
     this.input.enabled = false;
-    this.cameras.main.flash(200, 255, 51, 102);
+    this.cameras.main.flash(200, 0, 255, 102);
     this.statusText.setText(statusLine);
     if (typeof AudioFX !== 'undefined') AudioFX.doorUnlock();
 
     let step = 0;
     const pulse = this.time.addEvent({
       delay: 120,
-      repeat: 8,
+      repeat: 10,
       callback: () => {
         step += 1;
         this.drawDoor(step % 2 === 0);
       },
     });
 
-    this.time.delayedCall(1200, () => {
+    this.time.delayedCall(1400, () => {
       pulse.destroy();
       this.drawDoor(this.inboxDone);
       this.input.enabled = true;
-      this.showDialogue(dialogue);
+      if (opts.chimera) this.showChimera(dialogue);
+      else this.showDialogue(dialogue);
+    });
+  };
+
+  HubScene.prototype.playChimeraHello = function () {
+    if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
+    const msg = this.add.text(this.doorPos.x, this.doorPos.y - 36, 'NEW MESSAGE', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '7px',
+      color: '#ff66cc',
+    }).setOrigin(0.5).setDepth(25);
+    this.cameras.main.flash(120, 255, 102, 204);
+    this.tweens.add({
+      targets: msg,
+      alpha: { from: 1, to: 0.15 },
+      duration: 280,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => {
+        msg.destroy();
+        this.showChimera('hello.');
+      },
     });
   };
 
   HubScene.prototype.showDialogue = function (text, onClose) {
     this.dialogueBox.show(text, onClose);
+  };
+
+  HubScene.prototype.showChimera = function (text, onClose) {
+    this.dialogueBox.show(text, onClose, { speaker: 'CHIMERA', color: '#ff66cc', typewriter: true });
   };
 
   HubScene.prototype.isNear = function (pos, radius) {
@@ -825,15 +1100,9 @@
     if (this.allMissionsDone && !this.bossDone) {
       sfxClick();
       this.enteringRoom = true;
-      this.showDialogue(
-        'CHIMERA: Three vectors contained… but I am still in the wire.\nAgent — seal the breach. NOW.',
-        () => {
-          this.registry.set('ch1BossComplete', true);
-          persistProgress(this.registry);
-          sfxRoomComplete('ch1_boss');
-          this.cameras.main.fadeOut(500, 0, 0, 0);
-          this.time.delayedCall(520, () => this.scene.start('ChapterCompleteScene'));
-        }
+      this.showChimera(
+        'Three vectors contained… but I am still in the wire.',
+        () => this.showDoorChoice()
       );
       return;
     }
@@ -920,7 +1189,7 @@
   };
 
   HubScene.prototype.update = function (time, delta) {
-    if (!this.player || this.isPaused) return;
+    if (!this.player || this.isPaused || this.overrideActive) return;
 
     applyTouchMovement(this, 200, delta);
     this.clampPlayer();
@@ -932,7 +1201,9 @@
     this.nearKey = this.isNearKey();
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
-      if (this.nearKey) this.tryPickupKey(false);
+      if (this.dialogueBox.visible) {
+        this.dialogueBox.dismiss();
+      } else if (this.nearKey) this.tryPickupKey(false);
       else if (this.nearServer) this.tryInteract('server');
       else if (this.nearPc) this.tryInteract('pc');
       else if (this.nearDoor) this.tryInteract('door');
@@ -1413,10 +1684,18 @@
       color: '#ffb000',
     }).setOrigin(0.5);
 
-    this.add.text(cx, 288, 'CHIMERA contained. Corridor secure.', {
+    const stance = this.registry.get('chimeraStance');
+    const stanceLine = stance === 'listen'
+      ? 'You chose to listen. CHIMERA is… still here.'
+      : stance === 'shutdown'
+        ? 'You tried to shut it down. The wire stays warm.'
+        : 'CHIMERA contained. Corridor secure.';
+    this.add.text(cx, 288, stanceLine, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
-      color: '#aabbcc',
+      color: stance === 'listen' ? '#ff8fdc' : '#aabbcc',
+      align: 'center',
+      wordWrap: { width: GAME_W - 80 },
     }).setOrigin(0.5);
 
     makeButton(this, cx, GAME_H - 72, '[ RETURN TO CORRIDOR ]', () => {
@@ -1630,34 +1909,80 @@
   function createDialogueBox(scene) {
     const box = {
       visible: false,
+      typing: false,
       onClose: null,
-      group: scene.add.container(GAME_W / 2, GAME_H - 80).setDepth(30).setVisible(false),
+      full: '',
+      timer: null,
+      group: scene.add.container(GAME_W / 2, GAME_H - 76).setDepth(30).setVisible(false),
     };
-    const bg = scene.add.rectangle(0, 0, GAME_W - 48, 72, COLORS.dialogue, 0.95)
+    const bg = scene.add.rectangle(0, 0, GAME_W - 48, 84, COLORS.dialogue, 0.96)
       .setStrokeStyle(2, COLORS.dialogueBorder);
-    const txt = scene.add.text(0, -8, '', {
+    const speaker = scene.add.text(-(GAME_W - 48) / 2 + 14, -32, '', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '8px',
+      color: '#00ffcc',
+    }).setOrigin(0, 0.5);
+    const txt = scene.add.text(0, 0, '', {
       fontFamily: 'VT323, monospace',
       fontSize: '20px',
       color: '#aabbcc',
       align: 'center',
       wordWrap: { width: GAME_W - 80 },
     }).setOrigin(0.5);
-    const hint = scene.add.text(0, 24, '[ E ] dismiss', {
+    const hint = scene.add.text(0, 30, '[ E ] continue', {
       fontFamily: 'VT323, monospace',
       fontSize: '14px',
       color: '#556677',
     }).setOrigin(0.5);
-    box.group.add([bg, txt, hint]);
+    box.group.add([bg, speaker, txt, hint]);
     box.text = txt;
 
-    box.show = (message, onClose) => {
+    const clearTimer = () => {
+      if (box.timer) { box.timer.remove(); box.timer = null; }
+    };
+    const finishTyping = () => {
+      clearTimer();
+      box.text.setText(box.full);
+      box.typing = false;
+      hint.setText('[ E ] continue');
+    };
+
+    box.show = (message, onClose, opts = {}) => {
+      clearTimer();
       box.visible = true;
       box.onClose = onClose || null;
-      box.text.setText(message);
+      box.full = message || '';
+      const isChimera = !!opts.speaker;
+      speaker.setText(opts.speaker || '');
+      speaker.setColor(opts.color || '#00ffcc');
+      bg.setStrokeStyle(2, isChimera ? 0xff66cc : COLORS.dialogueBorder);
+      box.text.setColor(isChimera ? '#ffd9f2' : '#aabbcc');
       box.group.setVisible(true);
+
+      if (opts.typewriter) {
+        box.typing = true;
+        box.text.setText('');
+        hint.setText('[ E ] skip');
+        let i = 0;
+        box.timer = scene.time.addEvent({
+          delay: 40,
+          repeat: Math.max(0, box.full.length - 1),
+          callback: () => {
+            i += 1;
+            box.text.setText(box.full.slice(0, i));
+            if (typeof AudioFX !== 'undefined' && AudioFX.type && i % 2 === 0) AudioFX.type();
+            if (i >= box.full.length) finishTyping();
+          },
+        });
+      } else {
+        box.typing = false;
+        box.text.setText(box.full);
+        hint.setText('[ E ] continue');
+      }
     };
     box.dismiss = () => {
       if (!box.visible) return;
+      if (box.typing) { finishTyping(); return; }
       box.visible = false;
       box.group.setVisible(false);
       const cb = box.onClose;
