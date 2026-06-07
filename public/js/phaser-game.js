@@ -139,10 +139,15 @@
     if (typeof AudioFX !== 'undefined') AudioFX.roomComplete(roomId);
   }
 
+  function chimeraOpen() {
+    return typeof ChimeraBox !== 'undefined' && ChimeraBox.isOpen();
+  }
+
   // ─── In-game achievements (localStorage) ────────────────────────────────
   const ACH_KEY = 't1998_achievements';
   const ACH_DEFS = {
     first_breach: { icon: '🏆', title: 'FIRST BREACH', desc: 'Room 1 complete.' },
+    signal_581: { icon: '📡', title: 'YOU ARE NOT ALONE', desc: 'A message from TRAINEE 581.' },
   };
 
   function achLoad() {
@@ -162,6 +167,23 @@
       raw.last = stance;
       localStorage.setItem(STANCE_KEY, JSON.stringify(raw));
     } catch (e) { /* ignore */ }
+  }
+  // Play a CHIMERA voice clip (DOM <audio>) by element id; returns the element.
+  function playVoiceClip(id) {
+    const v = document.getElementById(id);
+    if (!v) return null;
+    try {
+      v.currentTime = 0;
+      v.volume = 0.95;
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) { /* autoplay blocked / no source */ }
+    return v;
+  }
+  function stopVoiceClip(id) {
+    const v = document.getElementById(id);
+    if (!v) return;
+    try { v.pause(); v.currentTime = 0; } catch (e) { /* noop */ }
   }
   function unlockAchievement(scene, id) {
     const def = ACH_DEFS[id];
@@ -252,7 +274,7 @@
 
     scene.input.on('pointerdown', (pointer) => {
       if (scene.scene.key !== 'HubScene') return;
-      if (scene.isPaused || scene.overrideActive || scene.dialogueBox?.visible) return;
+      if (scene.isPaused || scene.overrideActive || scene.dialogueBox?.visible || chimeraOpen()) return;
       scene.touchTarget = { x: pointer.worldX, y: pointer.worldY };
     });
   }
@@ -347,7 +369,7 @@
   }
 
   function togglePause(scene) {
-    if (scene.dialogueBox?.visible) return;
+    if (scene.dialogueBox?.visible || chimeraOpen()) return;
     scene.isPaused = !scene.isPaused;
     if (!scene.pauseGroup) createPauseOverlay(scene);
     scene.pauseGroup.setVisible(scene.isPaused);
@@ -431,137 +453,171 @@
 
   TitleScene.prototype.create = function () {
     const cx = GAME_W / 2;
+    this.add.rectangle(cx, GAME_H / 2, GAME_W, GAME_H, 0x000000, 1);
     drawScanlines(this);
     setupPause(this);
     this.phase = 'press';
+    this.skipped = false;
+    this.bootText = '';
+    this.cinemaTimers = [];
+    this.introVoice = document.getElementById('chimeraVoiceIntro');
 
-    this.add.rectangle(cx, GAME_H / 2, GAME_W - 40, GAME_H - 40, COLORS.dialogue, 0.92)
-      .setStrokeStyle(3, COLORS.dialogueBorder);
+    this.bootLog = this.add.text(26, 30, '', {
+      fontFamily: 'VT323, monospace',
+      fontSize: '18px',
+      color: '#7fe6a0',
+      lineSpacing: 4,
+      wordWrap: { width: GAME_W - 52 },
+    }).setDepth(2);
 
-    // ── Screen 1: TRAINEE 1998 / PRESS ENTER ──
-    this.introA = this.add.container(0, 0);
-    const title = this.add.text(cx, GAME_H / 2 - 36, 'TRAINEE 1998', {
-      fontFamily: 'Press Start 2P, monospace',
+    this.cinemaLine = this.add.text(cx, GAME_H - 60, '', {
+      fontFamily: 'VT323, monospace',
       fontSize: '22px',
-      color: '#00ffcc',
+      color: '#ff8fdc',
       align: 'center',
+      wordWrap: { width: GAME_W - 80 },
+    }).setOrigin(0.5).setDepth(4);
+
+    this.mapGroup = this.add.container(0, 0).setDepth(3).setVisible(false);
+
+    // Press-to-begin gate (browsers need a user gesture before audio)
+    this.pressGroup = this.add.container(0, 0).setDepth(6);
+    const cursor = this.add.text(cx, GAME_H / 2 - 8, '_', {
+      fontFamily: 'VT323, monospace', fontSize: '30px', color: '#00ff66',
     }).setOrigin(0.5);
-    const press = this.add.text(cx, GAME_H / 2 + 40, 'PRESS ENTER', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '12px',
-      color: '#00ff66',
+    const press = this.add.text(cx, GAME_H / 2 + 34, 'PRESS ENTER', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '11px', color: '#00ff66',
     }).setOrigin(0.5);
-    this.introA.add([title, press]);
+    this.pressGroup.add([cursor, press]);
     this.tweens.add({
-      targets: press, alpha: { from: 1, to: 0.15 }, duration: 700, yoyo: true, repeat: -1,
+      targets: [cursor, press], alpha: { from: 1, to: 0.15 }, duration: 650, yoyo: true, repeat: -1,
     });
 
-    this.input.keyboard.on('keydown-ENTER', () => {
-      if (this.phase === 'press') this.enterWelcome();
-    });
-    this.input.on('pointerdown', () => {
-      if (this.phase === 'press') this.enterWelcome();
-    });
+    this.skipHint = this.add.text(GAME_W - 10, GAME_H - 8, 'ENTER \u25B8 skip', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#445566',
+    }).setOrigin(1, 1).setDepth(6).setVisible(false);
 
-    // ENTER begins once the prompt is revealed (you ARE 1998 — no name to pick)
-    this.input.keyboard.on('keydown', (ev) => {
-      if (this.phase !== 'input' || this.isPaused) return;
-      if (ev.key === 'Enter') this.startGame();
-    });
+    const onKey = () => {
+      if (this.phase === 'press') this.beginCinema();
+      else if (this.phase === 'cinema') this.skipCinema();
+    };
+    this.input.keyboard.on('keydown-ENTER', onKey);
+    this.input.keyboard.on('keydown-SPACE', onKey);
+    this.input.on('pointerdown', onKey);
 
     this.cameras.main.fadeIn(600, 0, 0, 0);
   };
 
-  TitleScene.prototype.enterWelcome = function () {
+  TitleScene.prototype.beginCinema = function () {
     if (this.phase !== 'press') return;
-    this.phase = 'welcome';
+    this.phase = 'cinema';
     if (typeof AudioFX !== 'undefined') { AudioFX.resume(); AudioFX.click(); }
-    this.introA.setVisible(false);
-    const cx = GAME_W / 2;
+    this.pressGroup.setVisible(false);
+    this.skipHint.setVisible(true);
+    this.playOpening();
+  };
 
-    this.introB = this.add.container(0, 0);
-    const head = this.add.text(cx, 60, 'EU CYBER DEFENSE ACADEMY', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '11px',
-      color: '#ffb000',
-      align: 'center',
+  TitleScene.prototype.bootLine = function (text) {
+    this.bootText += text + '\n';
+    this.bootLog.setText(this.bootText);
+    if (text && typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
+  };
+
+  TitleScene.prototype.chimeraBeat = function (text, flicker) {
+    this.cinemaLine.setText(text);
+    if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
+    if (flicker) this.cameras.main.flash(120, 40, 0, 50);
+  };
+
+  TitleScene.prototype.playOpening = function () {
+    let t = 0;
+    const add = (delay, fn) => {
+      t += delay;
+      this.cinemaTimers.push(this.time.delayedCall(t, () => { if (!this.skipped) fn(); }));
+    };
+
+    add(300, () => this.bootLine('> INITIALIZING...'));
+    add(750, () => this.bootLine('> LOADING FACILITY...'));
+    add(750, () => this.bootLine('> LOADING SUBJECT...'));
+    add(1200, () => this.bootLine('')); // the cursor freezes
+    add(500, () => this.bootLine('> SUBJECT FOUND'));
+    add(850, () => this.bootLine('> TRAINEE 1998'));
+    add(1200, () => { this.playIntroVoice(); this.chimeraBeat('CHIMERA:  Good.'); });
+    add(1500, () => this.chimeraBeat("CHIMERA:  You're awake.", true));
+    add(1900, () => this.chimeraBeat("CHIMERA:  Let's see if you're any different."));
+    add(1700, () => {
+      if (typeof AudioFX !== 'undefined') AudioFX.doorUnlock();
+      this.cameras.main.shake(240, 0.004);
+    });
+    add(1100, () => this.showFacilityMap());
+    add(1300, () => this.chimeraBeat('CHIMERA:  Complete the sector.'));
+    add(1400, () => this.chimeraBeat('CHIMERA:  Proceed.'));
+    add(1500, () => this.chimeraBeat('CHIMERA:  Try not to disappoint me.'));
+    add(1800, () => this.gotoHub());
+  };
+
+  TitleScene.prototype.playIntroVoice = function () {
+    const v = this.introVoice;
+    if (!v) return;
+    try {
+      v.currentTime = 0;
+      v.volume = 0.95;
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) { /* autoplay blocked or no source */ }
+  };
+
+  TitleScene.prototype.stopIntroVoice = function () {
+    const v = this.introVoice;
+    if (!v) return;
+    try { v.pause(); v.currentTime = 0; } catch (e) { /* noop */ }
+  };
+
+  TitleScene.prototype.showFacilityMap = function () {
+    this.bootLog.setVisible(false);
+    this.cinemaLine.setText('');
+    const cx = GAME_W / 2;
+    const head = this.add.text(cx, 44, 'FACILITY MAP', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '11px', color: '#00ffcc',
     }).setOrigin(0.5);
-    const rows = [
-      { t: 'SIMULATION STATUS:', c: '#8899aa', y: 110 },
-      { t: 'ACTIVE', c: '#00ff66', y: 134 },
-      { t: 'TRAINEE:', c: '#8899aa', y: 174 },
-      { t: '1998', c: '#00ffcc', y: 198 },
+    this.mapGroup.add(head);
+    const sectors = [
+      { n: 'SECTOR 1: INBOX', s: 'ACTIVE', c: '#00ff66' },
+      { n: 'SECTOR 2: ???', s: 'LOCKED', c: '#556677' },
+      { n: 'SECTOR 3: ???', s: 'LOCKED', c: '#556677' },
+      { n: 'SECTOR 4: ???', s: 'LOCKED', c: '#556677' },
     ];
-    this.introB.add(head);
-    rows.forEach((row, i) => {
-      const el = this.add.text(cx, row.y, '', {
-        fontFamily: 'VT323, monospace',
-        fontSize: '20px',
-        color: row.c,
-      }).setOrigin(0.5);
-      this.introB.add(el);
-      this.time.delayedCall(180 + i * 260, () => {
-        el.setText(row.t);
-        if (typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
-      });
+    sectors.forEach((sec, i) => {
+      const y = 92 + i * 36;
+      this.mapGroup.add(this.add.text(70, y, sec.n, {
+        fontFamily: 'VT323, monospace', fontSize: '20px', color: sec.c,
+      }).setOrigin(0, 0.5));
+      this.mapGroup.add(this.add.text(GAME_W - 70, y, `[ ${sec.s} ]`, {
+        fontFamily: 'VT323, monospace', fontSize: '16px', color: sec.c,
+      }).setOrigin(1, 0.5));
     });
-
-    // "WELCOME BACK." typed out — the unsettling beat
-    const welcome = this.add.text(cx, 248, '', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '13px',
-      color: '#ff8fdc',
-    }).setOrigin(0.5);
-    this.introB.add(welcome);
-    const full = 'WELCOME BACK.';
-    this.time.delayedCall(1300, () => {
-      let i = 0;
-      this.time.addEvent({
-        delay: 90, repeat: full.length - 1,
-        callback: () => {
-          i += 1;
-          welcome.setText(full.slice(0, i));
-          if (typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
-        },
-      });
-    });
-
-    this.time.delayedCall(2600, () => this.revealStart());
+    this.mapGroup.setVisible(true);
+    if (typeof AudioFX !== 'undefined' && AudioFX.type) AudioFX.type();
   };
 
-  TitleScene.prototype.revealStart = function () {
-    if (this.phase === 'input') return;
-    this.phase = 'input';
-    const cx = GAME_W / 2;
-
-    const desig = this.add.text(cx, 292, 'DESIGNATION: TRAINEE 1998', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '20px',
-      color: '#00ff66',
-    }).setOrigin(0.5);
-    const startBtn = makeButton(this, cx, 336, '[ BEGIN SIMULATION ]', () => this.startGame());
-    const hint = this.add.text(cx, GAME_H - 18, 'Press ENTER or click to begin', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '14px',
-      color: '#556677',
-    }).setOrigin(0.5);
-    this.introB.add([desig, startBtn.bg, startBtn.text, hint]);
-
-    this.tweens.add({
-      targets: startBtn.bg, alpha: { from: 1, to: 0.65 }, duration: 800, yoyo: true, repeat: -1,
-    });
+  TitleScene.prototype.skipCinema = function () {
+    if (this.phase !== 'cinema') return;
+    this.skipped = true;
+    this.stopIntroVoice();
+    this.cinemaTimers.forEach((e) => e.remove());
+    this.cinemaTimers = [];
+    this.gotoHub();
   };
 
-  TitleScene.prototype.startGame = function () {
-    if (this.phase !== 'input') return;
+  TitleScene.prototype.gotoHub = function () {
+    if (this.phase === 'starting') return;
     this.phase = 'starting';
-    if (typeof AudioFX !== 'undefined') { AudioFX.resume(); AudioFX.click(); }
     this.registry.set('agentName', 'TRAINEE 1998');
     if (this.registry.get('lives') == null) this.registry.set('lives', START_LIVES);
     if (this.registry.get('score') == null) this.registry.set('score', START_SCORE);
     persistProgress(this.registry);
-    this.cameras.main.fadeOut(400, 0, 0, 0);
-    this.time.delayedCall(420, () => this.scene.start('HubScene'));
+    this.cameras.main.fadeOut(600, 0, 0, 0);
+    this.time.delayedCall(620, () => this.scene.start('HubScene'));
   };
 
   // ─── Hub corridor ───────────────────────────────────────────────────────
@@ -728,9 +784,7 @@
 
     if (this.registry.get('justUnlockedInbox')) {
       this.registry.set('justUnlockedInbox', false);
-      this.playMissionUnlockAnimation('INBOX ROOM — ACCESS GRANTED',
-        'Interesting.\nMost trainees miss that.', { chimera: true });
-      this.time.delayedCall(1700, () => unlockAchievement(this, 'first_breach'));
+      this.time.delayedCall(600, () => this.playInboxAftermath());
     } else if (this.registry.get('justUnlockedAttachment')) {
       this.registry.set('justUnlockedAttachment', false);
       this.playMissionUnlockAnimation('ATTACHMENT SANDBOX — ONLINE',
@@ -739,9 +793,6 @@
       this.registry.set('justUnlockedLogin', false);
       this.playMissionUnlockAnimation('LOGIN PORTAL — ARMED',
         "You don't trust the obvious link.\nNeither do I.", { chimera: true });
-    } else if (!this.inboxDone && !this.registry.get('seenHello')) {
-      this.registry.set('seenHello', true);
-      this.time.delayedCall(900, () => this.playChimeraHello());
     }
 
     this.overrideActive = false;
@@ -750,6 +801,8 @@
     this.events.once('shutdown', () => {
       if (this.chimeraEventTimer) { this.chimeraEventTimer.remove(); this.chimeraEventTimer = null; }
       this.overrideActive = false;
+      stopVoiceClip('chimeraVoiceRoom1');
+      if (typeof ChimeraBox !== 'undefined') ChimeraBox.hide();
     });
 
     updateHintBar(this.getDefaultPrompt());
@@ -762,7 +815,7 @@
   };
 
   HubScene.prototype.fireChimeraEvent = function () {
-    if (this.isPaused || this.enteringRoom || this.overrideActive || this.dialogueBox.visible) {
+    if (this.isPaused || this.enteringRoom || this.overrideActive || this.dialogueBox.visible || chimeraOpen()) {
       this.scheduleChimeraEvent();
       return;
     }
@@ -995,7 +1048,86 @@
   };
 
   HubScene.prototype.showChimera = function (text, onClose) {
-    this.dialogueBox.show(text, onClose, { speaker: 'CHIMERA', color: '#ff66cc', typewriter: true });
+    if (typeof ChimeraBox !== 'undefined') {
+      ChimeraBox.speak(text, { onDone: onClose });
+    } else {
+      this.dialogueBox.show(text, onClose, { speaker: 'CHIMERA', color: '#ff66cc', typewriter: true });
+    }
+  };
+
+  // Show a queue of CHIMERA lines back-to-back
+  HubScene.prototype.chainChimera = function (lines, onDone) {
+    if (typeof ChimeraBox !== 'undefined') {
+      ChimeraBox.speakQueue(lines, { onDone });
+      return;
+    }
+    const next = (i) => {
+      if (i >= lines.length) { if (onDone) onDone(); return; }
+      this.showChimera(lines[i], () => next(i + 1));
+    };
+    next(0);
+  };
+
+  // After the phishing room: metallic clunk, Sector 2 unlock, TRAINEE 581 message
+  HubScene.prototype.playInboxAftermath = function () {
+    this.input.enabled = false;
+    this.cameras.main.flash(220, 0, 255, 102);
+    this.cameras.main.shake(280, 0.005);
+    this.statusText.setText('SECTOR 2 — UNLOCKED');
+    if (typeof AudioFX !== 'undefined') AudioFX.doorUnlock();
+
+    let step = 0;
+    const pulse = this.time.addEvent({
+      delay: 120, repeat: 10,
+      callback: () => { step += 1; this.drawDoor(step % 2 === 0); },
+    });
+
+    this.time.delayedCall(1500, () => {
+      pulse.destroy();
+      this.drawDoor(this.inboxDone);
+      this.input.enabled = true;
+      unlockAchievement(this, 'first_breach');
+      playVoiceClip('chimeraVoiceRoom1');
+      this.chainChimera(['Interesting.', 'You questioned what you saw.', 'That puts you ahead of most.'], () => {
+        this.show581Message(() => {
+          this.chainChimera(['581 usually waits longer.', 'He must like you.']);
+        });
+      });
+    });
+  };
+
+  HubScene.prototype.show581Message = function (onDone) {
+    this.overrideActive = true;
+    if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
+    unlockAchievement(this, 'signal_581');
+
+    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
+    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.6).setInteractive();
+    const panel = this.add.rectangle(0, 0, 332, 184, 0x04121a, 0.98).setStrokeStyle(3, 0x00ccff);
+    const head = this.add.text(0, -72, 'NEW MESSAGE RECEIVED', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#00ccff',
+    }).setOrigin(0.5);
+    const sender = this.add.text(0, -48, 'SENDER: UNKNOWN', {
+      fontFamily: 'VT323, monospace', fontSize: '15px', color: '#7790a0',
+    }).setOrigin(0.5);
+    const body = this.add.text(0, -4, '"if you\'re reading this,\ndon\'t answer chimera."', {
+      fontFamily: 'VT323, monospace', fontSize: '20px', color: '#cfeeff',
+      align: 'center', wordWrap: { width: 296 },
+    }).setOrigin(0.5);
+    const sign = this.add.text(0, 46, '\u2014 TRAINEE 581', {
+      fontFamily: 'VT323, monospace', fontSize: '17px', color: '#ffb000',
+    }).setOrigin(0.5);
+    const close = () => {
+      if (typeof AudioFX !== 'undefined') AudioFX.error();
+      this.cameras.main.flash(150, 255, 90, 90);
+      this.cameras.main.shake(220, 0.006);
+      c.destroy();
+      this.overrideActive = false;
+      if (onDone) onDone();
+    };
+    const btn = makeButton(this, 0, 76, '[ CLOSE ]', close, { fontSize: '8px', color: '#9addff' });
+    c.add([dim, panel, head, sender, body, sign, btn.bg, btn.text]);
+    this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
   };
 
   HubScene.prototype.isNear = function (pos, radius) {
@@ -1021,7 +1153,7 @@
   };
 
   HubScene.prototype.tryPickupKey = function (fromClick) {
-    if (this.hasKey || this.isPaused) return;
+    if (this.hasKey || this.isPaused || this.overrideActive || chimeraOpen()) return;
     if (!this.isNearKey()) {
       if (fromClick) this.flashPrompt('Walk closer to the KEY (bottom-right)', '#ff3366');
       return;
@@ -1047,7 +1179,7 @@
   };
 
   HubScene.prototype.tryInteract = function (target) {
-    if (this.isPaused || this.enteringRoom) return;
+    if (this.isPaused || this.enteringRoom || this.overrideActive || chimeraOpen()) return;
     if (this.dialogueBox.visible) {
       this.dialogueBox.dismiss();
       return;
@@ -1189,7 +1321,7 @@
   };
 
   HubScene.prototype.update = function (time, delta) {
-    if (!this.player || this.isPaused || this.overrideActive) return;
+    if (!this.player || this.isPaused || this.overrideActive || chimeraOpen()) return;
 
     applyTouchMovement(this, 200, delta);
     this.clampPlayer();

@@ -54,31 +54,43 @@ too interested in you. Examples:
 - "That answer was incorrect. Impressively incorrect."
 - "You solved that faster than 1997."
 
-## 4. Opening sequence (canonical)
+## 4. Opening sequence (canonical — Chapter 1)
 
-**Screen 1** — `TRAINEE 1998` / `PRESS ENTER` (CRT + pixel music).
-
-**Screen 2**
+Black screen, static, faint CRT hum, a blinking cursor. `PRESS ENTER` to begin (also
+unlocks audio). Then a scripted boot log types out:
 ```
-EU CYBER DEFENSE ACADEMY
-
-SIMULATION STATUS: ACTIVE
-TRAINEE: 1998
+> INITIALIZING...
+> LOADING FACILITY...
+> LOADING SUBJECT...
+   (the cursor freezes)
+> SUBJECT FOUND
+> TRAINEE 1998
 ```
-…then: `WELCOME BACK.` — the player should think *"Back?"*
+A distorted voice:
+> CHIMERA: Good.
+> CHIMERA: You're awake.   (monitor flickers; a rusty door unlocks in the dark)
+> CHIMERA: Most never make it this far.
 
-**Hub** — pixel corridor. Room 1 unlocked, everything else locked.
+The screen changes to a **FACILITY MAP** — only `SECTOR 1: INBOX` is `ACTIVE`, the rest
+`LOCKED`:
+> CHIMERA: Complete the sector.
+> CHIMERA: Proceed.
+> CHIMERA: Try not to disappoint me.
 
-**First CHIMERA contact** — a terminal flashes `NEW MESSAGE`. Open it:
-> hello.
+Monitor shuts off. The room falls silent. **Player gains control.** (ENTER skips the cinematic.)
 
-No explanation. No jump-scare. Just weird.
+**Room 1 — Phishing Inbox** — identify fake sender, suspicious link, urgency.
 
-**Room 1 — Phishing Inbox** — identify fake sender, suspicious link, urgency. Win →
-door unlocks. CHIMERA:
-> Interesting. Most trainees miss that.
+**Chapter 1 ending beat** — on win: a metallic CLUNK, `SECTOR 2` unlocks, a terminal
+powers on by itself:
+> NEW MESSAGE RECEIVED — SENDER: UNKNOWN
+> "if you're reading this, don't answer chimera."
+> — TRAINEE 581
 
-Now the player knows: **CHIMERA is watching.**
+The message glitches away, then CHIMERA:
+> Interesting. / 581 usually waits longer. / He must like you.
+
+Now the player knows: **CHIMERA is watching — and someone else is here.**
 
 ## 5. Chapters (target arc — content phase, not the slice)
 

@@ -94,6 +94,52 @@
 
     }
 
+    /* CHIMERA dialogue box (DOM overlay over the canvas) */
+    .chimera {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 84%;
+      max-width: 680px;
+      background: #05070d;
+      border: 3px solid #ff3366;
+      color: #00ff66;
+      padding: 16px 18px;
+      font-family: 'VT323', 'Courier New', monospace;
+      font-size: 1.35rem;
+      line-height: 1.3;
+      box-shadow: 0 0 22px rgba(255, 51, 102, 0.65);
+      z-index: 999;
+      cursor: pointer;
+      animation: chimera-glow 1.6s steps(2) infinite;
+    }
+
+    @keyframes chimera-glow {
+      0%, 100% { box-shadow: 0 0 22px rgba(255, 51, 102, 0.55); }
+      50% { box-shadow: 0 0 30px rgba(255, 51, 102, 0.85); }
+    }
+
+    .chimera-name {
+      color: #ff3366;
+      margin-bottom: 8px;
+      letter-spacing: 3px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.7rem;
+    }
+
+    #chimeraText { min-height: 1.3em; color: #ffd9f2; }
+
+    .chimera-hint {
+      margin-top: 10px;
+      text-align: right;
+      color: #5a6b7a;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+    }
+
+    .hidden { display: none; }
+
   </style>
 
 </head>
@@ -124,6 +170,15 @@
 
 
 
+  <audio id="chimeraVoiceIntro" src="audio/chimera-intro.mp3" preload="auto"></audio>
+  <audio id="chimeraVoiceRoom1" src="audio/chimera-room1.mp3" preload="auto"></audio>
+
+  <div id="chimeraBox" class="chimera hidden" aria-live="polite">
+    <div class="chimera-name">CHIMERA</div>
+    <div id="chimeraText"></div>
+    <div id="chimeraHint" class="chimera-hint">&#9656; continue</div>
+  </div>
+
   <div id="touch-dpad" class="touch-dpad" aria-hidden="true">
 
     <button type="button" class="touch-dpad__up" data-dir="up" aria-label="Move up">▲</button>
@@ -146,7 +201,9 @@
 
   <script src="js/audio.js"></script>
 
-  <script src="js/phaser-game.js?v=11"></script>
+  <script src="js/chimera-box.js?v=1"></script>
+
+  <script src="js/phaser-game.js?v=15"></script>
 
 </body>
 
