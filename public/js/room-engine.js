@@ -48,7 +48,7 @@ const RoomEngine = (() => {
       </button>`
     ).join('');
     container.querySelectorAll('.engine-toggle').forEach((el) => {
-      el.addEventListener('click', () => selectOption(opt.id, container, btn, feedback, '.engine-toggle'));
+      el.addEventListener('click', () => selectOption(el.dataset.id, container, btn, feedback, '.engine-toggle'));
     });
   }
 
