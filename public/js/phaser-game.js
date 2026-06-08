@@ -100,7 +100,7 @@
     },
     scene: [
       BootScene, TitleScene, HubScene, PhishingScene, AttachmentScene,
-      FakeLoginScene, PasswordScene, MFAScene, CredentialScene,
+      FakeLoginScene, PasswordScene, MFAScene, CredentialScene, GenericPuzzleScene,
       GameOverScene, ChapterCompleteScene,
     ],
     input: {
@@ -112,9 +112,34 @@
   let touchBindingsInstalled = false;
 
   // ─── Progress & lives ───────────────────────────────────────────────────
+  function registryProgress(registry) {
+    const p = {};
+    if (typeof FacilitySectors !== 'undefined') {
+      FacilitySectors.SECTORS.forEach((sec) => {
+        p[sec.bossFlag] = !!registry.get(sec.bossFlag);
+        sec.missions.forEach((m) => { p[m.flag] = !!registry.get(m.flag); });
+      });
+    }
+    p.ch1BossComplete = !!registry.get('ch1BossComplete');
+    p.ch2BossComplete = !!registry.get('ch2BossComplete');
+    p.inboxComplete = !!registry.get('inboxComplete');
+    p.attachmentComplete = !!registry.get('attachmentComplete');
+    p.fakeLoginComplete = !!registry.get('fakeLoginComplete');
+    p.coreComplete = !!registry.get('coreComplete');
+    return p;
+  }
+
+  function hydrateAllSectorFlags(registry, p) {
+    if (typeof FacilitySectors === 'undefined') return;
+    FacilitySectors.SECTORS.forEach((sec) => {
+      registry.set(sec.bossFlag, !!p[sec.bossFlag]);
+      sec.missions.forEach((m) => registry.set(m.flag, !!p[m.flag]));
+    });
+  }
+
   function persistProgress(registry) {
     if (typeof ProfileSave === 'undefined') return;
-    ProfileSave.savePhaserProgress({
+    const payload = {
       avatarConfigured: !!registry.get('avatarConfigured'),
       avatarHair: registry.get('avatarHair') || 'black',
       avatarSkin: registry.get('avatarSkin') || 'light',
@@ -133,7 +158,14 @@
       hasKey: !!registry.get('hasKey'),
       lives: registry.get('lives') ?? START_LIVES,
       score: registry.get('score') ?? START_SCORE,
-    });
+    };
+    if (typeof FacilitySectors !== 'undefined') {
+      FacilitySectors.SECTORS.forEach((sec) => {
+        payload[sec.bossFlag] = !!registry.get(sec.bossFlag);
+        sec.missions.forEach((m) => { payload[m.flag] = !!registry.get(m.flag); });
+      });
+    }
+    ProfileSave.savePhaserProgress(payload);
   }
 
   function loseLife(scene, message) {
@@ -488,11 +520,11 @@
     this.registry.set('attachmentComplete', !!p.attachmentComplete);
     this.registry.set('fakeLoginComplete', !!p.fakeLoginComplete);
     this.registry.set('ch1BossComplete', !!p.ch1BossComplete);
-    this.registry.set('facilitySector', p.facilitySector || (p.ch1BossComplete ? 2 : 1));
-    this.registry.set('s2PasswordComplete', !!p.s2PasswordComplete);
-    this.registry.set('s2MfaComplete', !!p.s2MfaComplete);
-    this.registry.set('s2CredentialComplete', !!p.s2CredentialComplete);
     this.registry.set('ch2BossComplete', !!p.ch2BossComplete);
+    hydrateAllSectorFlags(this.registry, p);
+    this.registry.set('facilitySector', p.facilitySector || (typeof FacilitySectors !== 'undefined'
+      ? FacilitySectors.resolveFacilitySector(p)
+      : (p.ch1BossComplete ? 2 : 1)));
     this.registry.set('hasKey', !!p.hasKey);
     this.registry.set('lives', p.lives ?? START_LIVES);
     this.registry.set('score', p.score ?? START_SCORE);
@@ -763,22 +795,137 @@
     this.keyActive = this.allMissionsDone && !this.bossDone;
   };
 
-  HubScene.prototype.create = function () {
-    setSceneChrome(this, false);
-
-    if (this.registry.get('ch1BossComplete') && (this.registry.get('facilitySector') || 1) < 2) {
-      this.registry.set('facilitySector', 2);
+  HubScene.prototype.syncFacilitySector = function () {
+    if (typeof FacilitySectors === 'undefined') return;
+    const resolved = FacilitySectors.resolveFacilitySector(registryProgress(this.registry));
+    const cur = this.registry.get('facilitySector') || 1;
+    if (resolved !== cur) {
+      this.registry.set('facilitySector', resolved);
       this.registry.set('hasKey', false);
       persistProgress(this.registry);
     }
+  };
+
+  HubScene.prototype.loadHubSectorState = function () {
+    this.syncFacilitySector();
     this.sector = this.registry.get('facilitySector') || 1;
-    this.isSector2 = this.sector >= 2 && typeof FacilitySector2 !== 'undefined';
+    this.sectorConfig = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(this.sector) : null;
+    this.isSector1 = this.sector === 1;
+    this.isSector2 = this.sector === 2;
+    this.isMultiSector = !this.isSector1;
+
+    if (this.isSector1) {
+      this.loadSector1State();
+      return;
+    }
+
+    const cfg = this.sectorConfig;
+    const missions = cfg.missions || [];
+    this.bossDone = !!this.registry.get(cfg.bossFlag);
+    this.missionDone = missions.map((m) => !!this.registry.get(m.flag));
+    this.allMissionsDone = this.missionDone.every(Boolean);
+    this.inboxDone = !!this.missionDone[0];
+    this.attachmentDone = !!this.missionDone[1];
+    this.loginDone = !!this.missionDone[2];
 
     if (this.isSector2) {
-      this.loadSector2State();
-    } else {
-      this.loadSector1State();
+      this.s2PasswordDone = !!this.registry.get('s2PasswordComplete');
+      this.s2MfaDone = !!this.registry.get('s2MfaComplete');
+      this.s2CredentialDone = !!this.registry.get('s2CredentialComplete');
+      this.hubPos = {
+        pc: FacilitySector2.S2_POSITIONS.password,
+        archive: FacilitySector2.S2_POSITIONS.mfa,
+        server: FacilitySector2.S2_POSITIONS.credential,
+        door: FacilitySector2.S2_POSITIONS.door,
+        player: FacilitySector2.S2_POSITIONS.player,
+        key: FacilitySector2.S2_POSITIONS.key,
+        roomY: FacilitySector2.S2_POSITIONS.roomY,
+        roomRows: FacilitySector2.S2_POSITIONS.roomRows,
+      };
+    } else if (typeof FacilitySectorGeneric !== 'undefined') {
+      this.hubPos = FacilitySectorGeneric.hubPos();
     }
+
+    if (!this.allMissionsDone && this.registry.get('hasKey')) {
+      this.registry.set('hasKey', false);
+    }
+    this.keyActive = this.allMissionsDone && !this.bossDone;
+  };
+
+  HubScene.prototype.handleMultiTerminal = function (terminal) {
+    const terms = (this.sectorConfig && this.sectorConfig.terminals) || {};
+    const label = terms[terminal] || terminal.toUpperCase();
+    const near = { pc: () => this.isNearPc(), archive: () => this.isNearArchive(), server: () => this.isNearServer() };
+    if (!near[terminal] || !near[terminal]()) {
+      this.flashPrompt(`Move closer to the ${label} terminal`, '#ff3366');
+      return;
+    }
+    const mission = FacilitySectors.getMissionByTerminal(this.sector, terminal);
+    if (!mission) return;
+    if (mission.requires && !this.registry.get(mission.requires)) {
+      const prior = this.sectorConfig.missions.find((m) => m.flag === mission.requires);
+      const priorLabel = prior ? (terms[prior.terminal] || 'prior terminal') : 'prior mission';
+      this.flashPrompt(`Complete ${priorLabel} first`, '#ff3366');
+      return;
+    }
+    if (this.registry.get(mission.flag)) {
+      this.flashPrompt(`${label} complete — proceed to next terminal`, '#8899aa');
+      return;
+    }
+    if (mission.puzzleId) {
+      const puzzle = FacilitySectors.getPuzzle(mission.puzzleId);
+      this.showMissionPanel(
+        puzzle ? puzzle.title.replace(/^SECTOR \d+ — /, '') : label,
+        puzzle ? puzzle.prompt.slice(0, 48) : 'Begin mission',
+        'GenericPuzzleScene',
+        mission.puzzleId,
+      );
+      return;
+    }
+    if (mission.panelTitle) {
+      this.showMissionPanel(mission.panelTitle, mission.panelSub || '', mission.scene);
+      return;
+    }
+    if (mission.scene) {
+      sfxClick();
+      this.enteringRoom = true;
+      switchScene(this, mission.scene);
+    }
+  };
+
+  HubScene.prototype.showHubDoorChoice = function () {
+    const cfg = this.sectorConfig;
+    if (!cfg || !cfg.doorChoices) {
+      this.finishSectorBoss();
+      return;
+    }
+    this.showChimeraChoice(cfg.doorPrompt, cfg.doorChoices.map((ch) => ({
+      label: ch.label,
+      stance: ch.stance,
+      response: ch.response,
+      onClose: () => this.finishSectorBoss(),
+    })));
+  };
+
+  HubScene.prototype.finishSectorBoss = function () {
+    const cfg = this.sectorConfig;
+    if (!cfg) return;
+    this.registry.set('lastCompletedSector', this.sector);
+    this.registry.set(cfg.bossFlag, true);
+    if (cfg.nextId) {
+      this.registry.set('facilitySector', cfg.nextId);
+      this.registry.set('hasKey', false);
+    }
+    persistProgress(this.registry);
+    if (typeof AudioFX !== 'undefined' && AudioFX.roomComplete) AudioFX.roomComplete();
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.time.delayedCall(520, () => this.scene.start('ChapterCompleteScene'));
+  };
+
+  HubScene.prototype.create = function () {
+    setSceneChrome(this, false);
+
+    this.loadHubSectorState();
 
     this.interactHint = null;
     this.nearDoor = false;
@@ -791,11 +938,12 @@
     setupPause(this);
     initTouchControls(this);
 
-    if (this.isSector2) {
-      if (typeof FacilitySector2 !== 'undefined') {
-        FacilitySector2.buildMap(this);
-        this.facilityProps = FacilitySector2.createProps(this);
-      }
+    if (this.isSector2 && typeof FacilitySector2 !== 'undefined') {
+      FacilitySector2.buildMap(this);
+      this.facilityProps = FacilitySector2.createProps(this);
+    } else if (this.isMultiSector && typeof FacilitySectorGeneric !== 'undefined' && this.sectorConfig) {
+      FacilitySectorGeneric.buildMap(this, this.sectorConfig);
+      this.facilityProps = FacilitySectorGeneric.createProps(this, this.sectorConfig);
     } else {
       buildCorridorMap(this);
       if (typeof FacilityAtmosphere !== 'undefined') {
@@ -969,17 +1117,13 @@
       this.registry.set('justUnlockedLogin', false);
       this.playMissionUnlockAnimation('LOGIN PORTAL — ARMED',
         "You don't trust the obvious link.\nNeither do I.", { chimera: true });
-    } else if (this.isSector2 && !this.registry.get('s2IntroSeen')) {
-      this.registry.set('s2IntroSeen', true);
-      persistProgress(this.registry);
-      this.time.delayedCall(800, () => {
-        this.chainChimera([
-          'Sector 2.',
-          'The Breach.',
-          'Valid credentials were stolen.',
-          'Rotate them before the attacker moves.',
-        ]);
-      });
+    } else if (this.isMultiSector) {
+      const introKey = 'introSeen_' + this.sector;
+      if (!this.registry.get(introKey) && this.sectorConfig && this.sectorConfig.intro) {
+        this.registry.set(introKey, true);
+        persistProgress(this.registry);
+        this.time.delayedCall(800, () => this.chainChimera(this.sectorConfig.intro));
+      }
     } else if (this.registry.get('justUnlockedS2Mfa')) {
       this.registry.set('justUnlockedS2Mfa', false);
       this.playMissionUnlockAnimation('MFA KIOSK — ONLINE', 'Good. Codes are not passwords.', { chimera: true });
@@ -1114,6 +1258,7 @@
   };
 
   HubScene.prototype.finishChapter = function () {
+    this.registry.set('lastCompletedSector', 1);
     this.registry.set('ch1BossComplete', true);
     this.registry.set('facilitySector', 2);
     this.registry.set('hasKey', false);
@@ -1142,13 +1287,11 @@
   };
 
   HubScene.prototype.getStatusLine = function () {
-    if (this.isSector2) {
-      if (this.bossDone) return 'SECTOR 2 — CONTAINED';
+    if (this.isMultiSector && this.sectorConfig) {
+      const sid = this.sector === 'core' ? 'CORE' : `SECTOR ${this.sector}`;
+      if (this.bossDone) return `${sid} — CONTAINED`;
       if (this.allMissionsDone) return 'FINAL LOCKDOWN — DOOR READY';
-      if (this.s2CredentialDone) return 'BLAST DOOR — ACTIVE';
-      if (this.s2MfaDone) return 'CREDENTIAL AUDIT — ACTIVE';
-      if (this.s2PasswordDone) return 'MFA KIOSK — ACTIVE';
-      return 'SECTOR 2 — CREDENTIALS COMPROMISED';
+      return `${sid} — ${this.sectorConfig.tagline}`.toUpperCase();
     }
     if (this.bossDone) return 'CHAPTER 1 — CONTAINED';
     if (this.allMissionsDone) return 'FINAL BREACH — DOOR READY';
@@ -1159,15 +1302,17 @@
   };
 
   HubScene.prototype.getDefaultPrompt = function () {
-    if (this.isSector2) {
+    if (this.isMultiSector && this.sectorConfig) {
       if (this.allMissionsDone && !this.bossDone) {
-        if (this.hasKey) return '[ E ] at DOOR — lock the attacker out';
+        if (this.hasKey) return '[ E ] at DOOR — sector lockdown / confront CHIMERA';
         return 'Pick up the KEY (bottom-right), then breach the DOOR';
       }
-      if (this.s2CredentialDone) return 'All Sector 2 missions cleared — pick up KEY';
-      if (this.s2MfaDone && !this.s2CredentialDone) return '[ E ] at AUDIT terminal (bottom-left)';
-      if (this.s2PasswordDone && !this.s2MfaDone) return '[ E ] at MFA kiosk (center-top)';
-      return '[ E ] at PASSWORD vault (left alcove) — rotate credentials';
+      const active = FacilitySectors.getActiveMission(registryProgress(this.registry), this.sector);
+      if (!active && this.allMissionsDone) return 'All missions cleared — pick up KEY for blast door';
+      if (active) {
+        const term = this.sectorConfig.terminals[active.terminal] || active.terminal;
+        return `[ E ] at ${term} terminal`;
+      }
     }
     if (this.allMissionsDone && !this.bossDone) {
       if (this.hasKey) return '[ E ] at DOOR — final breach / confront CHIMERA';
@@ -1363,22 +1508,7 @@
   };
 
   HubScene.prototype.handleArchiveInteract = function () {
-    if (this.isSector2) {
-      if (!this.isNearArchive()) {
-        this.flashPrompt('Move closer to the MFA kiosk', '#ff3366');
-        return;
-      }
-      if (!this.s2PasswordDone) {
-        this.flashPrompt('Rotate passwords at the PASSWORD vault first', '#ff3366');
-        return;
-      }
-      if (this.s2MfaDone) {
-        this.flashPrompt('MFA protocol complete — proceed to AUDIT terminal', '#aa66dd');
-        return;
-      }
-      this.showSector2MissionPanel('MFA KIOSK', 'Never share verification codes', 'MFAScene');
-      return;
-    }
+    if (this.isMultiSector) return this.handleMultiTerminal('archive');
     if (!this.isNearArchive()) {
       this.flashPrompt('Move closer to the ARCHIVE (top-center)', '#ff3366');
       return;
@@ -1489,7 +1619,7 @@
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
   };
 
-  HubScene.prototype.showSector2MissionPanel = function (title, subtitle, sceneKey) {
+  HubScene.prototype.showMissionPanel = function (title, subtitle, sceneKey, puzzleId) {
     this.overrideActive = true;
     sfxClick();
     const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
@@ -1507,6 +1637,9 @@
       this.overrideActive = false;
       this.enteringRoom = true;
       this.cameras.main.flash(180, 100, 120, 255);
+      if (sceneKey === 'GenericPuzzleScene' && puzzleId) {
+        this.registry.set('pendingPuzzleId', puzzleId);
+      }
       switchScene(this, sceneKey);
     };
     const btnGo = makeButton(this, 0, 36, '[ BEGIN MISSION ]', launch, { fontSize: '8px', color: '#8899ff' });
@@ -1514,29 +1647,16 @@
     c.add([dim, panel, head, sub, btnGo.bg, btnGo.text, btnCancel.bg, btnCancel.text]);
   };
 
+  HubScene.prototype.showSector2MissionPanel = function (title, subtitle, sceneKey) {
+    this.showMissionPanel(title, subtitle, sceneKey);
+  };
+
   HubScene.prototype.showSector2DoorChoice = function () {
-    this.showChimeraChoice('The attacker is pivoting.\nCut access now — or trace where they went.', [
-      {
-        label: '[ LOCK THEM OUT ]',
-        stance: 'shutdown',
-        response: 'Good.\nThey will knock again.\nThey always do.',
-        onClose: () => this.finishSector2(),
-      },
-      {
-        label: '[ TRACE THE PIVOT ]',
-        stance: 'listen',
-        response: 'Brave.\nSector 3 holds what they took.\n…when you are ready.',
-        onClose: () => this.finishSector2(),
-      },
-    ]);
+    this.showHubDoorChoice();
   };
 
   HubScene.prototype.finishSector2 = function () {
-    this.registry.set('ch2BossComplete', true);
-    persistProgress(this.registry);
-    sfxRoomComplete('ch2_boss');
-    this.cameras.main.fadeOut(500, 0, 0, 0);
-    this.time.delayedCall(520, () => this.scene.start('ChapterCompleteScene'));
+    this.finishSectorBoss();
   };
 
   HubScene.prototype.isNear = function (pos, radius) {
@@ -1652,7 +1772,7 @@
       return;
     }
 
-    if (this.isSector2) {
+    if (this.isMultiSector) {
       if (this.allMissionsDone && !this.bossDone) {
         if (!this.hasKey) {
           sfxError();
@@ -1661,18 +1781,18 @@
         }
         sfxClick();
         this.enteringRoom = true;
-        this.showChimera(
-          'They are still inside the wire.\nLock them out — or let me show you what they took.',
-          () => this.showSector2DoorChoice()
-        );
+        const intro = this.isSector2 ? 'They are still inside the wire.\n' : '';
+        const prompt = (this.sectorConfig && this.sectorConfig.doorPrompt) || 'The door awaits.';
+        this.showChimera(intro + prompt.split('\n')[0], () => this.showHubDoorChoice());
         return;
       }
-      if (this.s2CredentialDone || this.s2MfaDone || this.s2PasswordDone) {
-        this.flashPrompt('Clear all Sector 2 terminals before the blast door opens', '#6688ff');
+      if (this.missionDone && this.missionDone.some(Boolean) && !this.allMissionsDone) {
+        this.flashPrompt(`Clear all ${this.sectorConfig.label} terminals before the blast door opens`, '#8899aa');
         return;
       }
       sfxError();
-      this.flashPrompt('DOOR LOCKED — begin at the PASSWORD vault', '#ff3366');
+      const first = this.sectorConfig.terminals ? this.sectorConfig.terminals.pc : 'first terminal';
+      this.flashPrompt(`DOOR LOCKED — begin at ${first}`, '#ff3366');
       return;
     }
 
@@ -1706,22 +1826,7 @@
   };
 
   HubScene.prototype.handleServerInteract = function () {
-    if (this.isSector2) {
-      if (!this.isNearServer()) {
-        this.flashPrompt('Move closer to the AUDIT terminal (bottom-left)', '#ff3366');
-        return;
-      }
-      if (!this.s2MfaDone) {
-        this.flashPrompt('Secure MFA at the kiosk first', '#ff3366');
-        return;
-      }
-      if (this.s2CredentialDone) {
-        this.flashPrompt('Credential audit complete — pick up KEY for blast door', '#8866cc');
-        return;
-      }
-      this.showSector2MissionPanel('CREDENTIAL AUDIT', 'Apply the correct access policy', 'CredentialScene');
-      return;
-    }
+    if (this.isMultiSector) return this.handleMultiTerminal('server');
     if (!this.isNearServer()) {
       this.flashPrompt('Move closer to the SERVER (bottom-left)', '#ff3366');
       return;
@@ -1740,18 +1845,7 @@
   };
 
   HubScene.prototype.handlePcInteract = function () {
-    if (this.isSector2) {
-      if (!this.isNearPc()) {
-        this.flashPrompt('Move closer to the PASSWORD vault (left alcove)', '#ff3366');
-        return;
-      }
-      if (this.s2PasswordDone) {
-        this.flashPrompt('Password rotation complete — use MFA kiosk next', '#6688ff');
-        return;
-      }
-      this.showSector2MissionPanel('PASSWORD VAULT', 'Rotate compromised credentials', 'PasswordScene');
-      return;
-    }
+    if (this.isMultiSector) return this.handleMultiTerminal('pc');
     if (!this.isNearPc()) {
       this.flashPrompt('Move closer to the LOGIN terminal (left alcove)', '#ff3366');
       return;
@@ -1795,6 +1889,11 @@
     if (this.isSector2 && typeof FacilitySector2 !== 'undefined') {
       FacilitySector2.clampToCorridor(this.player);
       if (this._prevX != null) FacilitySector2.resolveWallCollision(this.player, this._prevX, this._prevY);
+      return;
+    }
+    if (this.isMultiSector && !this.isSector2 && typeof FacilitySectorGeneric !== 'undefined') {
+      FacilitySectorGeneric.clampToCorridor(this.player);
+      if (this._prevX != null) FacilitySectorGeneric.resolveWallCollision(this.player, this._prevX, this._prevY);
       return;
     }
     if (typeof FacilityAtmosphere !== 'undefined') {
@@ -2331,6 +2430,69 @@
     stroke: 0x5533aa,
   });
 
+  function GenericPuzzleScene() { Phaser.Scene.call(this, { key: 'GenericPuzzleScene' }); }
+  GenericPuzzleScene.prototype = Object.create(Phaser.Scene.prototype);
+  GenericPuzzleScene.prototype.constructor = GenericPuzzleScene;
+  GenericPuzzleScene.prototype.init = function () { resetCamera(this); };
+  GenericPuzzleScene.prototype.create = function () {
+    const puzzleId = this.registry.get('pendingPuzzleId');
+    const cfg = typeof FacilitySectors !== 'undefined' ? FacilitySectors.getPuzzle(puzzleId) : null;
+    if (!cfg) { switchScene(this, 'HubScene'); return; }
+    this.puzzleCfg = cfg;
+    this.selectedId = null;
+    resetCamera(this);
+    setupPause(this);
+    addPuzzleHud(this);
+    drawScanlines(this);
+    this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, cfg.bg || 0x101828, 1)
+      .setStrokeStyle(3, cfg.stroke || 0x6688ff);
+    this.add.text(GAME_W / 2, 48, cfg.title, {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '9px', color: '#8899ff',
+    }).setOrigin(0.5);
+    this.add.text(GAME_W / 2, 78, cfg.prompt, {
+      fontFamily: 'VT323, monospace', fontSize: '20px', color: '#aabbcc', wordWrap: { width: GAME_W - 80 }, align: 'center',
+    }).setOrigin(0.5);
+    this.optionBtns = [];
+    cfg.options.forEach((opt, i) => {
+      const y = 118 + i * 52;
+      const btn = makeButton(this, GAME_W / 2, y, opt.text, () => {
+        if (this.isPaused) return;
+        sfxClick();
+        this.selectedId = opt.id;
+        this.optionBtns.forEach((b) => b.bg.setStrokeStyle(2, cfg.stroke || 0x6688ff));
+        btn.bg.setStrokeStyle(2, 0x66aaff);
+        this.feedbackText.setText('');
+      }, { fontSize: '7px', color: '#aabbcc' });
+      this.optionBtns.push(btn);
+    });
+    makeButton(this, GAME_W / 2, 340, '[ COMPLETE MISSION ]', () => this.submitGeneric(), { fontSize: '9px' });
+    makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => { sfxClick(); switchScene(this, 'HubScene'); }, { fontSize: '8px', color: '#8899aa' });
+  };
+  GenericPuzzleScene.prototype.submitGeneric = function () {
+    const cfg = this.puzzleCfg;
+    if (this.isPaused || !cfg) return;
+    if (!this.selectedId) {
+      this.feedbackText.setText('Select an answer first.').setColor('#ff3366');
+      return;
+    }
+    const chosen = cfg.options.find((o) => o.id === this.selectedId);
+    if (!chosen) return;
+    if (chosen.correct) {
+      this.registry.set(cfg.flag, true);
+      if (cfg.unlockFlag) this.registry.set(cfg.unlockFlag, true);
+      this.registry.set('pendingPuzzleId', null);
+      const score = (this.registry.get('score') ?? START_SCORE) + 200;
+      this.registry.set('score', score);
+      persistProgress(this.registry);
+      sfxRoomComplete(cfg.roomId);
+      this.cameras.main.flash(150, 100, 120, 255);
+      switchScene(this, 'HubScene');
+    } else {
+      sfxError();
+      loseLife(this, cfg.failMsg || 'Incorrect — try again.');
+    }
+  };
+
   // ─── Game over ──────────────────────────────────────────────────────────
   function GameOverScene() {
     Phaser.Scene.call(this, { key: 'GameOverScene' });
@@ -2394,43 +2556,41 @@
     drawScanlines(this);
     setupPause(this);
 
-    const isS2 = !!this.registry.get('ch2BossComplete') && (this.registry.get('facilitySector') || 1) >= 2;
-    const strokeCol = isS2 ? 0x6688ff : COLORS.doorOpen;
+    const sid = this.registry.get('lastCompletedSector') || 1;
+    const sec = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(sid) : null;
+    const isLegacyS1 = sid === 1 && !sec;
+    const strokeCol = sec && sec.id !== 1 ? (sec.palette && sec.palette.edge ? sec.palette.edge : 0x6688ff) : COLORS.doorOpen;
+    const headColor = sec && sec.id !== 1 ? '#8899ff' : '#00ff66';
 
     this.add.rectangle(cx, GAME_H / 2, GAME_W - 32, GAME_H - 32, COLORS.dialogue, 0.95)
       .setStrokeStyle(4, strokeCol);
 
-    this.add.text(cx, 70, isS2 ? 'SECTOR 2 COMPLETE' : 'CHAPTER 1 COMPLETE', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '14px',
-      color: isS2 ? '#8899ff' : '#00ff66',
-      align: 'center',
+    const sectorLabel = sid === 'core' ? 'CORE' : `SECTOR ${sid}`;
+    this.add.text(cx, 70, `${sectorLabel} COMPLETE`, {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '14px', color: headColor, align: 'center',
     }).setOrigin(0.5);
 
-    this.add.text(cx, 102, isS2 ? 'THE BREACH' : 'THE EMAIL', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '10px',
-      color: '#ffb000',
+    this.add.text(cx, 102, sec ? sec.title : (sid === 1 ? 'THE EMAIL' : 'COMPLETE'), {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '10px', color: '#ffb000',
     }).setOrigin(0.5);
 
-    const missionLines = isS2 ? [
-      { label: 'Password Rotation', done: !!this.registry.get('s2PasswordComplete') },
-      { label: 'MFA Protocol', done: !!this.registry.get('s2MfaComplete') },
-      { label: 'Credential Audit', done: !!this.registry.get('s2CredentialComplete') },
-    ] : [
-      { label: 'Phishing Inbox', done: !!this.registry.get('inboxComplete') },
-      { label: 'Attachment Sandbox', done: !!this.registry.get('attachmentComplete') },
-      { label: 'Fake Login Portal', done: !!this.registry.get('fakeLoginComplete') },
-    ];
+    const missionLines = sec && typeof FacilitySectors !== 'undefined'
+      ? FacilitySectors.missionLabels(sid).map((m) => ({
+        label: m.label,
+        done: !!this.registry.get(m.flag),
+      }))
+      : (sid === 1 || isLegacyS1 ? [
+        { label: 'Phishing Inbox', done: !!this.registry.get('inboxComplete') },
+        { label: 'Attachment Sandbox', done: !!this.registry.get('attachmentComplete') },
+        { label: 'Fake Login Portal', done: !!this.registry.get('fakeLoginComplete') },
+      ] : [
+        { label: 'Password Rotation', done: !!this.registry.get('s2PasswordComplete') },
+        { label: 'MFA Protocol', done: !!this.registry.get('s2MfaComplete') },
+        { label: 'Credential Audit', done: !!this.registry.get('s2CredentialComplete') },
+      ]);
 
-    this.add.text(cx, 132, isS2
-      ? '"They were inside — then you locked the door."'
-      : '"Something got through — then you shut it down."', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '18px',
-      color: '#aabbcc',
-      align: 'center',
-      wordWrap: { width: GAME_W - 80 },
+    this.add.text(cx, 132, sec ? sec.completeQuote : '"Something got through — then you shut it down."', {
+      fontFamily: 'VT323, monospace', fontSize: '18px', color: '#aabbcc', align: 'center', wordWrap: { width: GAME_W - 80 },
     }).setOrigin(0.5);
 
     missionLines.forEach((m, i) => {
@@ -2465,7 +2625,14 @@
       wordWrap: { width: GAME_W - 80 },
     }).setOrigin(0.5);
 
-    makeButton(this, cx, GAME_H - 72, isS2 ? '[ RETURN TO SECTOR 2 ]' : '[ ENTER SECTOR 2 ]', () => {
+    const next = sec ? sec.nextId : (sid === 1 ? 2 : null);
+    let btnLabel = '[ CONTINUE ]';
+    if (next === 'core') btnLabel = '[ ENTER CORE ]';
+    else if (next) btnLabel = `[ ENTER SECTOR ${next} ]`;
+    else if (sid === 'core' || this.registry.get('coreComplete')) btnLabel = '[ RETURN TO CORE ]';
+    else btnLabel = '[ RETURN TO FACILITY ]';
+
+    makeButton(this, cx, GAME_H - 72, btnLabel, () => {
       sfxClick();
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.time.delayedCall(420, () => this.scene.start('HubScene'));

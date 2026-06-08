@@ -157,11 +157,25 @@
       fontFamily: 'VT323, monospace', fontSize: '10px', color: '#442233', angle: 2,
     }).setDepth(1).setAlpha(0.5);
 
-    scene.add.text(14 * TILE, (ry + 1) * TILE + 18, 'TURN BACK', {
-      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#553322', angle: -8,
+    scene.add.text(5 * TILE + 4, (ry + 2) * TILE + 8, 'TURN BACK', {
+      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#553322', angle: -6,
     }).setDepth(1).setAlpha(0.45);
 
-    // Crumpled note — first environmental trace of 581 (full message comes after Inbox)
+    // Wall placard beside blast door (left jamb — not on the door itself)
+    const doorC = HUB_POSITIONS.door.c;
+    const doorR = HUB_POSITIONS.door.r;
+    const placardG = scene.add.graphics().setDepth(1);
+    const px = (doorC - 3) * TILE + 6;
+    const py = doorR * TILE + 2;
+    placardG.fillStyle(0x1a1208, 1);
+    placardG.fillRect(px, py, 22, 28);
+    placardG.lineStyle(1, 0xaa6622, 0.55);
+    placardG.strokeRect(px, py, 22, 28);
+    placardG.fillStyle(0xaa6622, 0.75);
+    placardG.fillTriangle(px + 4, py + 10, px + 18, py + 10, px + 11, py + 18);
+    scene.add.text(px + 11, py + 22, 'RESTRICTED', {
+      fontFamily: 'VT323, monospace', fontSize: '7px', color: '#886644',
+    }).setOrigin(0.5, 0).setDepth(1).setAlpha(0.65);
     const noteG = scene.add.graphics().setDepth(1);
     noteG.fillStyle(0xccc5aa, 0.85);
     noteG.fillRect(9 * TILE + 6, (ry + 5) * TILE + 10, 26, 20);
@@ -199,28 +213,14 @@
       fontFamily: 'VT323, monospace', fontSize: '10px', color: '#554422',
     }).setOrigin(0.5).setDepth(2).setAngle(6);
 
-    // Warning sign near blast door
-    const signG = scene.add.graphics().setDepth(1);
-    const sx = 12 * TILE;
-    const sy = (ry + 1) * TILE + 4;
-    signG.fillStyle(0x221100, 1);
-    signG.fillRect(sx, sy, 36, 22);
-    signG.lineStyle(2, 0xff6600, 0.8);
-    signG.strokeRect(sx, sy, 36, 22);
-    signG.fillStyle(0xff6600, 0.9);
-    for (let i = 0; i < 3; i++) signG.fillRect(sx + 6 + i * 10, sy + 8, 6, 6);
-    scene.add.text(sx + 18, sy + 26, 'RESTRICTED', {
-      fontFamily: 'VT323, monospace', fontSize: '8px', color: '#aa5522',
-    }).setOrigin(0.5, 0).setDepth(1).setAlpha(0.75);
-
-    // Security camera on upper wall
+    // Security camera — entrance wall, not over the blast door
     const camG = scene.add.graphics().setDepth(2);
     camG.fillStyle(0x1a2030, 1);
-    camG.fillRect(15 * TILE, (ry + 1) * TILE + 2, 14, 10);
+    camG.fillRect(6 * TILE, (ry + 1) * TILE + 2, 14, 10);
     camG.fillStyle(0x223344, 1);
-    camG.fillRect(15 * TILE + 3, (ry + 1) * TILE + 4, 8, 6);
+    camG.fillRect(6 * TILE + 3, (ry + 1) * TILE + 4, 8, 6);
     camG.fillStyle(0xff2233, 0.7);
-    camG.fillCircle(15 * TILE + 7, (ry + 1) * TILE + 7, 2);
+    camG.fillCircle(6 * TILE + 7, (ry + 1) * TILE + 7, 2);
 
     // Floor vent grate
     const ventG = scene.add.graphics().setDepth(0);
@@ -447,7 +447,7 @@
   /** Blast door with status banner — replaces flat DOOR label. */
   function createBlastDoor(scene, doorPos) {
     const gfx = scene.add.graphics().setDepth(3);
-    const banner = scene.add.text(doorPos.x, doorPos.y - 38, '', {
+    const banner = scene.add.text(doorPos.x, doorPos.y - 46, '', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '6px',
       color: '#00ff66',
@@ -486,12 +486,14 @@
         gfx.strokeRect(x, y, w / 2 - gap / 2, h);
         gfx.strokeRect(x + w / 2 + gap / 2, y, w / 2 - gap / 2, h);
 
-        // Warning stripes on locked door
+        // Warning stripes on locked door (integrated — no separate prop)
         if (!panelsOpen && !isBoss) {
-          gfx.fillStyle(CH1.doorLocked, 0.5);
-          for (let i = 0; i < 4; i++) {
-            gfx.fillRect(x + 6 + i * 14, y + h / 2 - 2, 8, 4);
+          gfx.fillStyle(0xff6600, 0.35);
+          for (let i = 0; i < 5; i++) {
+            gfx.fillRect(x + 4 + i * 12, y + 8 + (i % 2) * 10, 8, 4);
           }
+          gfx.lineStyle(1, CH1.doorLocked, 0.6);
+          gfx.strokeRect(x + 2, y + 2, w - 4, h - 4);
         }
 
         // Status banner

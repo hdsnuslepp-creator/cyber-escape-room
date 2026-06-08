@@ -1,58 +1,56 @@
 /**
- * Facility Mode DOM HUD — title bar, facility map, objective, status strip,
- * CHIMERA waveform, and the showChimeraDialogue() entry point.
- *
- * Reads progress from ProfileSave (written by the Phaser game) and reflects it
- * in the map + objective. Does not touch player movement or room logic.
+ * Facility map HUD — reflects all 7 sectors + CORE progress.
  */
 (function () {
   'use strict';
 
-  const SECTORS = [
+  const MAP_ENTRIES = [
     { n: 1, label: 'INBOX', wide: true },
-    { n: 2, label: '???' },
-    { n: 3, label: '???' },
-    { n: 4, label: '???' },
-    { n: 5, label: '???' },
-    { n: 6, label: '???' },
-    { n: 7, label: '???' },
-    { core: true, label: 'CORE', wide: true },
+    { n: 2, label: 'BREACH' },
+    { n: 3, label: 'SIGNALS' },
+    { n: 4, label: 'DATABASE' },
+    { n: 5, label: 'HUNTER' },
+    { n: 6, label: 'HUMAN' },
+    { n: 7, label: 'ALERT' },
+    { core: true, label: 'CHIMERA', wide: true },
   ];
 
-  const LOCK = '\uD83D\uDD12'; // padlock
-
+  const LOCK = '\uD83D\uDD12';
   let startTime = Date.now();
   let cells = [];
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
   function progress() {
-    if (typeof ProfileSave === 'undefined') {
-      return {
-        facilitySector: 1,
-        inboxComplete: false, attachmentComplete: false, fakeLoginComplete: false, ch1BossComplete: false,
-        s2PasswordComplete: false, s2MfaComplete: false, s2CredentialComplete: false, ch2BossComplete: false,
-      };
-    }
+    if (typeof ProfileSave === 'undefined') return {};
     return ProfileSave.getPhaserProgress();
   }
 
-  function buildWave() {
-    const wave = document.getElementById('chimeraWave');
-    if (!wave || wave.childElementCount) return;
-    const BARS = 16;
-    for (let i = 0; i < BARS; i++) {
-      const bar = document.createElement('i');
-      bar.style.animationDelay = `${(i * 0.07).toFixed(2)}s`;
-      bar.style.animationDuration = `${(0.7 + (i % 4) * 0.18).toFixed(2)}s`;
-      wave.appendChild(bar);
-    }
+  function sectorCleared(p, id) {
+    if (typeof FacilitySectors !== 'undefined') return FacilitySectors.isBossComplete(p, id);
+    if (id === 1) return !!p.ch1BossComplete;
+    if (id === 2) return !!p.ch2BossComplete;
+    return false;
+  }
+
+  function sectorUnlocked(p, id) {
+    if (typeof FacilitySectors !== 'undefined') return FacilitySectors.isSectorUnlocked(p, id);
+    if (id === 1) return true;
+    if (id === 2) return !!p.ch1BossComplete;
+    return false;
+  }
+
+  function activeSector(p) {
+    if (typeof FacilitySectors !== 'undefined') return FacilitySectors.resolveFacilitySector(p);
+    if (!p.ch1BossComplete) return 1;
+    if (!p.ch2BossComplete) return 2;
+    return 3;
   }
 
   function buildMap() {
     const grid = document.getElementById('mapGrid');
     if (!grid || grid.childElementCount) return;
-    cells = SECTORS.map((sec) => {
+    cells = MAP_ENTRIES.map((sec) => {
       const cell = document.createElement('div');
       cell.className = 'map-cell' + (sec.wide ? ' wide' : '');
       const lock = document.createElement('span');
@@ -76,12 +74,12 @@
     cell.classList.remove('active', 'cleared');
     if (state === 'active') {
       cell.classList.add('active');
-      lock.textContent = '\u25B8'; // open: small triangle marker
+      lock.textContent = '\u25B8';
     } else if (state === 'cleared') {
       cell.classList.add('cleared');
-      lock.textContent = '\u2713'; // check
+      lock.textContent = '\u2713';
     } else {
-      lock.textContent = sec.core || sec.n > 1 ? LOCK : LOCK;
+      lock.textContent = LOCK;
     }
   }
 
@@ -89,55 +87,69 @@
     const p = progress();
     const name = (p.agentName || 'TRAINEE 1998').toUpperCase();
     const title = document.querySelector('.ftb-title');
-    const sector = p.facilitySector || (p.ch1BossComplete ? 2 : 1);
+    const cur = activeSector(p);
+    const sec = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(cur) : null;
     if (title) {
-      if (sector >= 2 && p.ch1BossComplete && !p.ch2BossComplete) {
-        title.textContent = `${name} — SECTOR 2: THE BREACH`;
+      if (sec && !sectorCleared(p, cur)) {
+        title.textContent = `${name} — SECTOR ${sec.isCore ? 'CORE' : sec.id}: ${sec.title}`;
+      } else if (p.coreComplete) {
+        title.textContent = `${name} — FACILITY CONTAINED`;
       } else {
         title.textContent = `${name} — FACILITY LOCKDOWN`;
       }
     }
   }
 
+  function objectiveText(p) {
+    const cur = activeSector(p);
+    if (p.coreComplete) return 'All sectors cleared — CHIMERA contained';
+    const sec = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(cur) : null;
+    if (!sec || sec.legacy) {
+      if (!p.inboxComplete) return 'Sector 1: initialize breach at LOGIN terminal';
+      if (!p.attachmentComplete) return 'Sector 1: breach the SERVER';
+      if (!p.fakeLoginComplete) return 'Sector 1: clear the LOGIN portal';
+      if (!p.ch1BossComplete) return 'Sector 1: final breach at the DOOR';
+      return 'Sector 1 cleared — proceed to Sector 2';
+    }
+    if (sectorCleared(p, cur)) {
+      const next = sec.nextId;
+      if (next) return `${sec.title} cleared — proceed to ${next === 'core' ? 'CORE' : 'Sector ' + next}`;
+      return `${sec.title} — complete`;
+    }
+    const mission = FacilitySectors.getActiveMission(p, cur);
+    if (!mission) {
+      if (FacilitySectors.allMissionsComplete(p, cur)) return `${sec.label}: pick up KEY — breach the DOOR`;
+      return `Explore Sector ${cur === 'core' ? 'CORE' : cur}`;
+    }
+    const terms = sec.terminals || {};
+    const termName = terms[mission.terminal] || mission.terminal.toUpperCase();
+    return `Sector ${cur === 'core' ? 'CORE' : cur}: ${termName} terminal`;
+  }
+
   function refresh() {
     refreshAgent();
     const p = progress();
-    const sector = p.facilitySector || (p.ch1BossComplete ? 2 : 1);
-    const sector1Cleared = !!p.ch1BossComplete;
-    const sector2Cleared = !!p.ch2BossComplete;
+    const cur = activeSector(p);
 
     cells.forEach((entry) => {
       const { sec } = entry;
-      if (sec.n === 1) {
-        setCellState(entry, sector1Cleared ? 'cleared' : 'active');
-      } else if (sec.n === 2) {
-        if (!sector1Cleared) setCellState(entry, 'locked');
-        else setCellState(entry, sector2Cleared ? 'cleared' : 'active');
-        if (entry.sub) entry.sub.textContent = sector1Cleared ? 'BREACH' : '???';
-      } else if (sec.n === 3 && sector2Cleared) {
-        setCellState(entry, 'active');
-      } else {
+      const id = sec.core ? 'core' : sec.n;
+      if (!sectorUnlocked(p, id)) {
         setCellState(entry, 'locked');
+        if (entry.sub && sec.n === 2) entry.sub.textContent = '???';
+        return;
+      }
+      if (sectorCleared(p, id)) setCellState(entry, 'cleared');
+      else if (id === cur) setCellState(entry, 'active');
+      else setCellState(entry, 'locked');
+
+      if (entry.sub && sectorUnlocked(p, id)) {
+        entry.sub.textContent = sec.label;
       }
     });
 
     const obj = document.getElementById('objectiveText');
-    if (obj) {
-      let text;
-      if (sector >= 2 && sector1Cleared && !sector2Cleared) {
-        if (!p.s2PasswordComplete) text = 'Sector 2: rotate credentials at PASSWORD vault';
-        else if (!p.s2MfaComplete) text = 'Sector 2: secure MFA at the kiosk';
-        else if (!p.s2CredentialComplete) text = 'Sector 2: run CREDENTIAL audit (bottom-left)';
-        else text = 'Sector 2: pick up KEY — final lockdown at DOOR';
-      } else if (sector2Cleared) {
-        text = 'Sector 2 cleared — Sector 3 unlocks soon';
-      } else if (!p.inboxComplete) text = 'Initialize breach at the LOGIN terminal (Sector 1 — INBOX)';
-      else if (!p.attachmentComplete) text = 'Sector 1: breach the SERVER (Attachment)';
-      else if (!p.fakeLoginComplete) text = 'Sector 1: clear the LOGIN portal';
-      else if (!p.ch1BossComplete) text = 'Sector 1: final breach at the DOOR';
-      else text = 'Sector 1 cleared — proceed to Sector 2';
-      obj.textContent = text;
-    }
+    if (obj) obj.textContent = objectiveText(p);
   }
 
   function tick() {
@@ -149,8 +161,6 @@
     syncStats();
   }
 
-  // Mirror the live gameplay stats (lives/score/key) from the Phaser registry
-  // into the framed status strip so they don't have to be drawn on the canvas.
   function syncStats() {
     const game = window.__game;
     if (!game || !game.registry) return;
@@ -168,8 +178,6 @@
     }
   }
 
-  // Public API: drive CHIMERA dialogue + optional voice clip.
-  // voiceClip may be an <audio> element id, an audio src path, or null.
   function showChimeraDialogue(lines, voiceClip) {
     const arr = Array.isArray(lines) ? lines : [lines];
     let audio = null;
@@ -192,7 +200,6 @@
     tick();
     setInterval(tick, 1000);
     setInterval(refresh, 1000);
-    // Stats (lives/score/key) change mid-action, so poll them quickly.
     setInterval(syncStats, 250);
 
     const newRun = document.getElementById('btnNewRun');
@@ -207,15 +214,14 @@
     }
   }
 
+  function setCinematic(on) {
+    document.body.classList.toggle('cinematic', !!on);
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
-  }
-
-  // Toggle the clean fullscreen intro/cinematic look (HUD hidden) vs framed gameplay.
-  function setCinematic(on) {
-    document.body.classList.toggle('cinematic', !!on);
   }
 
   window.FacilityUI = { showChimeraDialogue, refresh, refreshAgent, setCinematic, resetTimer: () => { startTime = Date.now(); } };
