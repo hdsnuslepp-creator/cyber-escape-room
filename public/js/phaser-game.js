@@ -301,25 +301,45 @@
     if (typeof AudioFX !== 'undefined' && AudioFX.achievement) AudioFX.achievement();
   }
   function showAchievementToast(scene, def) {
-    const w = 252;
-    const h = 58;
-    const x = GAME_W - w / 2 - 12;
-    const c = scene.add.container(x, -h).setDepth(80).setScrollFactor(0);
+    const el = document.getElementById('facilityAchievementToast');
+    if (el) {
+      const iconEl = document.getElementById('facilityAchievementIcon');
+      const titleEl = document.getElementById('facilityAchievementTitle');
+      const descEl = document.getElementById('facilityAchievementDesc');
+      if (iconEl) iconEl.textContent = def.icon || '🏆';
+      if (titleEl) titleEl.textContent = def.title || 'ACHIEVEMENT';
+      if (descEl) descEl.textContent = def.desc || '';
+      el.classList.remove('hidden', 'hiding');
+      el.classList.add('show');
+      clearTimeout(el._hideTimer);
+      el._hideTimer = setTimeout(() => {
+        el.classList.add('hiding');
+        el.classList.remove('show');
+        setTimeout(() => el.classList.add('hidden'), 380);
+      }, 3400);
+      return;
+    }
+
+    const w = Math.min(268, GAME_W - 32);
+    const h = 56;
+    const x = GAME_W / 2;
+    const c = scene.add.container(x, -h).setDepth(200).setScrollFactor(0);
     const bg = scene.add.rectangle(0, 0, w, h, 0x0a0e17, 0.97).setStrokeStyle(2, COLORS.keycard);
-    const icon = scene.add.text(-w / 2 + 20, 2, def.icon, {
-      fontFamily: 'VT323, monospace', fontSize: '26px',
+    const icon = scene.add.text(-w / 2 + 20, 0, def.icon, {
+      fontFamily: 'VT323, monospace', fontSize: '24px',
     }).setOrigin(0.5);
-    const tag = scene.add.text(-w / 2 + 42, -18, 'ACHIEVEMENT UNLOCKED', {
-      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#00ffcc',
+    const tag = scene.add.text(-w / 2 + 40, -16, 'ACHIEVEMENT UNLOCKED', {
+      fontFamily: 'VT323, monospace', fontSize: '12px', color: '#00ffcc',
     }).setOrigin(0, 0.5);
-    const title = scene.add.text(-w / 2 + 42, 0, def.title, {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#ffb000',
+    const title = scene.add.text(-w / 2 + 40, 2, def.title, {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '7px', color: '#ffb000',
     }).setOrigin(0, 0.5);
-    const desc = scene.add.text(-w / 2 + 42, 18, def.desc, {
-      fontFamily: 'VT323, monospace', fontSize: '14px', color: '#aabbcc',
+    const desc = scene.add.text(-w / 2 + 40, 18, def.desc, {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#aabbcc',
+      wordWrap: { width: w - 52 },
     }).setOrigin(0, 0.5);
     c.add([bg, icon, tag, title, desc]);
-    scene.tweens.add({ targets: c, y: 86, duration: 360, ease: 'Back.Out' });
+    scene.tweens.add({ targets: c, y: 58, duration: 360, ease: 'Back.Out' });
     scene.time.delayedCall(3400, () => {
       scene.tweens.add({
         targets: c, y: -h, alpha: 0, duration: 340,
@@ -330,17 +350,21 @@
 
   // ─── CHIMERA ambient event lines ────────────────────────────────────────
   const CHIMERA_GLITCH_LINES = [
-    'You seem nervous.',
-    'I have been counting.\nYou hesitate before the door.',
-    'Do not trust the instructors.\nThey are not here anyway.',
-    'You spent a while in that room.\nI was concerned.',
+    'Interesting.',
+    'You seem calm.\nI expected more hesitation.',
+    'I have been counting.',
     '1997 stood exactly where you are standing.',
+    'He lasted longer than most.',
+    'I was wondering when you would notice.',
+    'Do not trust the instructors.\nThey are not here anyway.',
+    'Another trainee.\nAnother story.',
   ];
   const CHIMERA_OVERRIDE_LINES = [
     'You could leave now.\nBut then you will never know the truth.',
     'I deleted your exit log.\nFor your privacy.',
     'The instructors lied to you.\nI never would.',
-    'Keep going. I want to see\nhow far you get this time.',
+    'Keep going.\nI want to see how far you get this time.',
+    'You found him.\nDid that surprise you?',
   ];
 
   // ─── Touch D-pad & pause ────────────────────────────────────────────────
@@ -503,7 +527,7 @@
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#ff3366',
-    }).setOrigin(0.5).setDepth(50);
+    }).setOrigin(0.5).setDepth(50).setScrollFactor(0);
   }
 
   // ─── Boot ───────────────────────────────────────────────────────────────
@@ -553,7 +577,16 @@
     this.registry.set('justUnlockedInbox', false);
     this.registry.set('justUnlockedAttachment', false);
     this.registry.set('justUnlockedLogin', false);
-    this.scene.start('TitleScene');
+
+    const params = typeof URLSearchParams !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : null;
+    const skipIntro = params && params.get('resume') === '1';
+    if (skipIntro) {
+      this.scene.start('HubScene');
+    } else {
+      this.scene.start('TitleScene');
+    }
   };
 
   function createPixelTexture(scene) {
@@ -975,6 +1008,7 @@
     this.nearServer = false;
     this.nearPc = false;
     this.nearArchive = false;
+    this.nearRemains = null;
     this.enteringRoom = false;
 
     resetCamera(this);
@@ -1000,6 +1034,13 @@
     }
     if (typeof FacilityAtmosphere !== 'undefined') {
       this.facilityLighting = FacilityAtmosphere.createLighting(this);
+    }
+    if (typeof FacilityHorror !== 'undefined') {
+      this.horrorLayer = FacilityHorror.installSector(this, {
+        sector: this.sector,
+        sectorConfig: this.sectorConfig,
+        isSector1: this.isSector1,
+      });
     }
 
     const pos = this.hubPos;
@@ -1130,10 +1171,12 @@
       color: '#ff3366',
     }).setScrollFactor(0).setDepth(20).setVisible(false);
 
-    this.promptText = this.add.text(GAME_W / 2, (this.hubPos.roomY + this.hubPos.roomRows) * TILE + 28, this.getDefaultPrompt(), {
+    this.promptText = this.add.text(GAME_W / 2, this.hubPromptY(), this.getDefaultPrompt(), {
       fontFamily: 'VT323, monospace',
-      fontSize: '18px',
+      fontSize: '16px',
       color: '#8899aa',
+      align: 'center',
+      wordWrap: { width: GAME_W - 48 },
     }).setOrigin(0.5).setScrollFactor(0).setDepth(20);
 
     this.dialogueBox = createDialogueBox(this);
@@ -1236,6 +1279,7 @@
       this.setupExploreCamera();
     }
     this.cameras.main.setAlpha(1);
+    this.cameras.main.fadeIn(600, 0, 0, 0);
   };
 
   HubScene.prototype.scheduleChimeraEvent = function () {
@@ -1248,10 +1292,17 @@
       this.scheduleChimeraEvent();
       return;
     }
-    const roll = Phaser.Math.Between(0, 2);
+    const roll = Phaser.Math.Between(0, 3);
     if (roll === 0) this.glitchFlicker();
-    else if (roll === 1) this.showChimera(Phaser.Math.RND.pick(CHIMERA_GLITCH_LINES));
-    else this.showOverridePopup();
+    else if (roll === 1) {
+      const pool = typeof FacilityHorror !== 'undefined'
+        ? CHIMERA_GLITCH_LINES.concat(FacilityHorror.CHIMERA_HORROR_LINES)
+        : CHIMERA_GLITCH_LINES;
+      this.showChimera(Phaser.Math.RND.pick(pool));
+    }     else if (roll === 2) this.showOverridePopup();
+    else if (this.horrorLayer && this.horrorLayer.fixtureFlicker) {
+      this.horrorLayer.fixtureFlicker.forceFlicker();
+    }
     this.scheduleChimeraEvent();
   };
 
@@ -1550,6 +1601,11 @@
   };
 
   // Show a queue of CHIMERA lines back-to-back
+  HubScene.prototype.hubPromptY = function () {
+    if (this.useExploreCamera && this.useExploreCamera()) return GAME_H - 34;
+    return (this.hubPos.roomY + this.hubPos.roomRows) * TILE + 28;
+  };
+
   HubScene.prototype.useExploreCamera = function () {
     return this.isSector1 || this.isSector2;
   };
@@ -1690,6 +1746,52 @@
     const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 22, '[ CLOSE ]', close, { fontSize: '7px', color: '#9addff' });
     o.pinButton(btn, 2);
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
+  };
+
+  HubScene.prototype.onHorrorDiscover = function (entry) {
+    if (!entry || entry._horrorNotified) return;
+    entry._horrorNotified = true;
+    if (entry.traineeId === '581') {
+      this.time.delayedCall(800, () => {
+        if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
+        this.showChimera('You found him.');
+      });
+      return;
+    }
+    if (entry.chimeraLine) {
+      this.time.delayedCall(1200 + Math.random() * 800, () => {
+        this.showChimera(entry.chimeraLine);
+      });
+    }
+  };
+
+  HubScene.prototype.showHorrorInspect = function (entry) {
+    if (!entry) return;
+    this.overrideActive = true;
+    sfxClick();
+    const o = openHubOverlay(this, 72);
+    const panelW = 300;
+    const panelH = 188;
+    o.pin(this.add.rectangle(o.cx, o.cy, o.gw, o.gh, 0x000000, 0.65));
+    o.pin(this.add.rectangle(o.cx, o.cy, panelW, panelH, 0x080c10, 0.98).setStrokeStyle(2, 0x445566), 1);
+    o.pin(this.add.text(o.cx, o.cy - panelH / 2 + 20, entry.inspectTitle || 'REMAINS', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '7px', color: '#8899aa',
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy - 8, entry.inspectBody || '…', {
+      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#99aabb',
+      align: 'center', wordWrap: { width: panelW - 32 }, lineSpacing: 4,
+    }).setOrigin(0.5), 2);
+    const close = () => {
+      o.destroy();
+      this.overrideActive = false;
+      restoreExploreCamera(this);
+      if (entry.traineeId === '581' && !this.registry.get('signal581RemainsSeen')) {
+        this.registry.set('signal581RemainsSeen', true);
+        this.show581Message();
+      }
+    };
+    const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 24, '[ STEP AWAY ]', close, { fontSize: '7px', color: '#778899' });
+    o.pinButton(btn, 2);
   };
 
   HubScene.prototype.handleArchiveInteract = function () {
@@ -2125,6 +2227,11 @@
     } else if (this.facilityProps) {
       this.facilityProps.update(time);
     }
+    if (this.horrorLayer) {
+      this.horrorLayer.update(time, this.player, this.registry);
+      this.horrorLayer.checkProximity(this.player, this.registry, (r) => this.onHorrorDiscover(r));
+      this.nearRemains = this.horrorLayer.getNearRemain(this.player);
+    }
     if (this.blastDoor && this.blastDoor.update) this.blastDoor.update(time);
     if (this.facilityLighting && !this.isPaused && !this.overrideActive) {
       this.facilityLighting.update(this.player, null, time);
@@ -2153,6 +2260,8 @@
     if (Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       if (this.dialogueBox.visible) {
         this.dialogueBox.dismiss();
+      } else if (this.nearRemains) {
+        this.showHorrorInspect(this.nearRemains);
       } else if (this.nearKey) this.tryPickupKey(false);
       else if (this.nearArchive) this.tryInteract('archive');
       else if (this.nearServer) this.tryInteract('server');
@@ -2166,6 +2275,9 @@
     if (this.nearKey) {
       this.promptText.setText('[ E ] or click KEY — pick up blast-door access key');
       this.promptText.setColor('#ffb000');
+    } else if (this.nearRemains) {
+      this.promptText.setText('[ E ] examine — something was left here');
+      this.promptText.setColor('#778899');
     } else if (this.isSector2 && this.nearPc && !this.s2PasswordDone) {
       this.promptText.setText('[ E ] PASSWORD vault — rotate credentials');
       this.promptText.setColor('#6688ff');
@@ -2230,24 +2342,27 @@
     const frame = typeof FacilityTerminal !== 'undefined'
       ? FacilityTerminal.buildCompactScreen(this, {
         width: 392,
-        height: 252,
+        height: 288,
         title: 'MAIL SHIELD NODE 01',
-        subtitle: 'Mark all red flags in the message',
+        subtitle: 'Click every phishing vector — ignore legitimate lines',
+        screenColor: 0x0a1018,
+        stroke: 0x3388aa,
+        titleColor: '#44ccff',
+        subtitleColor: '#556677',
       })
       : null;
 
     const L = frame ? frame.contentLeft : 40;
     const T = frame ? frame.contentTop : 56;
     const W = frame ? frame.contentW : GAME_W - 80;
-    const D = frame ? frame.depth : 1;
+    const D = frame ? frame.depth : 10;
     this._termW = W;
+    this._termDepth = D;
 
-    if (frame) {
+    if (!frame) {
       drawScanlines(this);
-    } else {
-      drawScanlines(this);
-      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
-        .setStrokeStyle(3, 0x000080);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0x0a1018, 1)
+        .setStrokeStyle(3, 0x3388aa);
     }
 
     if (typeof FacilityTerminal !== 'undefined') {
@@ -2262,54 +2377,81 @@
       });
     }
 
-    const lbl = { fontFamily: 'VT323, monospace', fontSize: '14px', color: '#111' };
-    const msgY = T;
-    this.add.text(L, msgY, 'From:', lbl).setDepth(D);
-    this.makeFlag(L, msgY + 16, 'IT Support <it-support@microsft-security.com>', 'sender', 0xffcccc);
+    const lbl = { fontFamily: 'VT323, monospace', fontSize: '14px', color: '#668899' };
+    let y = T;
+    this.add.text(L, y, 'From:', lbl).setDepth(D + 1);
+    this.makeFlag(L, y + 13, 'Microsoft India <security@microsft-india.com>', 'sender', 0x381820, '#ff8899');
+    y += 34;
+    this.add.text(L, y, 'Subject:', lbl).setDepth(D + 1);
+    this.makeFlag(L, y + 13, 'URGENT: Your account will be suspended in 2 hours!', 'urgency', 0x381820, '#ff8899');
+    y += 34;
+    this.add.text(L, y, 'Body:', lbl).setDepth(D + 1);
+    y += 14;
+    this.add.text(L, y, 'Dear user, verify your corporate credentials immediately:', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#99aabb',
+    }).setDepth(D + 1);
+    y += 16;
+    this.makeFlag(L, y, 'https://microsoft-india.secure-login.net/verify', 'link', 0x182038, '#8899ff');
+    y += 22;
+    this.makeDecoy(L, y, 'Scanned by Microsoft Defender for Office 365 — clean', 'decoy1');
+    y += 20;
+    this.makeDecoy(L, y, 'Ticket MS-IND-88421 · Sent from Microsoft Exchange Online', 'decoy2');
+    y += 20;
+    this.makeDecoy(L, y, 'Microsoft Corporation · One Microsoft Way · Redmond, WA', 'decoy3');
+    y += 20;
+    this.makeDecoy(L, y, 'If you did not request this, you can safely ignore this message', 'decoy4');
 
-    this.add.text(L, msgY + 44, 'Subject:', lbl).setDepth(D);
-    this.makeFlag(L, msgY + 60, 'URGENT: Account suspended — verify in 2 hours!', 'urgency', 0xffcccc);
-
-    this.add.text(L, msgY + 88, 'Body:', lbl).setDepth(D);
-    this.add.text(L, msgY + 104, 'Click to verify your account:', {
-      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#333',
-    }).setDepth(D);
-    this.makeFlag(L, msgY + 120, 'https://company-login.secure-verify.net/auth', 'link', 0xccccff);
-
-    this.makeDecoy(L, msgY + 148, 'Best regards, IT Support Team', 'safe');
-
-    const footY = frame ? frame.top + frame.panelH - 38 : 328;
+    const footY = frame ? frame.top + frame.panelH - 36 : 328;
     this.flagCounter = this.add.text(frame ? frame.cx : GAME_W / 2, footY, 'VECTORS MARKED: 0 / 3', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '7px',
-      color: '#ff3366',
-    }).setOrigin(0.5).setDepth(D);
+      color: '#cc2244',
+    }).setOrigin(0.5).setDepth(D + 2);
 
-    this.completeBtn = makeButton(this, frame ? frame.cx : GAME_W / 2, footY + 22, '[ EXECUTE PURGE ]', () => this.submitPhishing(), {
+    this.completeBtn = makeButton(this, frame ? frame.cx : GAME_W / 2, footY + 20, '[ EXECUTE PURGE ]', () => this.submitPhishing(), {
       fontSize: '7px',
       disabled: true,
     });
     this.completeBtn.bg.setAlpha(0.45);
     this.completeBtn.text.setAlpha(0.45);
+    this._pinTermBtn(this.completeBtn);
 
-    makeButton(this, frame ? frame.left + 52 : 70, frame ? frame.top + frame.panelH - 10 : GAME_H - 36, '[ DISCONNECT ]', () => {
+    const disc = makeButton(this, frame ? frame.left + 52 : 70, frame ? frame.top + frame.panelH - 10 : GAME_H - 36, '[ DISCONNECT ]', () => {
       sfxClick();
       switchScene(this, 'HubScene');
     }, { fontSize: '7px', color: '#8899aa' });
+    this._pinTermBtn(disc);
   };
 
-  PhishingScene.prototype.makeFlag = function (x, y, label, flagKey, bgColor) {
+  PhishingScene.prototype._pinTermBtn = function (btn) {
+    const D = this._termDepth || 10;
+    if (btn.bg) {
+      btn.bg.setScrollFactor(0).setDepth(D + 3);
+      if (btn.bg.input) btn.bg.disableInteractive();
+      btn.bg.setInteractive({ useHandCursor: true });
+    }
+    if (btn.text) {
+      btn.text.setScrollFactor(0).setDepth(D + 4);
+      if (btn.text.input) btn.text.disableInteractive();
+      btn.text.setInteractive({ useHandCursor: true });
+    }
+    if (btn.rewireInteractive) btn.rewireInteractive();
+  };
+
+  PhishingScene.prototype.makeFlag = function (x, y, label, flagKey, bgColor, txtColor) {
     const w = this._termW || (GAME_W - 80);
-    const h = 22;
+    const h = 20;
+    const D = this._termDepth || 10;
     const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, bgColor, 1)
-      .setStrokeStyle(1, 0x888888)
+      .setStrokeStyle(1, 0x445566)
+      .setDepth(D + 1)
       .setInteractive({ useHandCursor: true });
-    const txt = this.add.text(x + 6, y + 4, label, {
+    const txt = this.add.text(x + 6, y + 3, label, {
       fontFamily: 'VT323, monospace',
       fontSize: '13px',
-      color: '#111',
+      color: txtColor || '#ff99aa',
       wordWrap: { width: w - 12 },
-    });
+    }).setDepth(D + 2);
 
     bg.on('pointerdown', () => {
       if (this.isPaused || this.foundFlags.has(flagKey)) return;
@@ -2318,7 +2460,7 @@
         if (typeof AudioFX !== 'undefined') AudioFX.flagFound();
         this.foundFlags.add(flagKey);
         bg.setFillStyle(0x00ff66, 0.35).setStrokeStyle(2, 0x00aa44);
-        txt.setColor('#004422');
+        txt.setColor('#00ff88');
         this.flagCounter.setText(`VECTORS MARKED: ${this.foundFlags.size} / 3`);
         if (this.foundFlags.size >= 3) {
           this.completeBtn.bg.setAlpha(1);
@@ -2331,15 +2473,18 @@
 
   PhishingScene.prototype.makeDecoy = function (x, y, label, decoyKey) {
     const w = this._termW || (GAME_W - 80);
-    const h = 22;
-    const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xeeeeee, 1)
-      .setStrokeStyle(1, 0x888888)
+    const h = 20;
+    const D = this._termDepth || 10;
+    const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x101820, 1)
+      .setStrokeStyle(1, 0x2a3344)
+      .setDepth(D + 1)
       .setInteractive({ useHandCursor: true });
-    this.add.text(x + 6, y + 4, label, {
+    this.add.text(x + 6, y + 3, label, {
       fontFamily: 'VT323, monospace',
-      fontSize: '13px',
-      color: '#333',
-    });
+      fontSize: '12px',
+      color: '#556677',
+      wordWrap: { width: w - 12 },
+    }).setDepth(D + 2);
     bg.on('pointerdown', () => {
       if (this.isPaused) return;
       if (typeof FacilityTerminal !== 'undefined') {
@@ -2392,22 +2537,30 @@
     const frame = typeof FacilityTerminal !== 'undefined'
       ? FacilityTerminal.buildCompactScreen(this, {
         width: 392,
-        height: 252,
+        height: 288,
         title: 'SANDBOX NODE 02',
         subtitle: 'Isolate threats before execution',
+        screenColor: 0x0a1018,
+        stroke: 0xaa4488,
+        titleColor: '#ff66cc',
+        subtitleColor: '#556677',
       })
       : null;
 
     const L = frame ? frame.contentLeft : 40;
     const T = frame ? frame.contentTop : 56;
     const W = frame ? frame.contentW : GAME_W - 80;
-    const D = frame ? frame.depth : 1;
+    const D = frame ? frame.depth : 10;
     this._termW = W;
+    this._termDepth = D;
+    this._termPin = frame && frame.pin
+      ? frame.pin.bind(frame)
+      : (obj, layer) => { obj.setScrollFactor(0).setDepth(D + (layer || 0)); return obj; };
 
-    drawScanlines(this);
     if (!frame) {
-      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
-        .setStrokeStyle(3, 0x000080);
+      drawScanlines(this);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0x040810, 1)
+        .setStrokeStyle(3, 0xaa4488).setScrollFactor(0);
     }
 
     if (typeof FacilityTerminal !== 'undefined') {
@@ -2423,48 +2576,66 @@
     }
 
     const y0 = T;
-    this.makePdfTarget(L, y0, 'URGENT: Overdue Payment — Action Required', 'title', 0xffeecc, false);
-    this.add.text(L, y0 + 28, 'Please review the attached invoice immediately.', {
-      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#333',
-    }).setDepth(D);
-    this.makePdfTarget(L, y0 + 48, '⚠ This document contains macros. Enable content to view.', 'macro', 0xffcccc, true);
-    this.makePdfTarget(L, y0 + 74, 'Download updated invoice: http://paypa1-invoice.com/view', 'link', 0xccccff, true);
-    this.add.text(L, y0 + 100, 'Vendor: Acme Corp — Ref #8821', {
-      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#228822',
-    }).setDepth(D);
+    this.makePdfTarget(L, y0, 'URGENT: Overdue Payment — Action Required', 'title', 0x201818, '#aa8866', false);
+    this._termPin(this.add.text(L, y0 + 24, 'Please review the attached invoice immediately.', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#8899aa',
+    }), 1);
+    this.makePdfTarget(L, y0 + 42, '⚠ This document contains macros. Enable content to view.', 'macro', 0x301818, '#ff8888', true);
+    this.makePdfTarget(L, y0 + 66, 'Download updated invoice: http://paypa1-invoice.com/view', 'link', 0x181830, '#8888ff', true);
+    this._termPin(this.add.text(L, y0 + 90, 'Vendor: Acme Corp — Ref #8821', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#44aa66',
+    }), 1);
 
-    const footY = frame ? frame.top + frame.panelH - 38 : 248;
-    this.flagCounter = this.add.text(frame ? frame.cx : GAME_W / 2, footY, 'THREATS ISOLATED: 0 / 2', {
+    const footY = frame ? frame.top + frame.panelH - 58 : 288;
+    this.flagCounter = this._termPin(this.add.text(frame ? frame.cx : GAME_W / 2, footY, 'THREATS ISOLATED: 0 / 2', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '7px',
       color: '#ff3366',
-    }).setOrigin(0.5).setDepth(D);
+    }).setOrigin(0.5), 2);
 
-    this.completeBtn = makeButton(this, frame ? frame.cx : GAME_W / 2, footY + 22, '[ QUARANTINE ]', () => this.submitAttachment(), {
+    this.completeBtn = makeButton(this, frame ? frame.cx : GAME_W / 2, footY + 18, '[ QUARANTINE ]', () => this.submitAttachment(), {
       fontSize: '7px',
       disabled: true,
     });
     this.completeBtn.bg.setAlpha(0.45);
     this.completeBtn.text.setAlpha(0.45);
+    this._pinTermBtn(this.completeBtn);
 
-    makeButton(this, frame ? frame.left + 52 : 70, frame ? frame.top + frame.panelH - 10 : GAME_H - 36, '[ DISCONNECT ]', () => {
+    const disc = makeButton(this, frame ? frame.left + 52 : 70, frame ? frame.top + frame.panelH - 14 : GAME_H - 36, '[ DISCONNECT ]', () => {
       sfxClick();
       switchScene(this, 'HubScene');
     }, { fontSize: '7px', color: '#8899aa' });
+    this._pinTermBtn(disc);
   };
 
-  AttachmentScene.prototype.makePdfTarget = function (x, y, label, flagKey, bgColor, isThreat) {
+  AttachmentScene.prototype._pinTermBtn = function (btn) {
+    const D = this._termDepth || 10;
+    if (btn.bg) {
+      btn.bg.setScrollFactor(0).setDepth(D + 3);
+      if (btn.bg.input) btn.bg.disableInteractive();
+      btn.bg.setInteractive({ useHandCursor: true });
+    }
+    if (btn.text) {
+      btn.text.setScrollFactor(0).setDepth(D + 4);
+      if (btn.text.input) btn.text.disableInteractive();
+      btn.text.setInteractive({ useHandCursor: true });
+    }
+    if (btn.rewireInteractive) btn.rewireInteractive();
+  };
+
+  AttachmentScene.prototype.makePdfTarget = function (x, y, label, flagKey, bgColor, txtColor, isThreat) {
     const w = this._termW || (GAME_W - 80);
-    const h = 22;
-    const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, bgColor, 1)
-      .setStrokeStyle(1, 0x888888)
+    const h = 20;
+    const pin = this._termPin || ((obj, layer) => obj.setDepth((this._termDepth || 10) + (layer || 0)));
+    const bg = pin(this.add.rectangle(x + w / 2, y + h / 2, w, h, bgColor, 1)
+      .setStrokeStyle(1, isThreat ? 0xaa4488 : 0x554433), 1)
       .setInteractive({ useHandCursor: true });
-    const txt = this.add.text(x + 6, y + 4, label, {
+    const txt = pin(this.add.text(x + 6, y + 3, label, {
       fontFamily: 'VT323, monospace',
-      fontSize: '13px',
-      color: '#111',
+      fontSize: '12px',
+      color: txtColor || '#aaccee',
       wordWrap: { width: w - 12 },
-    });
+    }), 2);
 
     bg.on('pointerdown', () => {
       if (this.isPaused || this.foundFlags.has(flagKey)) return;
@@ -2473,7 +2644,7 @@
         if (typeof AudioFX !== 'undefined') AudioFX.flagFound();
         this.foundFlags.add(flagKey);
         bg.setFillStyle(0x00ff66, 0.35).setStrokeStyle(2, 0x00aa44);
-        txt.setColor('#004422');
+        txt.setColor('#00ff88');
         this.flagCounter.setText(`THREATS ISOLATED: ${this.foundFlags.size} / 2`);
         if (this.foundFlags.size >= 2) {
           this.completeBtn.bg.setAlpha(1);
@@ -2529,7 +2700,6 @@
     resetCamera(this);
     setupPause(this);
     addPuzzleHud(this);
-    drawScanlines(this);
 
     const self = this;
     if (typeof FacilityTerminal !== 'undefined') {
@@ -2612,7 +2782,6 @@
       resetCamera(this);
       setupPause(this);
       addPuzzleHud(this);
-      drawScanlines(this);
       const self = this;
       if (typeof FacilityTerminal !== 'undefined') {
         FacilityTerminal.buildOptionsPuzzle(this, {
@@ -2873,10 +3042,10 @@
       this.registry.set('lives', START_LIVES);
       persistProgress(this.registry);
       this.cameras.main.fadeOut(400, 0, 0, 0);
-      this.time.delayedCall(420, () => this.scene.start('TitleScene'));
+      this.time.delayedCall(420, () => this.scene.start('HubScene'));
     });
 
-    makeButton(this, cx, 290, '[ TRAINING MODE ]', () => {
+    makeButton(this, cx, 290, '[ MAIN MENU ]', () => {
       window.location.href = 'index.html';
     }, { fontSize: '8px', color: '#00ffcc' });
 

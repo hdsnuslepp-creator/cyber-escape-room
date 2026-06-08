@@ -105,10 +105,10 @@
     if (p.coreComplete) return 'All sectors cleared — CHIMERA contained';
     const sec = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(cur) : null;
     if (!sec || sec.legacy) {
-      if (!p.inboxComplete) return 'Sector 1: initialize breach at LOGIN terminal';
-      if (!p.attachmentComplete) return 'Sector 1: quarantine attachments at ARCHIVE';
-      if (!p.fakeLoginComplete) return 'Sector 1: clear the LOGIN portal';
-      if (!p.ch1BossComplete) return 'Sector 1: final breach at the BLAST DOOR';
+      if (!p.inboxComplete) return 'Sector 1: breach at LOGIN';
+      if (!p.attachmentComplete) return 'Sector 1: quarantine at ARCHIVE';
+      if (!p.fakeLoginComplete) return 'Sector 1: clear LOGIN portal';
+      if (!p.ch1BossComplete) return 'Sector 1: breach BLAST DOOR';
       return 'Sector 1 cleared — proceed to Sector 2';
     }
     if (sectorCleared(p, cur)) {
@@ -209,7 +209,7 @@
         if (typeof ProfileSave !== 'undefined' && typeof ProfileSave.resetPhaserRun === 'function') {
           ProfileSave.resetPhaserRun();
         }
-        window.location.href = 'game.html';
+        window.location.href = 'index.html';
       });
     }
   }

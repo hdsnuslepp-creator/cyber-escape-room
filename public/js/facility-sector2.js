@@ -83,7 +83,7 @@
     }
 
     const ry = S2_POSITIONS.roomY;
-    if (typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.addWallGraffiti) {
+    if (typeof FacilityHorror === 'undefined' && typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.addWallGraffiti) {
       FacilityAtmosphere.addWallGraffiti(scene, '581 TRIED TO WARN YOU', {
         col: 19, row: ry + 3, face: 'west', fontSize: '9px', color: '#554466', alpha: 0.48,
       });

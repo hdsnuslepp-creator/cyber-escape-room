@@ -3,817 +3,131 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TRAINEE 1998</title>
-  <link rel="stylesheet" href="css/styles.css">
-  <link rel="stylesheet" href="css/pixel-theme.css?v=12">
+  <title>PROJECT CHIMERA — TRAINEE 1998</title>
+  <link rel="stylesheet" href="css/menu.css?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
-<body class="crt-screen app-screen-intro">
+<body class="menu-body crt-screen">
+
+  <div class="menu-bg" aria-hidden="true"></div>
+  <div class="menu-bg-pulse" aria-hidden="true"></div>
+  <div class="menu-vignette" aria-hidden="true"></div>
   <div class="scanlines" aria-hidden="true"></div>
-  <div class="crt-vignette" aria-hidden="true"></div>
-  <div id="pixelBg" class="pixel-bg" aria-hidden="true"></div>
 
-  <div class="app">
-    <div class="audio-bar" id="audioBar">
-      <button type="button" class="sound-toggle" data-sound-toggle aria-pressed="true">SOUND: ON</button>
-      <button type="button" class="sound-toggle" data-music-toggle aria-pressed="true">MUSIC: ON</button>
-      <label class="volume-control">
-        <span class="volume-control__label">Volume</span>
-        <input type="range" class="volume-slider" data-sound-volume min="0" max="100" step="1" value="10" aria-label="Volume">
-        <span class="volume-control__value" data-sound-volume-label>10%</span>
-      </label>
-    </div>
-
-    <header class="header header--intro" id="gameHeader">
-      <div class="header__top">
-        <div class="header__brand">
-          <span class="header__icon" aria-hidden="true">🔒</span>
-          <div class="header__titles">
-            <h1>TRAINEE 1998</h1>
-            <p class="header__subtitle">EU CYBER DEFENSE ACADEMY // SIM #1998</p>
-          </div>
-        </div>
-        <div class="hud">
-          <div class="hud__item hud__item--mode" id="hudModeWrap" hidden>
-            <span class="hud__label">MODE</span>
-            <span class="hud__value hud__value--mode" id="hudDifficulty">NORMAL</span>
-          </div>
-          <div class="hud__item"><span class="hud__label">TIME</span><span class="hud__value" id="hudTime">00:00</span></div>
-          <div class="hud__item"><span class="hud__label">SCORE</span><span class="hud__value hud__value--score" id="hudScore">1000</span></div>
-          <div class="hud__item"><span class="hud__label">LIVES</span><span class="hud__value hud__value--lives" id="hudLives">♥♥♥</span></div>
-          <div class="hud__item hud__item--hijack" id="hudHijackWrap" hidden>
-            <span class="hud__label">TRUST</span>
-            <span class="hud__value" id="hudHijack">—</span>
-          </div>
-        </div>
-      </div>
-      <div class="header__progress header__progress--idle" id="progressBar" aria-label="Room progress"></div>
-    </header>
-
-    <main id="gameContainer">
-      <!-- Intro -->
-      <section class="screen screen--active" data-screen="intro">
-        <div class="terminal-window">
-          <div class="terminal-window__bar">
-            <span class="dot dot--red"></span><span class="dot dot--yellow"></span><span class="dot dot--green"></span>
-            <span class="terminal-window__title">SECURE_TRAINING_ROOM.exe</span>
-          </div>
-          <div class="terminal-window__body">
-            <div id="bootSequence" class="boot-sequence" aria-live="polite"></div>
-            <div id="introActions" class="intro-actions" hidden>
-              <div class="intro-hero">
-                <div class="pixel-agent pixel-agent--idle" aria-hidden="true"></div>
-                <p class="intro-hero__tag">TRAINEE 1998 — AWAKE</p>
-              </div>
-              <div class="input-group input-group--pixel">
-                <label for="studentName">&gt; ENTER TRAINEE CODENAME</label>
-                <input type="text" id="studentName" class="input input--pixel" placeholder="agent_codename..." maxlength="60" autocomplete="name">
-              </div>
-              <div class="input-group input-group--pixel">
-                <label>&gt; DIFFICULTY</label>
-                <div class="difficulty-picker" id="difficultyPicker" role="group" aria-label="Choose difficulty">
-                  <button type="button" class="difficulty-card" data-difficulty="easy" aria-pressed="false">
-                    <span class="difficulty-card__icon difficulty-card__icon--easy" aria-hidden="true"></span>
-                    <span class="difficulty-card__name">EASY</span>
-                    <span class="difficulty-card__detail">5 lives · hints on</span>
-                  </button>
-                  <button type="button" class="difficulty-card difficulty-card--active" data-difficulty="normal" aria-pressed="true">
-                    <span class="difficulty-card__icon difficulty-card__icon--normal" aria-hidden="true"></span>
-                    <span class="difficulty-card__name">NORMAL</span>
-                    <span class="difficulty-card__detail">3 lives · standard</span>
-                  </button>
-                  <button type="button" class="difficulty-card" data-difficulty="hard" aria-pressed="false">
-                    <span class="difficulty-card__icon difficulty-card__icon--hard" aria-hidden="true"></span>
-                    <span class="difficulty-card__name">HARD</span>
-                    <span class="difficulty-card__detail">2 lives · no hints</span>
-                  </button>
-                </div>
-                <select id="difficultySelect" class="difficulty-select-hidden" aria-hidden="true" tabindex="-1">
-                  <option value="easy">Easy</option>
-                  <option value="normal" selected>Normal</option>
-                  <option value="hard">Hard</option>
-                </select>
-              </div>
-              <label class="intro-check">
-                <input type="checkbox" id="disableHijackFx"> Disable CHIMERA visual effects (cursor/banners still block submit)
-              </label>
-              <label class="intro-check">
-                <input type="checkbox" id="dyslexiaMode"> Read-aloud accessibility — tap READ when you want the current screen read aloud
-              </label>
-              <button type="button" class="btn btn--primary btn--pixel" id="btnStart">[ INITIALIZE BREACH ]</button>
-              <button type="button" class="btn btn--secondary btn--pixel" id="btnResume" hidden>[ RESUME CAMPAIGN ]</button>
-              <a href="game.html" class="btn btn--secondary btn--pixel btn--game-link">[ EXPLORE THE FACILITY ]</a>
-              <p class="intro-mode-note">Sim mode: solve the security rooms &nbsp;|&nbsp; Facility mode: walk the abandoned academy</p>
-              <div class="leaderboard-panel leaderboard-panel--pixel">
-                <h3>TOP OPERATIVES</h3>
-                <div id="introLeaderboard"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Chapter intro -->
-      <section class="screen" data-screen="chapter">
-        <div class="chapter-card">
-          <div class="chapter-card__hero">
-            <div class="pixel-agent pixel-agent--walk" aria-hidden="true"></div>
-          </div>
-          <p class="chapter-card__label" id="chapterLabel">Chapter 1</p>
-          <h2 class="chapter-card__title" id="chapterTitle">The Email</h2>
-          <p class="chapter-card__tagline" id="chapterTagline">"Something got through."</p>
-          <div class="chapter-card__intro" id="chapterIntro"></div>
-          <p class="chapter-card__briefing" id="chapterBriefing"></p>
-          <ul class="chapter-card__objectives" id="chapterObjectives"></ul>
-          <div class="chapter-card__rooms" id="chapterRoomList"></div>
-          <p class="chapter-card__note">Full campaign: 56 missions across 14 chapters — no skips.</p>
-          <p class="chapter-card__note chapter-card__hijack-warn" id="chapterHijackWarn" hidden>From Chapter 5 onward, CHIMERA may hijack your screen — fake cursors, urgent overrides, compromised tutor. Double-check everything.</p>
-          <div class="chapter-card__actions">
-            <button type="button" class="btn btn--primary btn--pixel" id="btnChapterContinue">[ ENTER CHAPTER ]</button>
-            <a href="game.html" class="btn btn--secondary btn--pixel" id="chapterGameLink">[ LOCKDOWN PROTOCOL ]</a>
-          </div>
-        </div>
-      </section>
-
-      <!-- Ch1 R1: Phishing -->
-      <section class="screen" data-screen="phishing">
-        <div class="room-shell room-theme room-theme--win98">
-          <p class="room-theme__tag">[ SYSTEM: MAIL CLIENT '98 ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="phishing">Chapter 1 — Room 1</span>
-              <h2>Phishing Inbox</h2>
-              <p class="level-desc"><span class="level-theme">Phishing Inbox</span> — Click anything in the email. Find 3 red flags, or try normal parts to learn why they're safe.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="phishing">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-phishing" hidden></div>
-          <div class="email-client">
-            <div class="email-client__toolbar"><span>Inbox</span><span class="email-client__count">1 unread</span></div>
-            <div class="email-message">
-            <div class="email-message__row">
-              <span class="email-label">From:</span>
-              <span class="phishing-target" data-flag="sender" tabindex="0">IT Support &lt;it-support@microsft-security.com&gt;</span>
-            </div>
-            <div class="email-message__row">
-              <span class="email-label">Subject:</span>
-              <span class="phishing-target" data-flag="urgency" tabindex="0">URGENT: Account suspended — verify in 2 hours!</span>
-            </div>
-            <div class="email-message__body">
-              <p class="phishing-target phishing-target--decoyable" data-flag="greeting" tabindex="0">Hello,</p>
-              <p class="phishing-target phishing-target--decoyable" data-flag="body" tabindex="0">We detected unusual sign-in activity on your account.</p>
-              <p class="email-callout-label">Click to verify your account:</p>
-              <a href="#" class="phishing-target email-verify-block" data-flag="link" tabindex="0">
-                <span class="email-verify-block__btn">VERIFY ACCOUNT NOW</span>
-                <span class="email-verify-block__url">https://company-login.secure-verify.net/auth</span>
-              </a>
-              <p class="phishing-target phishing-target--decoyable" data-flag="signoff" tabindex="0">Regards, Corporate IT</p>
-              <p class="email-attachment-label">Attachment:</p>
-              <div class="email-attachment phishing-target" data-flag="attachment" tabindex="0">
-                <span class="email-attachment__icon" aria-hidden="true">📎</span>
-                <span class="email-attachment__name">Account_Verification.exe</span>
-                <span class="email-attachment__size">842 KB</span>
-              </div>
-            </div>
-          </div>
-          </div>
-          <div class="flag-counter">Red flags: <strong id="flagCount">0</strong> / 3</div>
-          <div class="feedback" id="feedback-phishing" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-phishing" disabled>COMPLETE MISSION</button>
-        </div>
-      </section>
-
-      <!-- Ch1 R2: Attachment Sandbox -->
-      <section class="screen" data-screen="attachment">
-        <div class="room-shell room-theme room-theme--win98">
-          <p class="room-theme__tag">[ SYSTEM: ATTACHMENT SANDBOX ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge">Chapter 1 — Room 2</span>
-              <h2>Attachment Sandbox</h2>
-              <p class="level-desc"><span class="level-theme">PDF Analyzer</span> — Click <strong>2 suspicious parts</strong> of this PDF preview.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="attachment">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-attachment" hidden></div>
-          <div class="pdf-sandbox">
-            <div class="pdf-sandbox__toolbar">Invoice_2024.pdf — SANDBOX PREVIEW</div>
-            <div class="pdf-sandbox__body">
-              <p class="pdf-sandbox__title phishing-target" data-flag="title" tabindex="0">URGENT: Overdue Payment — Action Required</p>
-              <p>Please review the attached invoice immediately.</p>
-              <p class="phishing-target pdf-sandbox__macro" data-flag="macro" tabindex="0">⚠️ This document contains macros. Enable content to view.</p>
-              <p class="phishing-target pdf-sandbox__link" data-flag="link" tabindex="0">Download updated invoice: http://paypa1-invoice.com/view</p>
-              <p class="pdf-sandbox__safe">Vendor: Acme Corp — Ref #8821</p>
-            </div>
-          </div>
-          <div class="flag-counter">Threats found: <strong id="attachmentFlagCount">0</strong> / 2</div>
-          <div class="feedback" id="feedback-attachment" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-attachment" disabled>COMPLETE MISSION</button>
-        </div>
-      </section>
-
-      <!-- Ch1 R3: Fake Login Portal -->
-      <section class="screen" data-screen="fake_login">
-        <div class="room-shell room-theme room-theme--bank">
-          <p class="room-theme__tag">[ SYSTEM: WEB SHIELD ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge">Chapter 1 — Room 3</span>
-              <h2>Fake Login Portal</h2>
-              <p class="level-desc"><span class="level-theme">Browser Shield</span> — Which URL is the <strong>legitimate</strong> company login?</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="fake_login">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-fake_login" hidden></div>
-          <div class="option-grid" id="fakeLoginOptions"></div>
-          <div class="feedback" id="feedback-fake_login" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-fake_login" disabled>COMPLETE MISSION</button>
-        </div>
-      </section>
-
-      <!-- Ch1 Boss -->
-      <section class="screen" data-screen="ch1_boss">
-        <div class="room-shell room-theme room-theme--soc boss-room">
-          <p class="room-theme__tag">[ BOSS: INITIAL COMPROMISE ]</p>
-          <div class="act-banner act-banner--boss">Chapter 1 Boss — Stop the Initial Compromise</div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge room-badge--boss">CHAPTER BOSS</span>
-              <h2>Contain the Email Threat</h2>
-              <p class="level-desc">Complete both tasks in <strong>90 seconds</strong> to stop the initial breach.</p>
-            </div>
-          </div>
-          <div class="boss-hud">
-            <div class="boss-hud__timer">TIME: <strong id="ch1BossTimer">01:30</strong></div>
-            <div class="boss-hud__tasks">TASKS: <strong id="ch1BossTaskCount">0</strong> / 2</div>
-          </div>
-          <div class="tutor-panel" id="tutor-ch1_boss" hidden></div>
-          <div class="boss-grid">
-            <div class="boss-panel" data-boss="quarantine">
-              <h3 class="boss-panel__title">📧 Quarantine Email</h3>
-              <p class="boss-mini-email"><span class="boss-phish-target ch1-quarantine" tabindex="0">From: billing@paypa1-verify.com</span></p>
-              <span class="boss-panel__status" id="ch1StatusQuarantine">Pending</span>
-            </div>
-            <div class="boss-panel" data-boss="block">
-              <h3 class="boss-panel__title">🌐 Block Fake Portal</h3>
-              <p class="boss-panel__desc">Select the typosquatted URL to block:</p>
-              <div class="boss-option-list" id="ch1BossUrlOptions"></div>
-              <span class="boss-panel__status" id="ch1StatusBlock">Pending</span>
-            </div>
-          </div>
-          <div class="feedback" id="feedback-ch1_boss" hidden></div>
-        </div>
-      </section>
-
-      <!-- Ch2 R4: Password -->
-      <section class="screen" data-screen="password">
-        <div class="room-shell room-theme room-theme--dos">
-          <p class="room-theme__tag">[ SYSTEM: MS-DOS TERMINAL ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="password">Chapter 2 — Room 4</span>
-            <h2>Password Vault</h2>
-            <p class="level-desc"><span class="level-theme">Credential Hardening</span> — Attackers obtained weak credentials. Choose a password that meets security standards.</p>
-          </div>
-          <button class="btn btn--hint" data-hint-room="password">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-password" hidden></div>
-          <div class="password-grid" id="passwordOptions"></div>
-          <div class="feedback" id="feedback-password" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-password" disabled>SUBMIT</button>
-        </div>
-      </section>
-
-      <!-- Room 3: Cipher -->
-      <section class="screen" data-screen="cipher">
-        <div class="room-shell room-theme room-theme--military">
-          <p class="room-theme__tag">[ SYSTEM: ENCRYPTED MILITARY CONSOLE ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-          <div class="level-header">
-            <span class="level-badge room-badge" data-room="cipher">Chapter 3 — Room 7</span>
-            <h2>Cipher Lab</h2>
-            <p class="level-desc"><span class="level-theme">Encrypted Comms</span> — Intercept attacker communications. Decode the command (shift each letter back by 3).</p>
-          </div>
-          <button class="btn btn--hint" data-hint-room="cipher">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-cipher" hidden></div>
-          <div class="cipher-box">
-            <label class="cipher-label">Encrypted</label>
-            <code class="cipher-text">WRS VHFRHW</code>
-          </div>
-          <div class="input-group input-group--pixel">
-            <label for="cipherAnswer">&gt; DOOR CODE</label>
-            <input type="text" id="cipherAnswer" class="input input--pixel" placeholder="enter decoded code..." autocomplete="off">
-          </div>
-          <div class="feedback" id="feedback-cipher" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-cipher">UNLOCK DOOR</button>
-        </div>
-      </section>
-
-      <!-- Ch3: Steganography -->
-      <section class="screen" data-screen="steganography">
-        <div class="room-shell room-theme room-theme--stego">
-          <p class="room-theme__tag">[ SYSTEM: STEGANO LAB ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="steganography">Chapter 3 — Room 8</span>
-              <h2>Steganography</h2>
-              <p class="level-desc"><span class="level-theme">Hidden Data</span> — Attackers embedded commands in an image. Scan for concealed data.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="steganography">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-steganography" hidden></div>
-          <p class="stego-prompt">Click suspicious areas of the image to scan for hidden payloads:</p>
-          <div class="stego-scanner">
-            <div class="stego-image" id="stegoImage">
-              <span class="stego-image__label">vacation_photo.jpg</span>
-              <div class="stego-hotspot stego-hotspot--sky" data-stego="sky" tabindex="0" title="Scan sky region"></div>
-              <div class="stego-hotspot stego-hotspot--corner" data-stego="payload" tabindex="0" title="Scan corner pixels"></div>
-              <div class="stego-hotspot stego-hotspot--center" data-stego="center" tabindex="0" title="Scan center"></div>
-            </div>
-            <div class="stego-readout" id="stegoReadout">
-              <p class="stego-readout__status">AWAITING SCAN…</p>
-              <p class="stego-readout__data" id="stegoData" hidden></p>
-            </div>
-          </div>
-          <div class="feedback" id="feedback-steganography" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-steganography" disabled>EXTRACT PAYLOAD</button>
-        </div>
-      </section>
-
-      <!-- Room 4: SQL Injection -->
-      <section class="screen" data-screen="sql">
-        <div class="room-shell room-theme room-theme--server">
-          <p class="room-theme__tag">[ SYSTEM: SERVER RACK MONITOR ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="sql">Chapter 4 — Room 10</span>
-              <h2>SQL Injection</h2>
-              <p class="level-desc"><span class="level-theme">Database Access</span> — The attacker exploited a vulnerable login. Patch the system before data is stolen.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="sql">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-sql" hidden></div>
-          <div class="code-block">
-            <p class="code-block__label">Vulnerable login query</p>
-            <pre><code>SELECT * FROM users
-WHERE username = '" + username + "'
-AND password = '" + password + "'"</code></pre>
-          </div>
-          <p class="level-desc">Attacker input: <code class="inline-code">admin' --</code></p>
-          <div class="option-grid" id="sqlOptions"></div>
-          <div class="feedback" id="feedback-sql" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-sql" disabled>APPLY FIX</button>
-        </div>
-      </section>
-
-      <!-- Ch4: Database Forensics -->
-      <section class="screen" data-screen="db_forensics">
-        <div class="room-shell room-theme room-theme--forensics">
-          <p class="room-theme__tag">[ SYSTEM: DB FORENSICS ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="db_forensics">Chapter 4 — Room 11</span>
-              <h2>Database Forensics</h2>
-              <p class="level-desc"><span class="level-theme">Data Exfiltration</span> — Review export logs and identify which batch of customer records was stolen.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="db_forensics">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-db_forensics" hidden></div>
-          <div class="log-table-wrap">
-            <table class="log-table forensics-table">
-              <thead><tr><th>Export ID</th><th>User</th><th>Records</th><th>Destination</th><th>Time</th></tr></thead>
-              <tbody>
-                <tr><td>EXP-4412</td><td>jsmith</td><td>12</td><td>internal/reporting</td><td>09:15</td></tr>
-                <tr class="row--highlight"><td>EXP-4419</td><td>svc-backup</td><td>52,840</td><td>185.220.101.44</td><td>02:03</td></tr>
-                <tr><td>EXP-4420</td><td>mwilson</td><td>3</td><td>internal/hr</td><td>11:22</td></tr>
-                <tr><td>EXP-4421</td><td>etl-nightly</td><td>8,200</td><td>warehouse-db</td><td>03:00</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="log-prompt">Which export indicates data exfiltration?</p>
-          <div class="option-grid" id="dbForensicsOptions"></div>
-          <div class="feedback" id="feedback-db_forensics" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-db_forensics" disabled>FLAG EXPORT</button>
-        </div>
-      </section>
-
-      <!-- Room 5: Logs -->
-      <section class="screen" data-screen="logs">
-        <div class="room-shell room-theme room-theme--bank">
-          <p class="room-theme__tag">[ SYSTEM: SECURE BANK PORTAL ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="logs">Chapter 5 — Room 13</span>
-              <h2>Log Analysis</h2>
-              <p class="level-desc"><span class="level-theme">Threat Hunting</span> — Review authentication logs. Identify the attacker IP and timeline.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="logs">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-logs" hidden></div>
-          <div class="log-table-wrap">
-            <table class="log-table"><thead><tr><th>Time</th><th>User</th><th>IP</th><th>Status</th><th>Location</th></tr></thead>
-            <tbody id="logTableBody"></tbody></table>
-          </div>
-          <p class="log-prompt log-prompt--bank">Select the attacker IP from the authentication log:</p>
-          <div class="ip-options" id="ipOptions"></div>
-          <div class="feedback" id="feedback-logs" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-logs" disabled>SUBMIT</button>
-        </div>
-      </section>
-
-      <!-- Ch5: SIEM Dashboard -->
-      <section class="screen" data-screen="siem">
-        <div class="room-shell room-theme room-theme--siem">
-          <p class="room-theme__tag">[ SYSTEM: SIEM DASHBOARD ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="siem">Chapter 5 — Room 14</span>
-              <h2>SIEM Dashboard</h2>
-              <p class="level-desc"><span class="level-theme">Alert Correlation</span> — Multiple alerts fired at once. Identify the attack pattern.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="siem">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-siem" hidden></div>
-          <div class="siem-alerts">
-            <div class="siem-alert siem-alert--warn">⚠ 09:02 — Brute force: 47 failed logins from 203.45.67.89</div>
-            <div class="siem-alert siem-alert--crit">🔴 09:04 — Impossible travel: admin login NYC → RU in 4 min</div>
-            <div class="siem-alert siem-alert--crit">🔴 09:06 — Outbound transfer: 2.1 GB to unknown external IP</div>
-            <div class="siem-alert siem-alert--info">ℹ 09:10 — Printer offline: Floor 3</div>
-          </div>
-          <p class="log-prompt">Which alert sequence best indicates a successful breach?</p>
-          <div class="option-grid" id="siemOptions"></div>
-          <div class="feedback" id="feedback-siem" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-siem" disabled>CORRELATE</button>
-        </div>
-      </section>
-
-      <!-- Room 6: Social Engineering -->
-      <section class="screen" data-screen="social">
-        <div class="room-shell room-theme room-theme--soc">
-          <p class="room-theme__tag">[ SYSTEM: SOC DASHBOARD ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="social">Chapter 6 — Room 16</span>
-              <h2>Social Engineering</h2>
-              <p class="level-desc"><span class="level-theme">Human Factor</span> — Determine how the attacker manipulated staff. Choose the safest response.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="social">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-social" hidden></div>
-          <div class="scenario-box">
-            <p>📞 Incoming call: "Hi, this is IT Support. We're seeing a breach on your account and need your password <em>right now</em> to lock it down. You have 30 seconds."</p>
-          </div>
-          <div class="option-grid" id="socialOptions"></div>
-          <div class="feedback" id="feedback-social" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-social" disabled>CONFIRM RESPONSE</button>
-        </div>
-      </section>
-
-      <!-- Ch6: Insider Threat -->
-      <section class="screen" data-screen="insider">
-        <div class="room-shell room-theme room-theme--insider">
-          <p class="room-theme__tag">[ SYSTEM: HR SECURITY ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="insider">Chapter 6 — Room 17</span>
-              <h2>Insider Threat</h2>
-              <p class="level-desc"><span class="level-theme">Internal Investigation</span> — Someone moved large amounts of data. Identify suspicious employee activity.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="insider">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-insider" hidden></div>
-          <div class="insider-grid">
-            <div class="insider-card"><strong>Alice Chen</strong><p>Normal hours · 14 MB accessed · No USB</p></div>
-            <div class="insider-card insider-card--suspect"><strong>Bob Martinez</strong><p>03:12 AM · 2.4 GB downloaded · USB inserted</p></div>
-            <div class="insider-card"><strong>Carol Reed</strong><p>On vacation · No login activity</p></div>
-            <div class="insider-card"><strong>Dave Park</strong><p>Lunch break · Personal web browsing only</p></div>
-          </div>
-          <p class="log-prompt">Who shows insider threat indicators?</p>
-          <div class="option-grid" id="insiderOptions"></div>
-          <div class="feedback" id="feedback-insider" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-insider" disabled>REPORT</button>
-        </div>
-      </section>
-
-      <!-- Room 7: MFA -->
-      <section class="screen" data-screen="mfa">
-        <div class="room-shell room-theme room-theme--hacker">
-          <p class="room-theme__tag">[ SYSTEM: HACKER TERMINAL ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="mfa">Chapter 2 — Room 5</span>
-              <h2>MFA Lockdown</h2>
-              <p class="level-desc"><span class="level-theme">Account Protection</span> — Roll out MFA and stop credential abuse before the attacker pivots deeper.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="mfa">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-mfa" hidden></div>
-          <div class="scenario-box scenario-box--sms">
-            <p>📱 SMS from unknown number:</p>
-            <p class="sms-bubble">"Your verification code is <strong>847291</strong>. An IT agent is on the line — read this code aloud to confirm your identity."</p>
-          </div>
-          <div class="option-grid" id="mfaOptions"></div>
-          <div class="feedback" id="feedback-mfa" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-mfa" disabled>SUBMIT</button>
-        </div>
-      </section>
-
-      <!-- Ch2 Boss -->
-      <section class="screen" data-screen="ch2_boss">
-        <div class="room-shell room-theme room-theme--hacker boss-room">
-          <p class="room-theme__tag">[ BOSS: CREDENTIAL LOCKDOWN ]</p>
-          <div class="act-banner act-banner--boss">Chapter 2 Boss — Lock the Attacker Out</div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge room-badge--boss">CHAPTER 2 BOSS</span>
-              <h2>Credential Lockdown</h2>
-              <p class="level-desc">Rotate compromised credentials and enforce MFA before the attacker pivots. Complete both tasks within <strong>90 seconds</strong>.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="ch2_boss">? HINT</button>
-          </div>
-          <div class="boss-hud">
-            <div class="boss-hud__timer">LOCKOUT IN: <strong id="ch2BossTimer">01:30</strong></div>
-            <div class="boss-hud__tasks">TASKS: <strong id="ch2BossTaskCount">0</strong> / 2</div>
-          </div>
-          <div class="tutor-panel" id="tutor-ch2_boss" hidden></div>
-          <div class="boss-grid">
-            <div class="boss-panel" data-boss="rotate">
-              <h3 class="boss-panel__title">🔑 Rotate Password</h3>
-              <p class="boss-panel__desc">Select a new password for the compromised admin account:</p>
-              <div class="boss-option-list" id="ch2BossPasswordOptions"></div>
-              <span class="boss-panel__status" id="ch2StatusRotate">Pending</span>
-            </div>
-            <div class="boss-panel" data-boss="mfa">
-              <h3 class="boss-panel__title">📱 Enforce MFA</h3>
-              <p class="boss-mini-sms">"Read code <strong>847291</strong> aloud to verify your identity."</p>
-              <div class="boss-option-list" id="ch2BossMfaOptions"></div>
-              <span class="boss-panel__status" id="ch2StatusMfa">Pending</span>
-            </div>
-          </div>
-          <div class="feedback" id="feedback-ch2_boss" hidden></div>
-        </div>
-      </section>
-
-      <!-- Ch8: Backup Recovery -->
-      <section class="screen" data-screen="backup">
-        <div class="room-shell room-theme room-theme--backup">
-          <p class="room-theme__tag">[ SYSTEM: BACKUP VAULT ]</p>
-          <div class="act-banner chapter-banner" data-chapter-banner></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" data-room="backup">Chapter 8 — Room 22</span>
-              <h2>Backup Recovery</h2>
-              <p class="level-desc"><span class="level-theme">Restore Point</span> — Ransomware encrypted live systems. Select the last known clean backup.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="backup">? HINT</button>
-          </div>
-          <div class="tutor-panel" id="tutor-backup" hidden></div>
-          <div class="backup-list">
-            <div class="backup-entry"><code>backup_2024-05-28</code><span>Clean · verified</span></div>
-            <div class="backup-entry backup-entry--good"><code>backup_2024-06-01</code><span>Clean · last pre-infection snapshot</span></div>
-            <div class="backup-entry backup-entry--bad"><code>backup_2024-06-04</code><span>⚠ Encrypted files detected</span></div>
-            <div class="backup-entry backup-entry--bad"><code>backup_2024-06-05</code><span>🔴 Ransom note present</span></div>
-          </div>
-          <p class="log-prompt">Which backup should you restore from?</p>
-          <div class="option-grid" id="backupOptions"></div>
-          <div class="feedback" id="feedback-backup" hidden></div>
-          <button class="btn btn--primary btn--pixel" id="btn-backup" disabled>RESTORE</button>
-        </div>
-      </section>
-
-      <!-- Room 8: Final Boss -->
-      <section class="screen" data-screen="ransomware">
-        <div class="room-shell room-theme room-theme--mainframe boss-room">
-          <p class="room-theme__tag">[ FINAL BOSS: MAINFRAME CORE ]</p>
-          <div class="act-banner act-banner--boss">Chapter 8 Boss — Stop the Ransomware</div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge room-badge--boss">FINAL BOSS</span>
-              <h2>Ransomware Crisis</h2>
-              <p class="level-desc">Every skill you learned is required. Complete all <strong>5 containment tasks</strong> within <strong>5 minutes</strong>, then stop the ransomware deployment.</p>
-            </div>
-            <button class="btn btn--hint" data-hint-room="ransomware">? HINT</button>
-          </div>
-          <div class="boss-hud">
-            <div class="boss-hud__timer">CONTAIN IN: <strong id="bossTimer">05:00</strong></div>
-            <div class="boss-hud__tasks">TASKS: <strong id="bossTaskCount">0</strong> / 5</div>
-          </div>
-          <div class="tutor-panel" id="tutor-ransomware" hidden></div>
-          <div class="boss-grid">
-            <div class="boss-panel" data-boss="phishing">
-              <h3 class="boss-panel__title">📧 Threat Email</h3>
-              <p class="boss-panel__desc">Quarantine the phishing sender.</p>
-              <p class="boss-mini-email"><span class="boss-phish-target" tabindex="0">From: security@paypa1-verify.com</span></p>
-              <span class="boss-panel__status" id="bossStatusPhishing">Pending</span>
-            </div>
-            <div class="boss-panel" data-boss="cipher">
-              <h3 class="boss-panel__title">🔐 Intercepted Command</h3>
-              <code class="cipher-text">WRS VHFRHW</code>
-              <input type="text" id="bossCipherInput" class="input input--pixel boss-input" placeholder="decoded command..." autocomplete="off">
-              <button type="button" class="btn btn--pixel btn--boss-task" id="bossCipherBtn">DECODE</button>
-              <span class="boss-panel__status" id="bossStatusCipher">Pending</span>
-            </div>
-            <div class="boss-panel" data-boss="sql">
-              <h3 class="boss-panel__title">🗄️ Database Breach</h3>
-              <p class="boss-panel__desc">Patch the vulnerable login query.</p>
-              <div class="boss-option-list" id="bossSqlOptions"></div>
-              <span class="boss-panel__status" id="bossStatusSql">Pending</span>
-            </div>
-            <div class="boss-panel" data-boss="logs">
-              <h3 class="boss-panel__title">📊 Attack Logs</h3>
-              <p class="boss-panel__desc">Identify the attacker IP address.</p>
-              <div class="boss-option-list" id="bossIpOptions"></div>
-              <span class="boss-panel__status" id="bossStatusLogs">Pending</span>
-            </div>
-            <div class="boss-panel" data-boss="mfa">
-              <h3 class="boss-panel__title">📱 MFA Alert</h3>
-              <p class="boss-mini-sms">"Read code <strong>847291</strong> aloud to verify your identity."</p>
-              <div class="boss-option-list" id="bossMfaOptions"></div>
-              <span class="boss-panel__status" id="bossStatusMfa">Pending</span>
-            </div>
-          </div>
-          <div class="boss-contain" id="bossContain" hidden>
-            <div class="ransomware-popup animate-shake">
-              <div class="ransomware-popup__header">⚠️ RANSOMWARE DEPLOYING</div>
-              <p>Encryption is spreading. Execute containment protocol NOW.</p>
-            </div>
-            <div class="boss-option-list" id="bossContainOptions"></div>
-          </div>
-          <div class="feedback" id="feedback-ransomware" hidden></div>
-        </div>
-      </section>
-
-      <!-- Engine-driven rooms (Ch2–Ch14 expansion) -->
-      <section class="screen" data-screen="_engine">
-        <div class="room-shell room-theme room-theme--server" id="engineRoomShell">
-          <p class="room-theme__tag" id="engineRoomTag">[ SYSTEM: TRAINING MODULE ]</p>
-          <div class="act-banner chapter-banner" id="engineChapterBanner"></div>
-          <div class="room-toolbar">
-            <div class="level-header">
-              <span class="level-badge room-badge" id="engineRoomBadge">Chapter — Room</span>
-              <h2 id="engineRoomTitle">Training Module</h2>
-              <p class="level-desc" id="engineRoomDesc"></p>
-            </div>
-            <button type="button" class="btn btn--hint" id="btn-engine-hint">? HINT</button>
-            <button type="button" class="btn btn--hint btn--read-aloud" id="btn-engine-read" hidden title="Read question aloud">🔊 READ</button>
-          </div>
-          <div class="tutor-panel" id="tutor-engine" hidden></div>
-          <div id="engineRoomBody"></div>
-          <div class="feedback" id="feedback-engine" hidden></div>
-          <button type="button" class="btn btn--primary btn--pixel" id="btn-engine" disabled>SUBMIT</button>
-        </div>
-      </section>
-
-      <!-- Quiz -->
-      <section class="screen" data-screen="quiz">
-        <div class="quiz-arena" id="quizArena">
-          <div class="quiz-arena__fx" id="quizFx" aria-hidden="true"></div>
-          <div class="quiz-arena__flash" id="quizFlash" aria-hidden="true"></div>
-          <div class="quiz-arena__header">
-            <p class="quiz-arena__label"><span class="quiz-arena__bolt" aria-hidden="true">⚡</span> LIGHTNING DEBRIEF</p>
-            <p class="quiz-arena__tagline">Quick-fire security check — 3 questions, one at a time</p>
-            <div class="quiz-arena__dots" id="quizProgress" aria-label="Quiz progress"></div>
-            <div class="quiz-arena__meta">
-              <span id="quizCounter" class="quiz-arena__counter">Round 1 / 3</span>
-              <div class="quiz-arena__timer-wrap">
-                <span class="quiz-arena__timer-ring" id="quizTimerRing" aria-hidden="true"></span>
-                <span class="quiz-arena__timer" id="quizTimer">18</span>
-              </div>
-            </div>
-          </div>
-          <div class="quiz-arena__card" id="quizCard">
-            <p class="quiz-arena__prompt" id="quizPrompt"></p>
-            <div class="quiz-arena__options" id="quizOptions"></div>
-            <p class="quiz-arena__explain" id="quizExplain" hidden></p>
-          </div>
-          <p class="quiz-arena__score-pop" id="quizScorePop" hidden aria-hidden="true">+25</p>
-          <p class="quiz-arena__streak" id="quizStreak" hidden></p>
-          <div class="feedback quiz-arena__feedback" id="feedback-quiz" hidden></div>
-        </div>
-      </section>
-
-      <!-- Certificate -->
-      <section class="screen" data-screen="certificate">
-        <div class="certificate">
-          <div class="certificate__border">
-            <p class="certificate__label">Certificate of Completion</p>
-            <h2 class="certificate__title">Cybersecurity Escape Room</h2>
-            <p class="certificate__awarded">Awarded to</p>
-            <p class="certificate__name" id="certName">Student</p>
-            <div class="certificate__stats" id="certStats"></div>
-            <div class="campaign-map-wrap">
-              <h3 class="campaign-map__heading">Campaign Progress</h3>
-              <div class="campaign-map" id="certCampaignMap"></div>
-              <p class="campaign-map__secret" id="certSecretTeaser" hidden>✨ Flawless completion — Operation Chimera cleared with zero mistakes.</p>
-            </div>
-            <div class="achievements-list" id="certAchievements"></div>
-            <div class="leaderboard-panel leaderboard-panel--cert">
-              <h3>TOP OPERATIVES</h3>
-              <div id="certLeaderboard"></div>
-            </div>
-            <p class="certificate__date" id="certDate"></p>
-            <button class="btn btn--primary" id="btnPrint">Print Certificate</button>
-            <button class="btn btn--secondary" id="btnExportResults">Export CSV</button>
-            <button class="btn btn--secondary" id="btnRestart">Play Again</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Game Over / Fail Screen -->
-      <section class="screen" data-screen="gameover">
-        <div class="fail-screen">
-          <div class="fail-screen__border">
-            <p class="fail-screen__label">⚠ SYSTEM COMPROMISED</p>
-            <h2 class="fail-screen__title">Mission Failed</h2>
-            <p class="fail-screen__agent">Operative: <strong id="failAgentName">Agent</strong></p>
-            <p class="fail-screen__cause" id="failCause"></p>
-            <div class="certificate__stats" id="failStats"></div>
-            <div class="campaign-map-wrap">
-              <h3 class="campaign-map__heading">Campaign Progress — Failure Point</h3>
-              <div class="campaign-map campaign-map--fail" id="failCampaignMap"></div>
-            </div>
-            <ul class="fail-screen__tips" id="failTips"></ul>
-            <p class="fail-screen__date" id="failDate"></p>
-            <div class="fail-screen__actions">
-              <button class="btn btn--primary btn--pixel" id="btnRetryChapter">RETRY CHAPTER</button>
-              <button class="btn btn--secondary btn--pixel" id="btnRetry">FULL RESTART</button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer footer--pixel">
-      <a href="teacher.html" class="footer__link">[ TEACHER DASHBOARD ]</a>
-      <p class="footer__tagline">STAY SECURE. THINK SECURE. BE SECURE.</p>
-    </footer>
-  </div>
-
-  <button type="button" id="btnReadAloud" class="read-aloud-fab" hidden title="Read current question aloud">🔊 READ</button>
-  <p id="readAloudMobileHint" class="read-aloud-mobile-hint" hidden aria-live="polite"></p>
-
-  <div id="achievementToast" class="achievement-toast" hidden>
-    <span class="achievement-toast__icon">🏆</span>
-    <div>
-      <strong id="achievementTitle">Achievement</strong>
-      <p id="achievementDesc">Unlocked!</p>
-    </div>
-  </div>
-
-  <div id="missionBriefModal" class="brief-modal" hidden>
-    <div class="brief-modal__panel">
-      <p class="brief-modal__label">MISSION BRIEFING</p>
-      <h3 class="brief-modal__title" id="briefTitle"></h3>
-      <p class="brief-modal__story" id="briefStory"></p>
-      <p class="brief-modal__objective" id="briefObjective"></p>
-      <div class="brief-modal__actions">
-        <button type="button" class="btn btn--secondary btn--pixel btn--read-aloud" id="btnBriefRead" hidden title="Read briefing aloud">🔊 READ</button>
-        <button type="button" class="btn btn--primary btn--pixel" id="btnBriefStart">[ BEGIN MISSION ]</button>
+  <header class="menu-top">
+    <span class="menu-top__academy">EU CYBER DEFENSE ACADEMY // SIM #1998</span>
+    <div class="menu-top__chimera">
+      <span class="menu-top__sys">CHIMERA SYSTEM v2.1.7</span>
+      <div class="chimera-term" aria-live="polite">
+        <div class="chimera-term__head">CHIMERA:</div>
+        <div class="chimera-term__body"><span id="chimeraGreeting"></span><span class="chimera-cursor" aria-hidden="true">_</span></div>
       </div>
     </div>
-  </div>
+  </header>
 
-  <div id="hijackVerifyModal" class="hijack-modal" hidden>
-    <div class="hijack-modal__panel">
-      <p class="hijack-modal__label">⚠ DOUBLE-CHECK — POSSIBLE UI HIJACK</p>
-      <p class="hijack-modal__question" id="hijackVerifyQuestion"></p>
-      <div class="option-grid" id="hijackVerifyOptions"></div>
-      <div class="feedback hijack-verify-feedback" id="hijackVerifyFeedback" hidden></div>
-      <div class="hijack-modal__actions">
-        <button type="button" class="btn btn--primary btn--pixel" id="btnHijackVerifySubmit" disabled>CONFIRM</button>
-        <button type="button" class="btn btn--secondary btn--pixel" id="btnHijackVerifyClose">CLOSE</button>
+  <main class="menu-shell">
+    <div class="menu-brand">
+      <div class="menu-brand__row">
+        <h1 class="menu-brand__title">
+          <span class="menu-brand__project">PROJECT</span>
+          <span class="menu-brand__chimera">CHIMERA</span>
+        </h1>
+        <div class="menu-brand__logo" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="52" height="52" role="img" aria-label="">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#00ff66" stroke-width="2"/>
+            <circle cx="32" cy="28" r="10" fill="none" stroke="#00ff66" stroke-width="2"/>
+            <rect x="22" y="38" width="20" height="8" rx="2" fill="#00ff66" opacity="0.7"/>
+            <line x1="32" y1="4" x2="32" y2="12" stroke="#00ff66" stroke-width="2"/>
+            <line x1="32" y1="52" x2="32" y2="60" stroke="#00ff66" stroke-width="2"/>
+            <line x1="4" y1="32" x2="12" y2="32" stroke="#00ff66" stroke-width="2"/>
+            <line x1="52" y1="32" x2="60" y2="32" stroke="#00ff66" stroke-width="2"/>
+          </svg>
+        </div>
       </div>
+      <p class="menu-brand__tag">A PSYCHOLOGICAL CYBER HORROR</p>
+    </div>
+
+    <nav class="menu-nav" id="menuNav" aria-label="Main menu">
+      <button type="button" class="menu-item menu-item--active" data-action="new">
+        <span class="menu-item__icon" aria-hidden="true">▶</span>
+        <span class="menu-item__text">
+          <span class="menu-item__label">NEW RUN</span>
+          <span class="menu-item__sub">START SECTOR 1</span>
+        </span>
+      </button>
+      <button type="button" class="menu-item" data-action="continue" id="menuContinue">
+        <span class="menu-item__icon" aria-hidden="true">◻</span>
+        <span class="menu-item__text">
+          <span class="menu-item__label">CONTINUE</span>
+          <span class="menu-item__sub" id="continueSub">RESUME LAST RUN</span>
+        </span>
+      </button>
+      <button type="button" class="menu-item" data-action="settings">
+        <span class="menu-item__icon" aria-hidden="true">☰</span>
+        <span class="menu-item__text">
+          <span class="menu-item__label">SETTINGS</span>
+          <span class="menu-item__sub">AUDIO / VIDEO / GAMEPLAY</span>
+        </span>
+      </button>
+      <button type="button" class="menu-item" data-action="logs">
+        <span class="menu-item__icon" aria-hidden="true">▤</span>
+        <span class="menu-item__text">
+          <span class="menu-item__label">TRAINING LOGS</span>
+          <span class="menu-item__sub">UNLOCKED ARCHIVES</span>
+        </span>
+      </button>
+      <button type="button" class="menu-item" data-action="credits">
+        <span class="menu-item__icon" aria-hidden="true">☻</span>
+        <span class="menu-item__text">
+          <span class="menu-item__label">CREDITS</span>
+          <span class="menu-item__sub">DEVELOPMENT TEAM</span>
+        </span>
+      </button>
+      <button type="button" class="menu-item" data-action="exit">
+        <span class="menu-item__icon" aria-hidden="true">⏻</span>
+        <span class="menu-item__text">
+          <span class="menu-item__label">EXIT</span>
+          <span class="menu-item__sub">SHUTDOWN SYSTEM</span>
+        </span>
+      </button>
+    </nav>
+
+    <div class="menu-status" role="status">
+      <span class="menu-status__icon" aria-hidden="true">🔒</span>
+      <div>
+        <div class="menu-status__line menu-status__line--alert">FACILITY STATUS: LOCKDOWN</div>
+        <div class="menu-status__line">SEAL INTEGRITY: ACTIVE</div>
+      </div>
+    </div>
+
+    <p class="menu-version">v0.3.0 — EARLY ACCESS</p>
+  </main>
+
+  <footer class="menu-foot">
+    <div class="menu-flavor">
+      <p id="menuFlavor">They came before you.</p>
+      <p>Most of them never left.<span class="flavor-cursor" aria-hidden="true">_</span></p>
+    </div>
+    <div class="menu-keys">
+      <span>[ ↑↓ ] NAVIGATE</span>
+      <span>[ E / ENTER ] SELECT</span>
+      <span>[ ESC ] BACK</span>
+    </div>
+  </footer>
+
+  <!-- Modals -->
+  <div id="menuModal" class="menu-modal hidden" role="dialog" aria-modal="true" aria-labelledby="menuModalTitle">
+    <div class="menu-modal__panel">
+      <h2 id="menuModalTitle" class="menu-modal__title">SETTINGS</h2>
+      <div id="menuModalBody" class="menu-modal__body"></div>
+      <button type="button" id="menuModalClose" class="menu-modal__close">[ CLOSE ]</button>
     </div>
   </div>
 
-  <script src="js/config.js"></script>
   <script src="js/profile-save.js"></script>
   <script src="js/audio.js"></script>
-  <script src="js/achievements.js"></script>
-  <script src="js/rooms-data.js"></script>
-  <script src="js/campaign.js"></script>
-  <script src="js/game-state.js"></script>
-  <script src="js/room-engine.js"></script>
-  <script src="js/pixel-fx.js"></script>
-  <script src="js/read-aloud.js?v=6"></script>
-  <script src="js/hijack-system.js"></script>
-  <script src="js/tutor-client.js"></script>
-  <script src="js/app.js?v=11"></script>
+  <script src="js/menu.js?v=2"></script>
 </body>
 </html>

@@ -86,19 +86,14 @@
     }
 
     const ry = POSITIONS.roomY;
-    const wallSpots = [{ col: 19, row: ry + 3, face: 'west' }];
-    const graffiti = sec.graffiti || ['581 WAS HERE'];
-    const gr = graffiti[0];
-    if (gr && typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.addWallGraffiti) {
-      const spot = wallSpots[0];
-      FacilityAtmosphere.addWallGraffiti(scene, gr, {
-        col: spot.col,
-        row: spot.row,
-        face: spot.face,
-        fontSize: '10px',
-        color: '#445566',
-        alpha: 0.5,
-      });
+    if (!sec.horror && typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.addWallGraffiti) {
+      const graffiti = sec.graffiti || ['581 WAS HERE'];
+      const gr = graffiti[0];
+      if (gr) {
+        FacilityAtmosphere.addWallGraffiti(scene, gr, {
+          col: 19, row: ry + 3, face: 'west', fontSize: '10px', color: '#445566', alpha: 0.5,
+        });
+      }
     }
 
     if (sec.isCore) {

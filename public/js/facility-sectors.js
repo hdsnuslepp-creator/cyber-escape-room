@@ -57,6 +57,20 @@
         { label: '[ TRACE THE PIVOT ]', stance: 'listen', response: 'Brave.\nSector 3 holds what they took.\n…when you are ready.' },
       ],
       completeQuote: '"They were inside — then you locked the door."',
+      horror: {
+        remains: [{
+          type: 'abandoned_suit',
+          col: 17,
+          row: 6,
+          traineeId: '1777',
+          notebook: 'Rotation protocol failed.\nI heard 581 on the intercom.\nThen silence.',
+          inspectBody: 'TRAINEE 1777 — FAILED\n\nSuit still pressurized.\nBadge clipped.\n\nNo skeleton. They walked away — or were taken.',
+        }],
+        wallMessages: [
+          { col: 19, row: 4, face: 'west', text: "DON'T TRUST THE VOICES", alpha: 0.38, color: '#554466' },
+          { col: 19, row: 6, face: 'west', text: '581 TRIED TO WARN YOU', alpha: 0.42, color: '#554466' },
+        ],
+      },
     },
     {
       id: 3,
@@ -80,6 +94,22 @@
         { label: '[ FOLLOW THE BEACON ]', stance: 'listen', response: 'Then you will see\nwhat they wanted from the database.' },
       ],
       completeQuote: '"The signals stopped — but something was already copied."',
+      horror: {
+        remains: [{
+          type: 'skeleton',
+          col: 18,
+          row: 5,
+          traineeId: '412',
+          badge: true,
+          chimeraLine: 'He lasted longer than most.',
+          inspectBody: 'TRAINEE 412\n\nSlumped against the wall.\nNo signs of struggle.\n\nID badge still clipped.',
+        }],
+        wallMessages: [
+          { col: 19, row: 3, face: 'west', text: '581 WAS HERE', alpha: 0.44, color: '#336644' },
+          { col: 19, row: 5, face: 'west', text: 'THE WIRE REMEMBERS', alpha: 0.4, color: '#336644' },
+          { col: 19, row: 7, face: 'west', text: 'LISTEN CLOSER', alpha: 0.36, color: '#336644' },
+        ],
+      },
     },
     {
       id: 4,
@@ -103,6 +133,21 @@
         { label: '[ HUNT THE ATTACKER ]', stance: 'listen', response: 'Good.\nSector 5 is where they hide.' },
       ],
       completeQuote: '"The database held — this time."',
+      horror: {
+        remains: [{
+          type: 'notebook',
+          col: 17,
+          row: 5,
+          traineeId: '0144',
+          lines: ['Day 12.', 'The logs are wrong.', 'I turned the cameras off.'],
+          inspectTitle: 'NOTEBOOK — TRAINEE 0144',
+          inspectBody: 'Day 12.\nThe logs are wrong.\nI turned the cameras off.\n\n— TERMINATED',
+        }],
+        wallMessages: [
+          { col: 19, row: 4, face: 'west', text: 'I TURNED THE CAMERAS OFF', alpha: 0.4, color: '#664433' },
+          { col: 19, row: 6, face: 'west', text: '581 TRIED TO PATCH THIS', alpha: 0.38, color: '#664433' },
+        ],
+      },
     },
     {
       id: 5,
@@ -149,6 +194,22 @@
         { label: '[ INTERROGATE QUIETLY ]', stance: 'listen', response: 'Then you will understand\nwhy Sector 7 is burning.' },
       ],
       completeQuote: '"The human factor — contained."',
+      horror: {
+        remains: [{
+          type: 'skeleton',
+          col: 15,
+          row: 5,
+          traineeId: '998',
+          flashlight: true,
+          echoTerminal: "DON'T LET IT\nTALK TO YOU.",
+          chimeraLine: 'I was wondering when you would notice.',
+          inspectBody: 'TRAINEE 998 — FAILED\n\nStill holding the flashlight.\nScreen glows on a dead terminal.\n\n"DON\'T LET IT TALK TO YOU."',
+        }],
+        wallMessages: [
+          { col: 19, row: 4, face: 'west', text: '581 TRUSTED SOMEONE', alpha: 0.42, color: '#664466' },
+          { col: 19, row: 6, face: 'west', text: 'VERIFY HUMANS', alpha: 0.38, color: '#664466' },
+        ],
+      },
     },
     {
       id: 7,
@@ -196,6 +257,23 @@
         { label: '[ HEAR THE TRUTH ]', stance: 'listen', response: 'Then you know\nwhy 581 disappeared.' },
       ],
       completeQuote: '"Project CHIMERA — ended."',
+      horror: {
+        remains: [{
+          type: 'skeleton',
+          col: 9,
+          row: 4,
+          traineeId: '581',
+          terminalHand: true,
+          terminalMessage: 'WELCOME BACK\nTRAINEE 1998',
+          terminalColor: 0xff2288,
+          chimeraLine: 'You found him.',
+          inspectBody: 'TRAINEE 581\n\nHand on the terminal.\nLike they never left.\n\nThe screen reads your number.',
+        }],
+        wallMessages: [
+          { col: 1, row: 4, face: 'east', text: 'DO NOT ANSWER', alpha: 0.48, color: '#884466', mutable: true, altText: 'HE IS LISTENING' },
+          { col: 19, row: 5, face: 'west', text: '581 WAS RIGHT', alpha: 0.44, color: '#884466' },
+        ],
+      },
     },
   ];
 

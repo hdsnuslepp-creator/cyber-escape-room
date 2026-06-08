@@ -335,16 +335,15 @@
       body.fillRect(28, 38, 12, 8);
     }
 
-    // 581 — tiny note taped to upper-right bezel (not on the glass)
-    const sticky581 = addStickyNote(scene, 47, 6, ['581'], {
-      w: 18, h: 13, fontSize: '10px', angle: -14, tape: true,
+    // 581 — taped to upper-right bezel; scale down for 2× explore camera
+    const sticky581 = addStickyNote(scene, 44, 4, ['581'], {
+      w: 16, h: 12, fontSize: '9px', angle: -12, tape: true,
       paper: 0xf0e0b8, ink: '#3a2818',
-    });
-    // DON'T ANSWER IT — folded note on the desk in front of the keyboard
-    const stickyWarn = addStickyNote(scene, 14, 46, ["DON'T", 'ANSWER IT'], {
-      w: 30, h: 20, fontSize: '8px', lineH: 7, angle: -5, deskShadow: true,
+    }).setScale(0.55);
+    const stickyWarn = addStickyNote(scene, 10, 50, ["DON'T", 'ANSWER IT'], {
+      w: 26, h: 18, fontSize: '7px', lineH: 6, angle: -4, deskShadow: true,
       paper: 0xffeedd, ink: '#882222',
-    }).setVisible(false);
+    }).setScale(0.55).setVisible(false);
 
     let nearActive = false;
     let frozen = false;

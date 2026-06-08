@@ -40,6 +40,9 @@
     ['Careful.', 'That endpoint is bait.'],
     ['Hmm.', '1997 picked the obvious one.'],
     ['I would reconsider.', 'They always reconsider.'],
+    ['You found him.', 'Eventually everyone does.'],
+    ['He lasted longer than most.', 'You might as well.'],
+    ['I was wondering when you would notice.', 'The walls help.'],
   ];
 
   const DEFAULT_LORE = {
@@ -243,38 +246,41 @@
     const gw = scene.game.config.width;
     const gh = scene.game.config.height;
     const panelW = cfg.width || 392;
-    const panelH = cfg.height || 252;
+    const panelH = cfg.height || 288;
     const bezel = cfg.bezel || 8;
     const cx = gw / 2;
     const cy = gh / 2;
     const depth = cfg.depth != null ? cfg.depth : 1;
+    const screenColor = cfg.screenColor != null ? cfg.screenColor : 0x040810;
+    const stroke = cfg.stroke != null ? cfg.stroke : 0x226644;
+    const pin = (obj, d) => obj.setScrollFactor(0).setDepth(depth + (d || 0));
 
-    scene.add.rectangle(gw / 2, gh / 2, gw, gh, 0x020408, 0.78).setDepth(depth);
-    scene.add.rectangle(cx, cy + 5, panelW + bezel * 2, panelH + bezel + 18, 0x141c28, 1)
-      .setStrokeStyle(2, 0x2a4058).setDepth(depth + 1);
-    scene.add.rectangle(cx, cy - 4, panelW, panelH, cfg.screenColor || 0xc0c0c0, 1)
-      .setStrokeStyle(2, cfg.stroke || 0x000080).setDepth(depth + 2);
+    pin(scene.add.rectangle(gw / 2, gh / 2, gw, gh, 0x020408, 0.88));
+    pin(scene.add.rectangle(cx, cy + 5, panelW + bezel * 2, panelH + bezel + 18, 0x141c28, 1)
+      .setStrokeStyle(2, 0x2a4058), 1);
+    pin(scene.add.rectangle(cx, cy - 4, panelW, panelH, screenColor, 1)
+      .setStrokeStyle(2, stroke), 2);
 
     const left = cx - panelW / 2;
     const top = cy - 4 - panelH / 2;
     let contentTop = top + 8;
 
     if (cfg.title) {
-      scene.add.rectangle(cx, top + 11, panelW - 6, 14, 0x000808, 1).setDepth(depth + 3);
-      scene.add.text(cx, top + 11, cfg.title, {
+      pin(scene.add.rectangle(cx, top + 11, panelW - 6, 14, 0x000808, 1), 3);
+      pin(scene.add.text(cx, top + 11, cfg.title, {
         fontFamily: 'Press Start 2P, monospace', fontSize: '6px', color: cfg.titleColor || '#00ff66',
-      }).setOrigin(0.5).setDepth(depth + 4);
+      }).setOrigin(0.5), 4);
       contentTop = top + 24;
     }
     if (cfg.subtitle) {
-      scene.add.text(cx, top + 26, cfg.subtitle, {
-        fontFamily: 'VT323, monospace', fontSize: '13px', color: '#556677',
-      }).setOrigin(0.5).setDepth(depth + 4);
-      contentTop = top + 40;
+      pin(scene.add.text(cx, top + 26, cfg.subtitle, {
+        fontFamily: 'VT323, monospace', fontSize: '13px', color: cfg.subtitleColor || '#667788',
+      }).setOrigin(0.5), 4);
+      contentTop = top + 38;
     }
 
     const padX = 10;
-    const padBottom = 12;
+    const padBottom = 52;
     return {
       cx, cy, left, top, panelW, panelH,
       contentLeft: left + padX,
@@ -282,6 +288,7 @@
       contentW: panelW - padX * 2,
       contentH: panelH - (contentTop - top) - padBottom,
       depth: depth + 5,
+      pin: (obj, layer) => obj.setScrollFactor(0).setDepth(depth + 5 + (layer || 0)),
     };
   }
 
