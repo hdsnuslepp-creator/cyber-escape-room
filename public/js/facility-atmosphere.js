@@ -249,8 +249,8 @@
         scan.fillRect(8, 26 + scanY, 36, 1);
 
         glow.clear();
-        glow.fillStyle(CH1.loginGlow, 0.04 + flicker * 0.03);
-        glow.fillCircle(light.x, light.y, 48);
+        glow.fillStyle(CH1.loginGlow, 0.02 + flicker * 0.015);
+        glow.fillCircle(light.x, light.y, 40);
       },
       pulse() {
         flicker = 1;
@@ -301,8 +301,8 @@
       papers,
       update(time) {
         glow.clear();
-        glow.fillStyle(CH1.archiveGlow, 0.035 + Math.sin(time / 500) * 0.015);
-        glow.fillCircle(light.x, light.y, 44);
+        glow.fillStyle(CH1.archiveGlow, 0.018 + Math.sin(time / 500) * 0.008);
+        glow.fillCircle(light.x, light.y, 36);
         papers.forEach((p, i) => {
           p.y = 52 + (i % 2) * 3 + Math.sin(time / 800 + i) * 0.4;
         });
@@ -370,8 +370,8 @@
         }
 
         glow.clear();
-        glow.fillStyle(CH1.serverGlow, 0.03 + Math.sin(time / 400) * 0.02);
-        glow.fillCircle(light.x, light.y, 50);
+        glow.fillStyle(CH1.serverGlow, 0.016 + Math.sin(time / 400) * 0.008);
+        glow.fillCircle(light.x, light.y, 42);
       },
       pulse() {
         scene.tweens.add({ targets: leds, alpha: 0.2, duration: 40, yoyo: true, repeat: 5 });
@@ -470,56 +470,60 @@
     return { gfx: g, glow, pos };
   }
 
-  /** Darkness overlay + player flashlight + terminal glow pools. */
+  /** Soft radial blob for mask stamping (avoids ERASE blend — broken in many browsers). */
+  function stampLightMask(g, x, y, radius) {
+    const steps = 8;
+    for (let i = steps; i >= 1; i--) {
+      const t = i / steps;
+      g.fillStyle(0xffffff, t * t * 0.95);
+      g.fillCircle(x, y, radius * t);
+    }
+  }
+
+  /** Darkness overlay + player flashlight via inverted geometry mask. */
   function createLighting(scene) {
-    const dark = scene.add.graphics().setDepth(48);
+    const gw = scene.game.config.width;
+    const gh = scene.game.config.height;
+
+    // Mask: white = lit (darkness hidden). invertAlpha hides the overlay where mask is opaque.
+    const maskGfx = scene.add.graphics().setVisible(false).setDepth(47);
+    const mask = maskGfx.createGeometryMask();
+    mask.invertAlpha = true;
+
+    const dark = scene.add.rectangle(gw / 2, gh / 2, gw, gh, 0x020408, 0.88)
+      .setDepth(48);
+    dark.setMask(mask);
+
+    // Subtle coloured terminal halos (ADD, low alpha — not the main light source)
     const neon = scene.add.graphics().setDepth(44).setBlendMode(Phaser.BlendModes.ADD);
-    let dimLevel = 0.86;
+    let dimLevel = 0.82;
     let chimeraDim = 0;
 
     return {
       dark,
+      maskGfx,
       neon,
       setDim(v) { dimLevel = v; },
       chimeraPulse() {
-        chimeraDim = 0.18;
+        chimeraDim = 0.15;
         scene.time.delayedCall(400, () => { chimeraDim = 0; });
       },
       update(player, lightPoints, time) {
-        const alpha = Math.min(0.95, dimLevel + chimeraDim);
+        const alpha = Math.min(0.92, dimLevel + chimeraDim);
+        dark.setFillStyle(0x020408, alpha);
 
-        // Neon pools around terminals (visible even in dark)
         neon.clear();
         lightPoints.forEach((lp) => {
-          const pulse = 0.04 + Math.sin(time / 420 + lp.x) * 0.015;
+          const pulse = 0.018 + Math.sin(time / 420 + lp.x) * 0.008;
           neon.fillStyle(lp.color || CH1.accent, pulse);
-          neon.fillCircle(lp.x, lp.y, lp.radius || 40);
+          neon.fillCircle(lp.x, lp.y, (lp.radius || 40) * 0.45);
         });
 
-        // Darkness with ERASE holes for flashlight
-        dark.clear();
-        dark.setBlendMode(Phaser.BlendModes.NORMAL);
-        dark.fillStyle(0x020408, alpha);
-        dark.fillRect(0, 0, scene.game.config.width, scene.game.config.height);
-
-        dark.setBlendMode(Phaser.BlendModes.ERASE);
-        dark.fillStyle(0xffffff, 1);
-
-        // Player flashlight — soft falloff via concentric circles
-        if (player) {
-          for (let r = 88; r > 0; r -= 14) {
-            dark.fillCircle(player.x, player.y, r);
-          }
-        }
-
-        // Terminal areas stay slightly visible
+        maskGfx.clear();
+        if (player) stampLightMask(maskGfx, player.x, player.y, 82);
         lightPoints.forEach((lp) => {
-          for (let r = (lp.radius || 40); r > 0; r -= 12) {
-            dark.fillCircle(lp.x, lp.y, r * 0.55);
-          }
+          stampLightMask(maskGfx, lp.x, lp.y, (lp.radius || 40) * 0.65);
         });
-
-        dark.setBlendMode(Phaser.BlendModes.NORMAL);
       },
     };
   }
