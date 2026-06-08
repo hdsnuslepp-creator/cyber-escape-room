@@ -209,7 +209,16 @@ body.menu-body .scanlines {
 
 .menu-brand__logo {
   flex-shrink: 0;
-  filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.5));
+  filter: drop-shadow(0 0 10px rgba(0, 255, 102, 0.55));
+}
+
+.menu-brand__logo-img {
+  display: block;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .menu-brand__tag {
@@ -383,6 +392,32 @@ body.menu-body .scanlines {
   font-family: 'Press Start 2P', monospace;
   font-size: 6px;
   color: #445566;
+}
+
+.menu-audio {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  pointer-events: auto;
+}
+
+.menu-audio__btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: var(--neon);
+  background: rgba(0, 4, 8, 0.96);
+  border: 1px solid rgba(0, 255, 102, 0.45);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.menu-audio__btn:hover {
+  background: rgba(0, 255, 102, 0.08);
+}
+
+.menu-audio__btn.sound-toggle--off {
+  color: #556677;
+  border-color: #334455;
 }
 
 /* Modal */

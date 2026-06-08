@@ -1,12 +1,13 @@
 /* TRAINEE 1998 — Facility Mode shell (DOM overlay around the Phaser canvas) */
 :root {
-  --neon: #00ff88;
+  --neon: #00ff66;
   --neon-dim: #14392c;
   --neon-soft: #7fffc4;
   --amber: #ffb000;
   --panel-bg: rgba(0, 8, 12, 0.92);
   --bar-h: 46px;
   --strip-h: 34px;
+  --chimera-h: 118px;
   --right-w: 262px;
   --canvas-right: 300px;
 }
@@ -22,7 +23,7 @@ body.game-body .scanlines {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9999;
+  z-index: 5;
   background: repeating-linear-gradient(
     0deg,
     rgba(0, 0, 0, 0.16) 0px,
@@ -36,7 +37,7 @@ body.game-body .crt-vignette {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 9998;
+  z-index: 6;
   box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.9);
 }
 
@@ -47,13 +48,19 @@ body.game-body .crt-vignette {
   left: 14px;
   right: var(--canvas-right);
   bottom: calc(var(--strip-h) + 10px);
+  z-index: 1;
   border: 2px solid var(--neon);
   background: #00060a;
-  box-shadow: 0 0 14px rgba(0, 255, 136, 0.35), inset 0 0 50px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 14px rgba(0, 255, 102, 0.35), inset 0 0 50px rgba(0, 0, 0, 0.7);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   outline: none;
   overflow: hidden;
+  transition: bottom 0.2s ease;
+}
+
+body.chimera-open #game-canvas-wrap {
+  bottom: calc(var(--strip-h) + var(--chimera-h) + 10px);
 }
 
 #game-canvas-wrap canvas {
@@ -78,7 +85,7 @@ body.game-body .crt-vignette {
 .facility-topbar {
   background: var(--panel-bg);
   border: 2px solid var(--neon);
-  box-shadow: 0 0 14px rgba(0, 255, 136, 0.35);
+  box-shadow: 0 0 14px rgba(0, 255, 102, 0.35);
 }
 
 /* ── Top title bar ────────────────────────────────────────────────────── */
@@ -100,7 +107,7 @@ body.game-body .crt-vignette {
   font-size: 11px;
   letter-spacing: 1px;
   color: var(--neon);
-  text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.5);
 }
 
 .ftb-actions {
@@ -130,12 +137,22 @@ body.game-body .crt-vignette {
   width: var(--right-w);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--neon-dim) transparent;
 }
 
 .hud-panel {
-  padding: 12px;
+  padding: 10px;
   box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.hud-objective {
+  flex: 0 1 auto;
+  min-height: 0;
 }
 
 .hud-panel h2 {
@@ -193,7 +210,7 @@ body.game-body .crt-vignette {
   border-color: var(--neon);
   color: var(--neon);
   background: rgba(0, 45, 30, 0.45);
-  box-shadow: 0 0 10px rgba(0, 255, 136, 0.45);
+  box-shadow: 0 0 10px rgba(0, 255, 102, 0.45);
 }
 
 .map-cell.active .lock {
@@ -227,7 +244,7 @@ body.game-body .crt-vignette {
   left: 18px;
   right: calc(var(--canvas-right) + 14px);
   max-width: 340px;
-  z-index: 55;
+  z-index: 65;
   display: flex;
   align-items: flex-start;
   gap: 10px;
@@ -310,31 +327,33 @@ body.game-body .crt-vignette {
   font-weight: normal;
 }
 
-/* ── CHIMERA dialogue ─────────────────────────────────────────────────── */
+/* ── CHIMERA dialogue — sits between canvas and status strip ─────────── */
 .chimera-dialogue {
   position: absolute;
-  left: 24px;
+  left: 14px;
   right: var(--canvas-right);
-  bottom: 52px;
-  height: 145px;
+  bottom: var(--strip-h);
+  height: var(--chimera-h);
   display: grid;
-  grid-template-columns: 230px 1fr;
-  box-shadow: 0 0 18px rgba(0, 255, 136, 0.4);
+  grid-template-columns: 180px 1fr;
+  box-shadow: 0 0 18px rgba(0, 255, 102, 0.4);
+  pointer-events: auto;
+  z-index: 55;
 }
 
 .chimera-id {
   border-right: 1px solid var(--neon);
-  padding: 24px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .chimera-name {
-  font-size: 20px;
+  font-size: 16px;
   letter-spacing: 2px;
   color: var(--neon);
-  text-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.6);
 }
 
 .chimera-wave {
@@ -360,19 +379,24 @@ body.chimera-speaking .chimera-wave {
 }
 
 .chimera-body {
-  padding: 22px 24px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .chimera-text {
   flex: 1;
   font-family: 'VT323', monospace;
-  font-size: 20px;
-  line-height: 1.55;
+  font-size: 18px;
+  line-height: 1.45;
   color: #aaffdd;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--neon-dim) transparent;
 }
 
 .chimera-hint {
@@ -391,13 +415,25 @@ body.chimera-speaking .chimera-wave {
   height: var(--strip-h);
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 18px;
   padding: 0 18px;
   box-sizing: border-box;
   border-width: 2px 0 0 0;
   font-size: 8px;
   letter-spacing: 1px;
   color: #3f6e5c;
+}
+
+.status-hint {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #668877;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-strip b {
@@ -503,7 +539,7 @@ body.creator-open .scanlines {
   padding: 22px 24px 26px;
   border: 2px solid var(--neon-dim);
   background: rgba(0, 10, 14, 0.96);
-  box-shadow: 0 0 24px rgba(0, 255, 136, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 24px rgba(0, 255, 102, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.5);
 }
 
 .cc-title {
@@ -626,6 +662,12 @@ body.cinematic #game-canvas-wrap {
   box-shadow: none;
 }
 
+body.cinematic .facility-achievement-toast,
+body.cinematic .touch-dpad,
+body.chimera-open .touch-dpad {
+  display: none !important;
+}
+
 /* ── Touch controls ───────────────────────────────────────────────────── */
 .touch-dpad {
   position: fixed;
@@ -655,7 +697,7 @@ body.cinematic #game-canvas-wrap {
 
 .touch-dpad button:active,
 .touch-dpad button.dpad-active {
-  background: rgba(0, 255, 136, 0.25);
+  background: rgba(0, 255, 102, 0.25);
   color: #aaffdd;
 }
 
@@ -673,7 +715,9 @@ body.cinematic #game-canvas-wrap {
 @media (max-width: 860px) {
   .facility-right { display: none; }
   #game-canvas-wrap { right: 14px; }
-  .chimera-dialogue { right: 24px; grid-template-columns: 120px 1fr; }
-  .chimera-id { padding: 12px; }
-  .chimera-name { font-size: 14px; }
+  .chimera-dialogue { right: 14px; grid-template-columns: 110px 1fr; }
+  .chimera-id { padding: 10px; }
+  .chimera-name { font-size: 12px; }
+  .chimera-text { font-size: 16px; }
+  .status-hint { display: none; }
 }

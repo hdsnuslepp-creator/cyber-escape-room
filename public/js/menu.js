@@ -123,9 +123,11 @@
         if (typeof ProfileSave !== 'undefined' && ProfileSave.resetPhaserRun) {
           ProfileSave.resetPhaserRun();
         }
+        if (typeof AudioFX !== 'undefined') AudioFX.stopMenuMusic();
         window.location.href = 'game.html';
         break;
       case 'continue':
+        if (typeof AudioFX !== 'undefined') AudioFX.stopMenuMusic();
         window.location.href = 'game.html?resume=1';
         break;
       case 'settings':
@@ -163,17 +165,20 @@
   }
 
   function openSettings() {
-    const vol = typeof AudioFX !== 'undefined' ? Math.round((AudioFX.volume || 0.1) * 100) : 32;
-    const soundOn = typeof AudioFX !== 'undefined' ? AudioFX.enabled : true;
+    const vol = typeof AudioFX !== 'undefined' ? AudioFX.getVolume() : 32;
+    const soundOn = typeof AudioFX !== 'undefined' ? AudioFX.isEnabled() : true;
+    const musicOn = typeof AudioFX !== 'undefined' ? AudioFX.isMusicOn() : true;
     openModal('SETTINGS', `
       <p>System preferences — stored locally.</p>
       <label><input type="checkbox" id="setSound" ${soundOn ? 'checked' : ''}> Sound effects</label>
+      <label><input type="checkbox" id="setMusic" ${musicOn ? 'checked' : ''}> Menu music</label>
       <label>Volume <input type="range" id="setVolume" min="0" max="100" value="${vol}"> <span id="setVolLabel">${vol}%</span></label>
       <label><input type="checkbox" id="setReduced"> Reduced visual effects</label>
       <p style="font-size:15px;color:#556677;margin-top:12px">Teacher tools: <a href="teacher.html" style="color:#00ff88">Dashboard</a></p>
     `);
 
     const setSound = document.getElementById('setSound');
+    const setMusic = document.getElementById('setMusic');
     const setVol = document.getElementById('setVolume');
     const setVolLabel = document.getElementById('setVolLabel');
     const setReduced = document.getElementById('setReduced');
@@ -188,11 +193,17 @@
         if (typeof AudioFX !== 'undefined') AudioFX.setEnabled(setSound.checked);
       });
     }
+    if (setMusic) {
+      setMusic.addEventListener('change', () => {
+        if (typeof AudioFX === 'undefined') return;
+        if (setMusic.checked !== AudioFX.isMusicOn()) AudioFX.toggleMusic();
+      });
+    }
     if (setVol && setVolLabel) {
       setVol.addEventListener('input', () => {
         const v = Number(setVol.value);
         setVolLabel.textContent = `${v}%`;
-        if (typeof AudioFX !== 'undefined') AudioFX.setVolume(v / 100);
+        if (typeof AudioFX !== 'undefined') AudioFX.setVolume(v);
       });
     }
     if (setReduced && typeof ProfileSave !== 'undefined') {
@@ -304,11 +315,26 @@
     }, 8000);
   }
 
+  function bindMenuMusic() {
+    let started = false;
+    const tryStart = () => {
+      if (started) return;
+      started = true;
+      if (typeof AudioFX !== 'undefined') {
+        AudioFX.resume();
+        AudioFX.startMenuMusic();
+      }
+    };
+    document.addEventListener('pointerdown', tryStart, { once: true });
+    document.addEventListener('keydown', tryStart, { once: true });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     refreshContinue();
     collectItems();
     setSelected(0);
     bindNav();
+    bindMenuMusic();
     typeGreeting();
     cycleFlavor();
   });

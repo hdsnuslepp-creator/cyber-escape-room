@@ -91,7 +91,7 @@
   const WALLS = parseLayout();
 
   const GRAFFITI_WALLS = {
-    door: { text: 'HE IS LISTENING', col: 1, rowOff: 9, face: 'east', color: '#994466', fontSize: '10px' },
+    door: { text: 'HE IS LISTENING', col: 2, rowOff: 9, face: 'south', color: '#994466', fontSize: '10px' },
   };
 
   function wallGraffitiAnchor(col, row, face) {
@@ -895,7 +895,7 @@
 
     const ambient = scene.add.rectangle(cx, cy, gw, gh, 0x020408, 0.58).setDepth(48);
     const glow = scene.add.graphics().setDepth(49).setBlendMode(Phaser.BlendModes.ADD);
-    const vignette = scene.add.graphics().setDepth(50);
+    const vignette = scene.add.graphics().setDepth(52);
 
     let dimLevel = 0.58;
     let chimeraDim = 0;

@@ -5,9 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRAINEE 1998 — Facility Lockdown</title>
-  <!-- asset build: 66 -->
+  <link rel="icon" type="image/png" href="img/chimera-logo.png">
+  <!-- asset build: 67 -->
 
-  <link rel="stylesheet" href="css/game.css?v=9">
+  <link rel="stylesheet" href="css/game.css?v=10">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -27,7 +28,7 @@
     <div class="facility-topbar">
       <span class="ftb-title">TRAINEE 1998 — FACILITY LOCKDOWN</span>
       <span class="ftb-actions">
-        <a class="ftb-sim" href="#" id="btnNewRun">[ NEW RUN ]</a>
+        <a class="ftb-sim" href="#" id="btnNewRun">[ RESET RUN ]</a>
         <a class="ftb-sim" href="index.html">[ MAIN MENU ]</a>
       </span>
     </div>
@@ -65,7 +66,8 @@
     </div>
 
     <div class="status-strip">
-      <span>STATUS: <b id="stStatus">ONLINE</b></span>
+      <span>STATUS: <b id="stStatus">LOCKDOWN</b></span>
+      <span class="status-hint" id="game-hint-bar"></span>
       <span>LIVES: <b id="stLives" class="st-lives">♥♥♥</b></span>
       <span>SCORE: <b id="stScore" class="st-score">1000</b></span>
       <span>KEY: <b id="stKey" class="st-key">—</b></span>
@@ -153,16 +155,16 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <script src="js/profile-save.js"></script>
   <script src="js/audio.js"></script>
-  <script src="js/chimera-box.js?v=4"></script>
+  <script src="js/chimera-box.js?v=5"></script>
   <script src="js/facility-sectors.js?v=6"></script>
   <script src="js/facility-sector-generic.js?v=5"></script>
-  <script src="js/facility-ui.js?v=13"></script>
+  <script src="js/facility-ui.js?v=14"></script>
   <script src="js/facility-character.js?v=1"></script>
-  <script src="js/facility-atmosphere.js?v=28"></script>
+  <script src="js/facility-atmosphere.js?v=29"></script>
   <script src="js/facility-sector2.js?v=6"></script>
   <script src="js/facility-horror.js?v=1"></script>
-  <script src="js/facility-terminal.js?v=11"></script>
-  <script src="js/phaser-game.js?v=66"></script>
+  <script src="js/facility-terminal.js?v=12"></script>
+  <script src="js/phaser-game.js?v=67"></script>
 
 </body>
 

@@ -176,6 +176,40 @@
       ky.textContent = hasKey ? '\u2713' : '\u2014';
       ky.classList.toggle('has-key', !!hasKey);
     }
+    syncStatus(game, lives);
+  }
+
+  function syncStatus(game, lives) {
+    const st = document.getElementById('stStatus');
+    if (!st) return;
+    const p = progress();
+    if (p.coreComplete) {
+      st.textContent = 'CONTAINED';
+      st.style.color = '#00ff66';
+      return;
+    }
+    if (typeof ChimeraBox !== 'undefined' && ChimeraBox.isOpen()) {
+      st.textContent = 'CHIMERA LINK';
+      st.style.color = '#ff6688';
+      return;
+    }
+    if (game?.scene?.getScene('HubScene')?.isPaused) {
+      st.textContent = 'PAUSED';
+      st.style.color = '#8899aa';
+      return;
+    }
+    if (typeof lives === 'number' && lives <= 1) {
+      st.textContent = 'CRITICAL';
+      st.style.color = '#ff3366';
+      return;
+    }
+    if (!p.ch1BossComplete) {
+      st.textContent = 'LOCKDOWN';
+      st.style.color = '#ff6688';
+      return;
+    }
+    st.textContent = 'ACTIVE';
+    st.style.color = '#00ff66';
   }
 
   function showChimeraDialogue(lines, voiceClip) {
@@ -201,15 +235,17 @@
     setInterval(tick, 1000);
     setInterval(refresh, 1000);
     setInterval(syncStats, 250);
+    window.addEventListener('chimera:speak', () => syncStats());
 
     const newRun = document.getElementById('btnNewRun');
     if (newRun) {
       newRun.addEventListener('click', (e) => {
         e.preventDefault();
+        if (!window.confirm('Reset progress and start a new run?')) return;
         if (typeof ProfileSave !== 'undefined' && typeof ProfileSave.resetPhaserRun === 'function') {
           ProfileSave.resetPhaserRun();
         }
-        window.location.href = 'index.html';
+        window.location.href = 'game.html';
       });
     }
   }

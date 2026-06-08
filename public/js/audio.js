@@ -3,7 +3,9 @@
  */
 const AudioFX = (() => {
   const MUSIC_VERSION = '2';
+  const MENU_MUSIC_VERSION = '1';
   const MUSIC_SRC = new URL(`audio/vinyl-hearth-v2.mp3?v=${MUSIC_VERSION}`, window.location.href).href;
+  const MENU_MUSIC_SRC = new URL(`audio/crt-confetti.mp3?v=${MENU_MUSIC_VERSION}`, window.location.href).href;
 
   let ctx = null;
   let masterGain = null;
@@ -11,7 +13,12 @@ const AudioFX = (() => {
   let musicOn = localStorage.getItem('cer_music') !== 'off';
   let volume = clampVolume(parseInt(localStorage.getItem('cer_volume') || '10', 10));
   let musicEl = null;
+  let menuMusicEl = null;
   let previewTimer = null;
+
+  function isMenuPage() {
+    return document.body?.classList?.contains('menu-body');
+  }
 
   function clampVolume(v) {
     return Math.min(100, Math.max(0, Number.isFinite(v) ? v : 10));
@@ -42,12 +49,29 @@ const AudioFX = (() => {
     musicEl = new Audio(MUSIC_SRC);
     musicEl.loop = true;
     musicEl.preload = 'auto';
-    musicEl.volume = musicVolume();
+    musicEl.volume = gameMusicVolume();
   }
 
-  function musicVolume() {
+  function initMenuMusicElement() {
+    if (menuMusicEl && menuMusicEl.src === MENU_MUSIC_SRC) return;
+    if (menuMusicEl) {
+      menuMusicEl.pause();
+      menuMusicEl = null;
+    }
+    menuMusicEl = new Audio(MENU_MUSIC_SRC);
+    menuMusicEl.loop = true;
+    menuMusicEl.preload = 'auto';
+    menuMusicEl.volume = menuMusicVolume();
+  }
+
+  function gameMusicVolume() {
     if (!musicOn || !enabled || volume === 0) return 0;
     return (volume / 100) * 0.55;
+  }
+
+  function menuMusicVolume() {
+    if (!musicOn || !enabled || volume === 0) return 0;
+    return (volume / 100) * 0.45;
   }
 
   function applyMasterGain() {
@@ -56,12 +80,25 @@ const AudioFX = (() => {
   }
 
   function applyMusicVolume() {
-    if (!musicEl) return;
-    musicEl.volume = musicVolume();
+    if (musicEl) musicEl.volume = gameMusicVolume();
+    if (menuMusicEl) menuMusicEl.volume = menuMusicVolume();
+  }
+
+  function startMenuMusic() {
+    if (!musicOn || !enabled || volume === 0) return;
+    if (musicEl) musicEl.pause();
+    initMenuMusicElement();
+    applyMusicVolume();
+    menuMusicEl.play().catch(() => { /* needs user gesture */ });
   }
 
   function startMusic() {
     if (!musicOn || !enabled || volume === 0) return;
+    if (isMenuPage()) {
+      startMenuMusic();
+      return;
+    }
+    if (menuMusicEl) menuMusicEl.pause();
     initMusicElement();
     applyMusicVolume();
     musicEl.play().catch(() => { /* needs user gesture */ });
@@ -69,12 +106,21 @@ const AudioFX = (() => {
 
   function pauseMusic() {
     if (musicEl) musicEl.pause();
+    if (menuMusicEl) menuMusicEl.pause();
+  }
+
+  function stopMenuMusic() {
+    if (!menuMusicEl) return;
+    menuMusicEl.pause();
+    menuMusicEl.currentTime = 0;
   }
 
   function stopMusic() {
-    if (!musicEl) return;
-    musicEl.pause();
-    musicEl.currentTime = 0;
+    if (musicEl) {
+      musicEl.pause();
+      musicEl.currentTime = 0;
+    }
+    stopMenuMusic();
   }
 
   function sfxClick() {
@@ -133,6 +179,10 @@ const AudioFX = (() => {
 
   function isEnabled() {
     return enabled;
+  }
+
+  function isMusicOn() {
+    return musicOn;
   }
 
   function getVolume() {
@@ -281,7 +331,11 @@ const AudioFX = (() => {
 
   function initUI() {
     bindControls();
-    initMusicElement();
+    if (isMenuPage()) {
+      initMenuMusicElement();
+    } else {
+      initMusicElement();
+    }
     updateUI();
   }
 
@@ -445,9 +499,12 @@ const AudioFX = (() => {
     setEnabled,
     setVolume,
     isEnabled,
+    isMusicOn,
     getVolume,
     startMusic,
+    startMenuMusic,
     stopMusic,
+    stopMenuMusic,
     startFacilityAmbience,
     stopFacilityAmbience,
     triggerStaticBurst,

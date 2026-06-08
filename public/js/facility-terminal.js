@@ -55,10 +55,15 @@
     opts = opts || {};
     const color = opts.color || '#00ff66';
     const fontSize = opts.fontSize || '8px';
+    const wrapW = opts.wrapWidth || 260;
     const text = scene.add.text(x, y, label, {
       fontFamily: 'Press Start 2P, monospace', fontSize, color,
+      wordWrap: { width: wrapW, useAdvancedWrap: true },
+      align: 'center',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-    const bg = scene.add.rectangle(x, y, text.width + 16, text.height + 10, 0x000000, 0.75)
+    const bgW = Math.min(wrapW + 16, Math.max(text.width + 16, 80));
+    const bgH = text.height + 10;
+    const bg = scene.add.rectangle(x, y, bgW, bgH, 0x000000, 0.75)
       .setStrokeStyle(2, 0x00ff66).setInteractive({ useHandCursor: true });
     text.setDepth(1);
     bg.setDepth(0);
@@ -382,7 +387,7 @@
           btn.bg.setStrokeStyle(2, 0x66ffaa);
           if (scene.feedbackText) scene.feedbackText.setText('');
         });
-      }, { fontSize: '4px', color: '#aabbcc' });
+      }, { fontSize: '4px', color: '#aabbcc', wrapWidth: mainW - 20 });
       btn.bg.setDepth(D).setStrokeStyle(2, stroke);
       btn.text.setDepth(D + 1);
       btn.optId = opt.id;

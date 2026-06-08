@@ -185,6 +185,9 @@
       });
     }
     ProfileSave.savePhaserProgress(payload);
+    if (typeof window.FacilityUI !== 'undefined' && window.FacilityUI.refresh) {
+      window.FacilityUI.refresh();
+    }
   }
 
   function loseLife(scene, message) {
@@ -1000,6 +1003,9 @@
 
   HubScene.prototype.create = function () {
     setSceneChrome(this, false);
+    if (window.FacilityUI && typeof FacilityUI.resetTimer === 'function') {
+      FacilityUI.resetTimer();
+    }
 
     this.loadHubSectorState();
 
@@ -1061,7 +1067,7 @@
     this.player.setDepth(4);
 
     this.playerGfx = this.add.graphics();
-    this.playerGfx.setDepth(51);
+    this.playerGfx.setDepth(49);
     drawPlayerSprite(this.playerGfx, this.player.x, this.player.y, this.avatar, 0, this.useExploreCamera() ? 1.5 : 1);
 
     const doorPos = hubTilePx(this, pos.door.c, pos.door.r);
@@ -1602,7 +1608,7 @@
 
   // Show a queue of CHIMERA lines back-to-back
   HubScene.prototype.hubPromptY = function () {
-    if (this.useExploreCamera && this.useExploreCamera()) return GAME_H - 34;
+    if (this.useExploreCamera && this.useExploreCamera()) return GAME_H - 52;
     return (this.hubPos.roomY + this.hubPos.roomRows) * TILE + 28;
   };
 
@@ -1689,7 +1695,7 @@
         this.overrideActive = false;
         this.input.enabled = true;
         this.refreshPrompt();
-        this.flashPrompt('The east wall exhales. Something unlocked.', '#8899aa');
+        this.flashPrompt('The south wall exhales. Something unlocked.', '#8899aa');
       });
     };
 

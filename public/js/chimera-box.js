@@ -41,6 +41,7 @@
 
   function show() {
     if (box) box.classList.remove('hidden');
+    document.body.classList.add('chimera-open', 'chimera-speaking');
   }
 
   function hide() {
@@ -48,6 +49,7 @@
     typing = false;
     onDone = null;
     if (box) box.classList.add('hidden');
+    document.body.classList.remove('chimera-open', 'chimera-speaking');
   }
 
   function startTyping(message, speed) {
