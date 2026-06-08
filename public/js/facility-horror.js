@@ -293,6 +293,20 @@
           inspectBody: 'They said I was number 1998.\nHow many came before?\n\nThe last line is smeared.',
         }, 's1');
         if (nb) remains.push(nb);
+
+        const skel = placeRemain(scene, {
+          type: 'skeleton',
+          col: 11,
+          row: spawn.roomY + 2,
+          scale: 0.88,
+          offsetX: -6,
+          offsetY: 10,
+          badge: false,
+          inspectTitle: 'REMAINS — UNIDENTIFIED',
+          inspectBody: 'Batch zero.\nThe badge is gone.\n\nSomeone rested here.\nThey did not get up.',
+          chimeraLine: 'Early batch.\nMost of them never woke up.',
+        }, 's1');
+        if (skel) remains.push(skel);
       }
       if (FacilityAtmosphere.addWallGraffiti) {
         const ry = spawn.roomY;

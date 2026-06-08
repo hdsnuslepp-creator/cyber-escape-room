@@ -257,39 +257,45 @@
   function addEnvironmentalDetails(scene) {
     scene._hubGraffiti = addDeliberateGraffiti(scene);
     addFloorCoffeeCup(scene);
+    addHubSpiderWebs(scene);
   }
 
-  /** Small paper sticky — sized for CRT bezel / desk placement. */
-  function addStickyNote(scene, x, y, lines, opts) {
+  /** Small paper sticky — local coords on a parent container (CRT bezel / desk). */
+  function addStickyNote(parent, localX, localY, lines, opts) {
     opts = opts || {};
-    const lineH = opts.lineH || 9;
-    const padY = opts.padY || 3;
-    const padX = opts.padX || 4;
-    const fontSize = opts.fontSize || '10px';
+    const scene = parent.scene;
+    const lineH = opts.lineH || 7;
+    const padY = opts.padY || 2;
+    const padX = opts.padX || 3;
+    const fontSize = opts.fontSize || '7px';
     const maxLen = Math.max(...lines.map((l) => l.length), 1);
-    const w = opts.w || Math.max(22, maxLen * 5 + padX * 2);
+    const w = opts.w || Math.max(18, maxLen * 4 + padX * 2);
     const h = opts.h || padY * 2 + lines.length * lineH;
     const angle = opts.angle || 0;
-    const paper = opts.paper != null ? opts.paper : 0xe8d49c;
-    const ink = opts.ink || '#2a2018';
+    const paper = opts.paper != null ? opts.paper : 0xfff0c8;
+    const ink = opts.ink || '#1a1008';
 
-    const note = scene.add.container(x, y).setAngle(angle);
+    const note = scene.add.container(localX, localY).setAngle(angle);
     const bg = scene.add.graphics();
-    bg.fillStyle(0x000000, 0.1);
+    bg.fillStyle(0x000000, 0.22);
     bg.fillRect(-w / 2 + 1, -h / 2 + 1, w, h);
     bg.fillStyle(paper, 1);
     bg.fillRect(-w / 2, -h / 2, w, h);
-    bg.lineStyle(1, 0xc4a870, 0.4);
+    bg.lineStyle(1, 0xc4a870, 0.65);
     bg.strokeRect(-w / 2, -h / 2, w, h);
-    bg.fillStyle(0xffffff, 0.07);
-    bg.fillRect(-w / 2 + 1, -h / 2 + 1, w - 2, 1);
+    if (opts.highlight) {
+      bg.lineStyle(1, 0xffeeaa, 0.45);
+      bg.strokeRect(-w / 2 - 1, -h / 2 - 1, w + 2, h + 2);
+    }
+    bg.fillStyle(0xffffff, 0.14);
+    bg.fillRect(-w / 2 + 1, -h / 2 + 1, w - 2, 2);
     if (opts.tape) {
-      bg.fillStyle(0x9a9080, 0.55);
-      bg.fillRect(-3, -h / 2 - 1, 6, 3);
+      bg.fillStyle(0xd8d0c0, 0.85);
+      bg.fillRect(-5, -h / 2 - 2, 10, 3);
     }
     if (opts.deskShadow) {
-      bg.fillStyle(0x000000, 0.18);
-      bg.fillRect(-w / 2 + 2, h / 2 - 1, w - 2, 2);
+      bg.fillStyle(0x000000, 0.28);
+      bg.fillRect(-w / 2 + 1, h / 2 - 1, w - 1, 2);
     }
 
     const labels = lines.map((line, i) => scene.add.text(0, -h / 2 + padY + i * lineH, line, {
@@ -297,12 +303,82 @@
       fontSize,
       color: ink,
       align: 'center',
+      resolution: 1,
+      stroke: opts.highlight ? '#000000' : undefined,
+      strokeThickness: opts.highlight ? 1 : 0,
     }).setOrigin(0.5, 0));
 
     note.add([bg, ...labels]);
-    labels.forEach((t) => { if (t.setResolution) t.setResolution(2); });
-    if (opts.scale) note.setScale(opts.scale);
+    note.setDepth(opts.depth != null ? opts.depth : 4);
+    note.setAlpha(opts.alpha != null ? opts.alpha : 1);
+    parent.add(note);
     return note;
+  }
+
+  /** Corner spider web — muted grey strands, no gore. */
+  function createSpiderWeb(scene, x, y, opts) {
+    opts = opts || {};
+    const size = opts.size || 26;
+    const alpha = opts.alpha != null ? opts.alpha : 0.38;
+    const corner = opts.corner || 'tl';
+    let ax = 1;
+    let ay = 1;
+    if (corner === 'tr') ax = -1;
+    if (corner === 'bl') ay = -1;
+    if (corner === 'br') { ax = -1; ay = -1; }
+
+    const g = scene.add.graphics();
+    const strand = 0xb8c4d0;
+    g.lineStyle(1, strand, alpha);
+    const spokes = 6;
+    for (let i = 0; i < spokes; i++) {
+      const t = i / (spokes - 1);
+      const ex = ax * size * (0.25 + t * 0.75);
+      const ey = ay * size * (0.25 + (1 - t) * 0.75);
+      g.lineBetween(0, 0, ex, ey);
+    }
+    for (let ring = 1; ring <= 4; ring++) {
+      const rt = ring / 4;
+      g.beginPath();
+      const steps = 10;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const ex = ax * size * rt * (0.35 + t * 0.65);
+        const ey = ay * size * rt * (0.35 + (1 - t) * 0.65);
+        if (i === 0) g.moveTo(ex * 0.2, ey * 0.2);
+        else g.lineTo(ex, ey);
+      }
+      g.strokePath();
+    }
+    if (opts.spider) {
+      const sx = ax * size * 0.42;
+      const sy = ay * size * 0.42;
+      g.fillStyle(0x1a1a1a, Math.min(1, alpha + 0.25));
+      g.fillCircle(sx, sy, 1.6);
+      g.lineStyle(1, 0x1a1a1a, alpha + 0.15);
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        g.lineBetween(sx, sy, sx + Math.cos(a) * 3.5, sy + Math.sin(a) * 3.5);
+      }
+    }
+
+    const root = scene.add.container(x, y).setDepth(opts.depth != null ? opts.depth : 1);
+    root.add(g);
+    return root;
+  }
+
+  function addHubSpiderWebs(scene) {
+    const ry = HUB_POSITIONS.roomY;
+    const spots = [
+      { x: mapC(6) * TILE + 4, y: ry * TILE + 6, corner: 'tl', size: 28, alpha: 0.42 },
+      { x: mapC(2) * TILE + TILE - 4, y: (ry + 4) * TILE + 6, corner: 'tr', size: 24, alpha: 0.36 },
+      { x: mapC(6) * TILE + 4, y: (ry + 9) * TILE + TILE - 6, corner: 'bl', size: 26, alpha: 0.38 },
+      { x: mapC(3) * TILE + TILE / 2, y: (ry + 10) * TILE + 4, corner: 'tl', size: 32, alpha: 0.44, spider: true },
+      { x: mapC(1) * TILE + TILE - 4, y: (ry + 6) * TILE + TILE - 5, corner: 'br', size: 22, alpha: 0.3 },
+      { x: mapC(5) * TILE + TILE - 3, y: (ry + 2) * TILE + 5, corner: 'tr', size: 20, alpha: 0.34 },
+    ];
+    scene._hubWebs = spots.map((s) => createSpiderWeb(scene, s.x, s.y, s));
+    return scene._hubWebs;
   }
 
   /** Login terminal — Room B, compact CRT desk. */
@@ -335,23 +411,6 @@
       body.fillRect(28, 38, 12, 8);
     }
 
-    // 581 — taped to upper-right bezel; scale down for 2× explore camera
-    const sticky581 = addStickyNote(scene, 44, 4, ['581'], {
-      w: 16, h: 12, fontSize: '9px', angle: -12, tape: true,
-      paper: 0xf0e0b8, ink: '#3a2818',
-    }).setScale(0.55);
-    const stickyWarn = addStickyNote(scene, 10, 50, ["DON'T", 'ANSWER IT'], {
-      w: 26, h: 18, fontSize: '7px', lineH: 6, angle: -4, deskShadow: true,
-      paper: 0xffeedd, ink: '#882222',
-    }).setScale(0.55).setVisible(false);
-
-    let nearActive = false;
-    let frozen = false;
-    let screenOn = 0.35;
-    let scanY = 0;
-    let flickerT = 0;
-    let nextFlicker = 0;
-
     function drawScreen() {
       screen.clear();
       if (screenOn < 0.08) return;
@@ -364,9 +423,31 @@
       for (let i = 0; i < 3; i++) screen.fillRect(17, 18 + i * 4, 14 + i * 3, 2);
     }
 
+    let nearActive = false;
+    let frozen = false;
+    let screenOn = 0.35;
+    let scanY = 0;
+    let flickerT = 0;
+    let nextFlicker = 0;
+
     drawBody();
+
+    // Sticky notes — bright paper, readable at 2× explore camera
+    const sticky581 = addStickyNote(root, 49, 7, ['581'], {
+      w: 14, h: 11, fontSize: '7px', lineH: 7, padY: 2, angle: -10, tape: true,
+      paper: 0xfff4c0, ink: '#1a0a00', depth: 5, highlight: true,
+    });
+    const stickyWarn = addStickyNote(root, 6, 40, ["DON'T", 'ANSWER IT'], {
+      w: 22, h: 15, fontSize: '6px', lineH: 6, padY: 2, angle: -4, deskShadow: true,
+      paper: 0xffeed8, ink: '#aa1122', depth: 5, highlight: true,
+    }).setVisible(false);
+    const pcWeb = createSpiderWeb(scene, 7, 5, { corner: 'tl', size: 13, alpha: 0.48, depth: 4 });
+
     drawScreen();
-    root.add([body, screen, scan, sticky581, stickyWarn]);
+    root.add([body, screen, scan]);
+    root.add(pcWeb);
+    root.bringToTop(sticky581);
+    root.bringToTop(stickyWarn);
 
     return {
       root, screen, sticky581, stickyWarn,
