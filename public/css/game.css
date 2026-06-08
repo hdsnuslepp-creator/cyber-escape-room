@@ -265,25 +265,25 @@ body.game-body .crt-vignette {
 }
 
 .chimera-wave {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 22px;
-  margin-top: 18px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  letter-spacing: 1px;
+  line-height: 1;
+  margin-top: 14px;
+  color: var(--neon);
+  opacity: 0.75;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.chimera-wave i {
-  width: 3px;
-  height: 100%;
-  background: var(--neon);
-  transform-origin: bottom center;
-  transform: scaleY(0.3);
-  animation: wave 1s infinite ease-in-out;
+body.chimera-speaking .chimera-wave {
+  animation: chimera-wave-pulse 0.35s steps(3) infinite;
+  color: #ff6688;
 }
 
-@keyframes wave {
-  0%, 100% { transform: scaleY(0.25); }
-  50% { transform: scaleY(1); }
+@keyframes chimera-wave-pulse {
+  0%, 100% { opacity: 0.5; letter-spacing: 0; }
+  50% { opacity: 1; letter-spacing: 2px; }
 }
 
 .chimera-body {
@@ -377,6 +377,165 @@ body.chimera-speaking #facility-ui {
 @keyframes chimera-ui-flicker {
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(0.75) hue-rotate(-20deg); }
+}
+
+/* CRT ambient flicker + static burst */
+body.game-body.crt-screen .scanlines {
+  animation: crt-idle-flicker 8s steps(1) infinite;
+}
+
+body.game-body.crt-static .scanlines {
+  animation: crt-static-burst 0.12s steps(2) 1;
+}
+
+body.game-body.crt-static #game-canvas-wrap {
+  filter: contrast(1.15) brightness(1.08);
+}
+
+@keyframes crt-idle-flicker {
+  0%, 92%, 100% { opacity: 1; }
+  93% { opacity: 0.88; }
+  94% { opacity: 1; }
+  96% { opacity: 0.92; }
+}
+
+@keyframes crt-static-burst {
+  0% { opacity: 0.3; transform: translateX(0); }
+  25% { opacity: 1; transform: translateX(2px); }
+  50% { opacity: 0.4; transform: translateX(-1px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+body.creator-open #facility-ui,
+body.creator-open #game-canvas-wrap,
+body.creator-open .scanlines {
+  filter: blur(2px) brightness(0.35);
+  pointer-events: none;
+}
+
+/* Character creator */
+.character-creator {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 4, 8, 0.92);
+  pointer-events: auto;
+}
+
+.cc-panel {
+  width: min(420px, 94vw);
+  padding: 22px 24px 26px;
+  border: 2px solid var(--neon-dim);
+  background: rgba(0, 10, 14, 0.96);
+  box-shadow: 0 0 24px rgba(0, 255, 136, 0.15), inset 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.cc-title {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--neon);
+}
+
+.cc-sub {
+  margin: 8px 0 18px;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #3f6e5c;
+}
+
+.cc-layout {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.cc-preview-wrap {
+  flex: 0 0 96px;
+  border: 2px solid var(--neon-dim);
+  background: #040810;
+  image-rendering: pixelated;
+}
+
+.cc-form {
+  flex: 1;
+  min-width: 0;
+}
+
+.cc-label {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #3f6e5c;
+  margin-bottom: 6px;
+}
+
+.cc-label input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border: 2px solid var(--neon-dim);
+  background: #040810;
+  color: var(--neon-soft);
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  outline: none;
+}
+
+.cc-label input:focus {
+  border-color: var(--neon);
+}
+
+.cc-row {
+  margin-top: 12px;
+}
+
+.cc-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.cc-opt {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 6px 7px;
+  border: 2px solid var(--neon-dim);
+  background: rgba(0, 20, 14, 0.5);
+  color: #3f6e5c;
+  cursor: pointer;
+}
+
+.cc-opt.selected {
+  border-color: var(--neon);
+  color: var(--neon);
+  background: rgba(0, 45, 30, 0.45);
+}
+
+.cc-opt:hover {
+  color: var(--neon-soft);
+}
+
+.cc-confirm {
+  width: 100%;
+  padding: 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  border: 2px solid var(--amber);
+  background: rgba(40, 24, 0, 0.4);
+  color: var(--amber);
+  cursor: pointer;
+}
+
+.cc-confirm:hover {
+  color: var(--neon);
+  border-color: var(--neon);
 }
 
 /* Cinematic / intro mode: hide the HUD and let the canvas fill the screen so the

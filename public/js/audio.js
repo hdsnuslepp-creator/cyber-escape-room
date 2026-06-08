@@ -375,6 +375,68 @@ const AudioFX = (() => {
     }
   }
 
+  let ambienceNodes = null;
+
+  function startFacilityAmbience() {
+    if (!enabled || volume === 0) return;
+    stopFacilityAmbience();
+    try {
+      const ac = getCtx();
+      const hum = ac.createOscillator();
+      hum.type = 'sine';
+      hum.frequency.value = 58;
+
+      const buzz = ac.createOscillator();
+      buzz.type = 'sawtooth';
+      buzz.frequency.value = 120;
+
+      const noise = ac.createBufferSource();
+      const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.15;
+      noise.buffer = buf;
+      noise.loop = true;
+
+      const humGain = ac.createGain();
+      humGain.gain.value = 0.012 * (volume / 100);
+      const buzzGain = ac.createGain();
+      buzzGain.gain.value = 0.004 * (volume / 100);
+      const noiseGain = ac.createGain();
+      noiseGain.gain.value = 0.006 * (volume / 100);
+
+      hum.connect(humGain).connect(masterGain);
+      buzz.connect(buzzGain).connect(masterGain);
+      noise.connect(noiseGain).connect(masterGain);
+
+      hum.start();
+      buzz.start();
+      noise.start();
+
+      ambienceNodes = { hum, buzz, noise, humGain, buzzGain, noiseGain };
+    } catch { /* ignore */ }
+  }
+
+  function stopFacilityAmbience() {
+    if (!ambienceNodes) return;
+    try {
+      ['hum', 'buzz', 'noise'].forEach((k) => {
+        if (ambienceNodes[k]) {
+          ambienceNodes[k].stop();
+          ambienceNodes[k].disconnect();
+        }
+      });
+    } catch { /* ignore */ }
+    ambienceNodes = null;
+  }
+
+  function triggerStaticBurst() {
+    if (!enabled || volume === 0) return;
+    noiseBurst(0.06, 0.03);
+    tone(180 + Math.random() * 40, 0.04, 'sawtooth', 0.02);
+    document.body.classList.add('crt-static');
+    setTimeout(() => document.body.classList.remove('crt-static'), 120);
+  }
+
   return {
     resume,
     initUI,
@@ -386,6 +448,9 @@ const AudioFX = (() => {
     getVolume,
     startMusic,
     stopMusic,
+    startFacilityAmbience,
+    stopFacilityAmbience,
+    triggerStaticBurst,
     roomComplete,
 
     click: sfxClick,

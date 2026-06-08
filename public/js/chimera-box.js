@@ -71,6 +71,9 @@
     clearTyping();
     onDone = typeof opts.onDone === 'function' ? opts.onDone : null;
     show();
+    if (typeof AudioFX !== 'undefined' && AudioFX.triggerStaticBurst) {
+      AudioFX.triggerStaticBurst();
+    }
     try {
       window.dispatchEvent(new CustomEvent('chimera:speak', { detail: { text: String(message) } }));
     } catch (e) { /* noop */ }

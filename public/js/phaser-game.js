@@ -36,6 +36,26 @@
     { id: 'd', text: 'https://acmec0rp.com/signin', correct: false },
   ];
 
+  const PASSWORD_OPTIONS = [
+    { id: 'a', text: 'password123', correct: false },
+    { id: 'b', text: 'Summer2024!', correct: false },
+    { id: 'c', text: 'Tr0ub4dor&3', correct: false },
+    { id: 'd', text: 'k9#mP2$vL8@xQ4!nR', correct: true },
+  ];
+
+  const MFA_OPTIONS = [
+    { id: 'a', text: 'Read the code aloud to the agent', correct: false },
+    { id: 'b', text: 'Never share MFA codes — hang up', correct: true },
+    { id: 'c', text: 'Text the code to verify faster', correct: false },
+  ];
+
+  const CREDENTIAL_OPTIONS = [
+    { id: 'a', text: 'Rotate passwords quarterly only', correct: false },
+    { id: 'b', text: 'Unique creds per user + vault + disable shared accounts', correct: true },
+    { id: 'c', text: 'Post new passwords on the intranet', correct: false },
+    { id: 'd', text: 'Same passphrase for all admins', correct: false },
+  ];
+
   function tilePx(c, r) {
     return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
   }
@@ -80,7 +100,8 @@
     },
     scene: [
       BootScene, TitleScene, HubScene, PhishingScene, AttachmentScene,
-      FakeLoginScene, GameOverScene, ChapterCompleteScene,
+      FakeLoginScene, PasswordScene, MFAScene, CredentialScene,
+      GameOverScene, ChapterCompleteScene,
     ],
     input: {
       keyboard: true,
@@ -94,11 +115,21 @@
   function persistProgress(registry) {
     if (typeof ProfileSave === 'undefined') return;
     ProfileSave.savePhaserProgress({
+      avatarConfigured: !!registry.get('avatarConfigured'),
+      avatarHair: registry.get('avatarHair') || 'black',
+      avatarSkin: registry.get('avatarSkin') || 'light',
+      avatarSuit: registry.get('avatarSuit') || 'cyan',
+      avatarHeadgear: registry.get('avatarHeadgear') || 'none',
       agentName: registry.get('agentName') || '',
+      facilitySector: registry.get('facilitySector') || 1,
       inboxComplete: !!registry.get('inboxComplete'),
       attachmentComplete: !!registry.get('attachmentComplete'),
       fakeLoginComplete: !!registry.get('fakeLoginComplete'),
       ch1BossComplete: !!registry.get('ch1BossComplete'),
+      s2PasswordComplete: !!registry.get('s2PasswordComplete'),
+      s2MfaComplete: !!registry.get('s2MfaComplete'),
+      s2CredentialComplete: !!registry.get('s2CredentialComplete'),
+      ch2BossComplete: !!registry.get('ch2BossComplete'),
       hasKey: !!registry.get('hasKey'),
       lives: registry.get('lives') ?? START_LIVES,
       score: registry.get('score') ?? START_SCORE,
@@ -448,10 +479,20 @@
       : {};
 
     this.registry.set('agentName', p.agentName || '');
+    this.registry.set('avatarConfigured', !!p.avatarConfigured);
+    this.registry.set('avatarHair', p.avatarHair || 'black');
+    this.registry.set('avatarSkin', p.avatarSkin || 'light');
+    this.registry.set('avatarSuit', p.avatarSuit || 'cyan');
+    this.registry.set('avatarHeadgear', p.avatarHeadgear || 'none');
     this.registry.set('inboxComplete', !!p.inboxComplete);
     this.registry.set('attachmentComplete', !!p.attachmentComplete);
     this.registry.set('fakeLoginComplete', !!p.fakeLoginComplete);
     this.registry.set('ch1BossComplete', !!p.ch1BossComplete);
+    this.registry.set('facilitySector', p.facilitySector || (p.ch1BossComplete ? 2 : 1));
+    this.registry.set('s2PasswordComplete', !!p.s2PasswordComplete);
+    this.registry.set('s2MfaComplete', !!p.s2MfaComplete);
+    this.registry.set('s2CredentialComplete', !!p.s2CredentialComplete);
+    this.registry.set('ch2BossComplete', !!p.ch2BossComplete);
     this.registry.set('hasKey', !!p.hasKey);
     this.registry.set('lives', p.lives ?? START_LIVES);
     this.registry.set('score', p.score ?? START_SCORE);
@@ -540,8 +581,29 @@
     this.phase = 'cinema';
     if (typeof AudioFX !== 'undefined') { AudioFX.resume(); AudioFX.click(); }
     this.pressGroup.setVisible(false);
-    this.skipHint.setVisible(true);
-    this.playOpening();
+
+    const startOpening = () => {
+      this.skipHint.setVisible(true);
+      this.playOpening();
+    };
+
+    if (typeof FacilityCharacter !== 'undefined' && FacilityCharacter.needsCreator()) {
+      FacilityCharacter.show((avatar) => {
+        FacilityCharacter.applyToRegistry(this.registry);
+        persistProgress(this.registry);
+        if (typeof window.FacilityUI !== 'undefined' && window.FacilityUI.refreshAgent) {
+          window.FacilityUI.refreshAgent();
+        }
+        startOpening();
+      });
+      return;
+    }
+
+    if (typeof FacilityCharacter !== 'undefined') {
+      FacilityCharacter.loadFromSave();
+      FacilityCharacter.applyToRegistry(this.registry);
+    }
+    startOpening();
   };
 
   TitleScene.prototype.bootLine = function (text) {
@@ -568,7 +630,10 @@
     add(750, () => this.bootLine('> LOADING SUBJECT...'));
     add(1200, () => this.bootLine('')); // the cursor freezes
     add(500, () => this.bootLine('> SUBJECT FOUND'));
-    add(850, () => this.bootLine('> TRAINEE 1998'));
+    add(850, () => {
+      const name = this.registry.get('agentName') || 'TRAINEE 1998';
+      this.bootLine(`> ${name.toUpperCase()}`);
+    });
     add(1200, () => { this.playIntroVoice(); this.chimeraBeat('CHIMERA:  Good.'); });
     add(1500, () => this.chimeraBeat("CHIMERA:  You're awake.", true));
     add(1900, () => this.chimeraBeat("CHIMERA:  Let's see if you're any different."));
@@ -639,7 +704,9 @@
   TitleScene.prototype.gotoHub = function () {
     if (this.phase === 'starting') return;
     this.phase = 'starting';
-    this.registry.set('agentName', 'TRAINEE 1998');
+    if (!this.registry.get('agentName')) {
+      this.registry.set('agentName', 'TRAINEE 1998');
+    }
     if (this.registry.get('lives') == null) this.registry.set('lives', START_LIVES);
     if (this.registry.get('score') == null) this.registry.set('score', START_SCORE);
     persistProgress(this.registry);
@@ -654,17 +721,63 @@
   HubScene.prototype = Object.create(Phaser.Scene.prototype);
   HubScene.prototype.constructor = HubScene;
 
-  HubScene.prototype.create = function () {
-    setSceneChrome(this, false);
+  HubScene.prototype.loadSector1State = function () {
     this.inboxDone = !!this.registry.get('inboxComplete');
     this.attachmentDone = !!this.registry.get('attachmentComplete');
     this.loginDone = !!this.registry.get('fakeLoginComplete');
     this.bossDone = !!this.registry.get('ch1BossComplete');
     this.allMissionsDone = this.inboxDone && this.attachmentDone && this.loginDone;
-
-    // Key only unlocks the final blast door — clear stale saves from the old door-first flow.
+    this.hubPos = {
+      pc: HUB.pc, archive: HUB.archive, server: HUB.server,
+      door: HUB.door, player: HUB.player, key: HUB.key,
+      roomY: HUB.roomY, roomRows: HUB.roomRows,
+    };
     if (!this.allMissionsDone && this.registry.get('hasKey')) {
       this.registry.set('hasKey', false);
+    }
+    this.keyActive = this.allMissionsDone && !this.bossDone;
+  };
+
+  HubScene.prototype.loadSector2State = function () {
+    this.s2PasswordDone = !!this.registry.get('s2PasswordComplete');
+    this.s2MfaDone = !!this.registry.get('s2MfaComplete');
+    this.s2CredentialDone = !!this.registry.get('s2CredentialComplete');
+    this.inboxDone = this.s2PasswordDone;
+    this.attachmentDone = this.s2MfaDone;
+    this.loginDone = this.s2CredentialDone;
+    this.bossDone = !!this.registry.get('ch2BossComplete');
+    this.allMissionsDone = this.s2PasswordDone && this.s2MfaDone && this.s2CredentialDone;
+    this.hubPos = {
+      pc: FacilitySector2.S2_POSITIONS.password,
+      archive: FacilitySector2.S2_POSITIONS.mfa,
+      server: FacilitySector2.S2_POSITIONS.credential,
+      door: FacilitySector2.S2_POSITIONS.door,
+      player: FacilitySector2.S2_POSITIONS.player,
+      key: FacilitySector2.S2_POSITIONS.key,
+      roomY: FacilitySector2.S2_POSITIONS.roomY,
+      roomRows: FacilitySector2.S2_POSITIONS.roomRows,
+    };
+    if (!this.allMissionsDone && this.registry.get('hasKey')) {
+      this.registry.set('hasKey', false);
+    }
+    this.keyActive = this.allMissionsDone && !this.bossDone;
+  };
+
+  HubScene.prototype.create = function () {
+    setSceneChrome(this, false);
+
+    if (this.registry.get('ch1BossComplete') && (this.registry.get('facilitySector') || 1) < 2) {
+      this.registry.set('facilitySector', 2);
+      this.registry.set('hasKey', false);
+      persistProgress(this.registry);
+    }
+    this.sector = this.registry.get('facilitySector') || 1;
+    this.isSector2 = this.sector >= 2 && typeof FacilitySector2 !== 'undefined';
+
+    if (this.isSector2) {
+      this.loadSector2State();
+    } else {
+      this.loadSector1State();
     }
 
     this.interactHint = null;
@@ -678,25 +791,40 @@
     setupPause(this);
     initTouchControls(this);
 
-    buildCorridorMap(this);
+    if (this.isSector2) {
+      if (typeof FacilitySector2 !== 'undefined') {
+        FacilitySector2.buildMap(this);
+        this.facilityProps = FacilitySector2.createProps(this);
+      }
+    } else {
+      buildCorridorMap(this);
+      if (typeof FacilityAtmosphere !== 'undefined') {
+        this.facilityProps = FacilityAtmosphere.createProps(this);
+      }
+    }
     if (typeof FacilityAtmosphere !== 'undefined') {
-      this.facilityProps = FacilityAtmosphere.createProps(this);
       this.facilityLighting = FacilityAtmosphere.createLighting(this);
     }
 
-    const spawn = tilePx(HUB.player.c, HUB.player.r);
+    const pos = this.hubPos;
+    const spawn = tilePx(pos.player.c, pos.player.r);
     this.player = this.add.sprite(spawn.x, spawn.y, 'pixel');
     this.player.setDisplaySize(20, 28);
-    this.player.setTint(COLORS.player);
+    this.avatar = {
+      hair: this.registry.get('avatarHair') || 'black',
+      skin: this.registry.get('avatarSkin') || 'light',
+      suit: this.registry.get('avatarSuit') || 'cyan',
+      headgear: this.registry.get('avatarHeadgear') || 'none',
+    };
     this.player.setDepth(4);
 
     this.playerGfx = this.add.graphics();
     this.playerGfx.setDepth(5);
-    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y);
+    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y, this.avatar);
 
-    const doorPos = tilePx(HUB.door.c, HUB.door.r);
-    this.serverPos = tilePx(HUB.server.c, HUB.server.r);
-    this.pcPos = tilePx(HUB.pc.c, HUB.pc.r);
+    const doorPos = tilePx(pos.door.c, pos.door.r);
+    this.serverPos = tilePx(pos.server.c, pos.server.r);
+    this.pcPos = tilePx(pos.pc.c, pos.pc.r);
 
     if (typeof FacilityAtmosphere !== 'undefined') {
       this.blastDoor = FacilityAtmosphere.createBlastDoor(this, doorPos);
@@ -722,20 +850,19 @@
       .setDepth(15);
     this.serverInteractZone.on('pointerdown', () => this.tryInteract('server'));
 
-    this.archivePos = tilePx(HUB.archive.c, HUB.archive.r);
+    this.archivePos = tilePx(pos.archive.c, pos.archive.r);
     this.archiveInteractZone = this.add.rectangle(this.archivePos.x, this.archivePos.y, TILE * 2.4, TILE * 2, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.archiveInteractZone.on('pointerdown', () => this.tryInteract('archive'));
 
-    this.keyPos = tilePx(HUB.key.c, HUB.key.r);
-    this.hasKey = !!this.registry.get('hasKey');
+    this.keyPos = tilePx(pos.key.c, pos.key.r);
     // Key only matters for the final blast-door breach — not for starting Sector 1.
-    this.keyActive = this.allMissionsDone && !this.bossDone;
+    this.hasKey = !!this.registry.get('hasKey');
     if (typeof FacilityAtmosphere !== 'undefined') {
-      this.keyObjects = FacilityAtmosphere.createKeycardProp(this, HUB.key.c, HUB.key.r);
+      this.keyObjects = FacilityAtmosphere.createKeycardProp(this, pos.key.c, pos.key.r);
     } else {
-      const keyXY = tileXY(HUB.key.c - 1, HUB.key.r);
+      const keyXY = tileXY(pos.key.c - 1, pos.key.r);
       this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
     }
     if (!this.keyActive || this.hasKey) {
@@ -785,7 +912,7 @@
       color: '#ff3366',
     }).setScrollFactor(0).setDepth(20).setVisible(false);
 
-    this.promptText = this.add.text(GAME_W / 2, (HUB.roomY + HUB.roomRows) * TILE + 28, this.getDefaultPrompt(), {
+    this.promptText = this.add.text(GAME_W / 2, (this.hubPos.roomY + this.hubPos.roomRows) * TILE + 28, this.getDefaultPrompt(), {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#8899aa',
@@ -807,9 +934,23 @@
       SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
     });
 
+    if (typeof AudioFX !== 'undefined') {
+      AudioFX.startFacilityAmbience();
+    }
+
     if (this.game.canvas) {
       this.game.canvas.setAttribute('tabindex', '0');
       this.game.canvas.focus();
+    }
+
+    if (!this.isSector2 && !this.registry.get('hubIntroSeen')) {
+      this.registry.set('hubIntroSeen', true);
+      this.time.delayedCall(1200, () => {
+        this.chainChimera([
+          'The lights still work.',
+          'That should tell you something.',
+        ]);
+      });
     }
     this.input.on('pointerdown', () => {
       if (this.game.canvas) this.game.canvas.focus();
@@ -828,6 +969,23 @@
       this.registry.set('justUnlockedLogin', false);
       this.playMissionUnlockAnimation('LOGIN PORTAL — ARMED',
         "You don't trust the obvious link.\nNeither do I.", { chimera: true });
+    } else if (this.isSector2 && !this.registry.get('s2IntroSeen')) {
+      this.registry.set('s2IntroSeen', true);
+      persistProgress(this.registry);
+      this.time.delayedCall(800, () => {
+        this.chainChimera([
+          'Sector 2.',
+          'The Breach.',
+          'Valid credentials were stolen.',
+          'Rotate them before the attacker moves.',
+        ]);
+      });
+    } else if (this.registry.get('justUnlockedS2Mfa')) {
+      this.registry.set('justUnlockedS2Mfa', false);
+      this.playMissionUnlockAnimation('MFA KIOSK — ONLINE', 'Good. Codes are not passwords.', { chimera: true });
+    } else if (this.registry.get('justUnlockedS2Credential')) {
+      this.registry.set('justUnlockedS2Credential', false);
+      this.playMissionUnlockAnimation('CREDENTIAL AUDIT — PASS', 'Policy applied. They will try again.', { chimera: true });
     }
 
     this.overrideActive = false;
@@ -957,6 +1115,8 @@
 
   HubScene.prototype.finishChapter = function () {
     this.registry.set('ch1BossComplete', true);
+    this.registry.set('facilitySector', 2);
+    this.registry.set('hasKey', false);
     persistProgress(this.registry);
     sfxRoomComplete('ch1_boss');
     this.cameras.main.fadeOut(500, 0, 0, 0);
@@ -982,6 +1142,14 @@
   };
 
   HubScene.prototype.getStatusLine = function () {
+    if (this.isSector2) {
+      if (this.bossDone) return 'SECTOR 2 — CONTAINED';
+      if (this.allMissionsDone) return 'FINAL LOCKDOWN — DOOR READY';
+      if (this.s2CredentialDone) return 'BLAST DOOR — ACTIVE';
+      if (this.s2MfaDone) return 'CREDENTIAL AUDIT — ACTIVE';
+      if (this.s2PasswordDone) return 'MFA KIOSK — ACTIVE';
+      return 'SECTOR 2 — CREDENTIALS COMPROMISED';
+    }
     if (this.bossDone) return 'CHAPTER 1 — CONTAINED';
     if (this.allMissionsDone) return 'FINAL BREACH — DOOR READY';
     if (this.loginDone) return 'ALL ROOMS CLEARED — DOOR';
@@ -991,6 +1159,16 @@
   };
 
   HubScene.prototype.getDefaultPrompt = function () {
+    if (this.isSector2) {
+      if (this.allMissionsDone && !this.bossDone) {
+        if (this.hasKey) return '[ E ] at DOOR — lock the attacker out';
+        return 'Pick up the KEY (bottom-right), then breach the DOOR';
+      }
+      if (this.s2CredentialDone) return 'All Sector 2 missions cleared — pick up KEY';
+      if (this.s2MfaDone && !this.s2CredentialDone) return '[ E ] at AUDIT terminal (bottom-left)';
+      if (this.s2PasswordDone && !this.s2MfaDone) return '[ E ] at MFA kiosk (center-top)';
+      return '[ E ] at PASSWORD vault (left alcove) — rotate credentials';
+    }
     if (this.allMissionsDone && !this.bossDone) {
       if (this.hasKey) return '[ E ] at DOOR — final breach / confront CHIMERA';
       return 'Pick up the KEY (bottom-right), then breach the DOOR';
@@ -1164,11 +1342,11 @@
     const sender = this.add.text(0, -48, 'SENDER: UNKNOWN', {
       fontFamily: 'VT323, monospace', fontSize: '15px', color: '#7790a0',
     }).setOrigin(0.5);
-    const body = this.add.text(0, -4, '"if you\'re reading this,\ndon\'t answer chimera."', {
+    const body = this.add.text(0, -4, '"If you\'re reading this,\ndon\'t answer CHIMERA."', {
       fontFamily: 'VT323, monospace', fontSize: '20px', color: '#cfeeff',
       align: 'center', wordWrap: { width: 296 },
     }).setOrigin(0.5);
-    const sign = this.add.text(0, 46, '\u2014 TRAINEE 581', {
+    const sign = this.add.text(0, 46, '\u2014 Trainee 581', {
       fontFamily: 'VT323, monospace', fontSize: '17px', color: '#ffb000',
     }).setOrigin(0.5);
     const close = () => {
@@ -1185,6 +1363,22 @@
   };
 
   HubScene.prototype.handleArchiveInteract = function () {
+    if (this.isSector2) {
+      if (!this.isNearArchive()) {
+        this.flashPrompt('Move closer to the MFA kiosk', '#ff3366');
+        return;
+      }
+      if (!this.s2PasswordDone) {
+        this.flashPrompt('Rotate passwords at the PASSWORD vault first', '#ff3366');
+        return;
+      }
+      if (this.s2MfaDone) {
+        this.flashPrompt('MFA protocol complete — proceed to AUDIT terminal', '#aa66dd');
+        return;
+      }
+      this.showSector2MissionPanel('MFA KIOSK', 'Never share verification codes', 'MFAScene');
+      return;
+    }
     if (!this.isNearArchive()) {
       this.flashPrompt('Move closer to the ARCHIVE (top-center)', '#ff3366');
       return;
@@ -1293,6 +1487,56 @@
     const btnCancel = makeButton(this, 0, 68, '[ CANCEL ]', close, { fontSize: '8px', color: '#8899aa' });
     c.add([dim, panel, head, sub, body, btnGo.bg, btnGo.text, btnCancel.bg, btnCancel.text]);
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
+  };
+
+  HubScene.prototype.showSector2MissionPanel = function (title, subtitle, sceneKey) {
+    this.overrideActive = true;
+    sfxClick();
+    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
+    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
+    const panel = this.add.rectangle(0, 0, 340, 168, 0x0c1020, 0.98).setStrokeStyle(3, 0x6688ff);
+    const head = this.add.text(0, -58, title, {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#8899ff',
+    }).setOrigin(0.5);
+    const sub = this.add.text(0, -32, subtitle, {
+      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#7788aa',
+    }).setOrigin(0.5);
+    const close = () => { sfxClick(); c.destroy(); this.overrideActive = false; };
+    const launch = () => {
+      c.destroy();
+      this.overrideActive = false;
+      this.enteringRoom = true;
+      this.cameras.main.flash(180, 100, 120, 255);
+      switchScene(this, sceneKey);
+    };
+    const btnGo = makeButton(this, 0, 36, '[ BEGIN MISSION ]', launch, { fontSize: '8px', color: '#8899ff' });
+    const btnCancel = makeButton(this, 0, 68, '[ CANCEL ]', close, { fontSize: '8px', color: '#8899aa' });
+    c.add([dim, panel, head, sub, btnGo.bg, btnGo.text, btnCancel.bg, btnCancel.text]);
+  };
+
+  HubScene.prototype.showSector2DoorChoice = function () {
+    this.showChimeraChoice('The attacker is pivoting.\nCut access now — or trace where they went.', [
+      {
+        label: '[ LOCK THEM OUT ]',
+        stance: 'shutdown',
+        response: 'Good.\nThey will knock again.\nThey always do.',
+        onClose: () => this.finishSector2(),
+      },
+      {
+        label: '[ TRACE THE PIVOT ]',
+        stance: 'listen',
+        response: 'Brave.\nSector 3 holds what they took.\n…when you are ready.',
+        onClose: () => this.finishSector2(),
+      },
+    ]);
+  };
+
+  HubScene.prototype.finishSector2 = function () {
+    this.registry.set('ch2BossComplete', true);
+    persistProgress(this.registry);
+    sfxRoomComplete('ch2_boss');
+    this.cameras.main.fadeOut(500, 0, 0, 0);
+    this.time.delayedCall(520, () => this.scene.start('ChapterCompleteScene'));
   };
 
   HubScene.prototype.isNear = function (pos, radius) {
@@ -1408,6 +1652,30 @@
       return;
     }
 
+    if (this.isSector2) {
+      if (this.allMissionsDone && !this.bossDone) {
+        if (!this.hasKey) {
+          sfxError();
+          this.flashPrompt('Blast door locked — pick up the KEY (bottom-right) first', '#ff3366');
+          return;
+        }
+        sfxClick();
+        this.enteringRoom = true;
+        this.showChimera(
+          'They are still inside the wire.\nLock them out — or let me show you what they took.',
+          () => this.showSector2DoorChoice()
+        );
+        return;
+      }
+      if (this.s2CredentialDone || this.s2MfaDone || this.s2PasswordDone) {
+        this.flashPrompt('Clear all Sector 2 terminals before the blast door opens', '#6688ff');
+        return;
+      }
+      sfxError();
+      this.flashPrompt('DOOR LOCKED — begin at the PASSWORD vault', '#ff3366');
+      return;
+    }
+
     if (this.allMissionsDone && !this.bossDone) {
       if (!this.hasKey) {
         sfxError();
@@ -1438,6 +1706,22 @@
   };
 
   HubScene.prototype.handleServerInteract = function () {
+    if (this.isSector2) {
+      if (!this.isNearServer()) {
+        this.flashPrompt('Move closer to the AUDIT terminal (bottom-left)', '#ff3366');
+        return;
+      }
+      if (!this.s2MfaDone) {
+        this.flashPrompt('Secure MFA at the kiosk first', '#ff3366');
+        return;
+      }
+      if (this.s2CredentialDone) {
+        this.flashPrompt('Credential audit complete — pick up KEY for blast door', '#8866cc');
+        return;
+      }
+      this.showSector2MissionPanel('CREDENTIAL AUDIT', 'Apply the correct access policy', 'CredentialScene');
+      return;
+    }
     if (!this.isNearServer()) {
       this.flashPrompt('Move closer to the SERVER (bottom-left)', '#ff3366');
       return;
@@ -1456,6 +1740,18 @@
   };
 
   HubScene.prototype.handlePcInteract = function () {
+    if (this.isSector2) {
+      if (!this.isNearPc()) {
+        this.flashPrompt('Move closer to the PASSWORD vault (left alcove)', '#ff3366');
+        return;
+      }
+      if (this.s2PasswordDone) {
+        this.flashPrompt('Password rotation complete — use MFA kiosk next', '#6688ff');
+        return;
+      }
+      this.showSector2MissionPanel('PASSWORD VAULT', 'Rotate compromised credentials', 'PasswordScene');
+      return;
+    }
     if (!this.isNearPc()) {
       this.flashPrompt('Move closer to the LOGIN terminal (left alcove)', '#ff3366');
       return;
@@ -1496,6 +1792,11 @@
   };
 
   HubScene.prototype.clampPlayer = function () {
+    if (this.isSector2 && typeof FacilitySector2 !== 'undefined') {
+      FacilitySector2.clampToCorridor(this.player);
+      if (this._prevX != null) FacilitySector2.resolveWallCollision(this.player, this._prevX, this._prevY);
+      return;
+    }
     if (typeof FacilityAtmosphere !== 'undefined') {
       FacilityAtmosphere.clampToCorridor(this.player);
       if (this._prevX != null) {
@@ -1527,7 +1828,7 @@
     this._prevY = this.player.y;
     applyTouchMovement(this, 200, delta);
     this.clampPlayer();
-    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y);
+    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y, this.avatar);
 
     this.nearDoor = this.isNearDoor();
     this.nearServer = this.isNearServer();
@@ -1551,29 +1852,45 @@
     if (this.nearKey) {
       this.promptText.setText('[ E ] or click KEY — pick up blast-door access key');
       this.promptText.setColor('#ffb000');
-    } else if (this.nearPc && !this.inboxDone) {
+    } else if (this.isSector2 && this.nearPc && !this.s2PasswordDone) {
+      this.promptText.setText('[ E ] PASSWORD vault — rotate credentials');
+      this.promptText.setColor('#6688ff');
+    } else if (this.isSector2 && this.nearArchive && this.s2PasswordDone && !this.s2MfaDone) {
+      this.promptText.setText('[ E ] MFA kiosk — secure verification codes');
+      this.promptText.setColor('#aa66dd');
+    } else if (this.isSector2 && this.nearServer && this.s2MfaDone && !this.s2CredentialDone) {
+      this.promptText.setText('[ E ] AUDIT terminal — credential policy check');
+      this.promptText.setColor('#8866cc');
+    } else if (this.isSector2 && this.nearDoor && this.allMissionsDone && !this.bossDone) {
+      if (this.hasKey) {
+        this.promptText.setText('[ E ] DOOR — lock the attacker out');
+      } else {
+        this.promptText.setText('DOOR LOCKED — pick up KEY (bottom-right) first');
+      }
+      this.promptText.setColor('#ffb000');
+    } else if (!this.isSector2 && this.nearPc && !this.inboxDone) {
       this.promptText.setText('[ E ] LOGIN — Initialize Breach (Sector 1 INBOX)');
       this.promptText.setColor('#44ccff');
-    } else if (this.nearArchive) {
+    } else if (!this.isSector2 && this.nearArchive) {
       this.promptText.setText('[ E ] ARCHIVE — trainee records');
       this.promptText.setColor('#ff66cc');
-    } else if (this.nearServer && this.inboxDone && !this.attachmentDone) {
+    } else if (!this.isSector2 && this.nearServer && this.inboxDone && !this.attachmentDone) {
       this.promptText.setText('[ E ] SERVER — Attachment Sandbox');
       this.promptText.setColor('#aa88ff');
-    } else if (this.nearPc && this.attachmentDone && !this.loginDone) {
+    } else if (!this.isSector2 && this.nearPc && this.attachmentDone && !this.loginDone) {
       this.promptText.setText('[ E ] LOGIN — Fake Login Portal');
       this.promptText.setColor('#00ccff');
-    } else if (this.nearDoor && this.allMissionsDone && !this.bossDone) {
+    } else if (!this.isSector2 && this.nearDoor && this.allMissionsDone && !this.bossDone) {
       if (this.hasKey) {
         this.promptText.setText('[ E ] DOOR — final breach / confront CHIMERA');
       } else {
         this.promptText.setText('DOOR LOCKED — pick up KEY (bottom-right) first');
       }
       this.promptText.setColor('#ffb000');
-    } else if (this.nearDoor && !this.inboxDone) {
+    } else if (!this.isSector2 && this.nearDoor && !this.inboxDone) {
       this.promptText.setText('DOOR LOCKED — use LOGIN terminal to initialize breach');
       this.promptText.setColor('#ff3366');
-    } else if (this.nearDoor && this.inboxDone && !this.allMissionsDone) {
+    } else if (!this.isSector2 && this.nearDoor && this.inboxDone && !this.allMissionsDone) {
       this.promptText.setText('DOOR sealed — clear SERVER and LOGIN first');
       this.promptText.setColor('#8899aa');
     } else {
@@ -1912,6 +2229,108 @@
     }
   };
 
+  // ─── Sector 2 puzzles (password / MFA / credential audit) ───────────────
+  function createOptionsPuzzleScene(SceneCtor, key, cfg) {
+    SceneCtor.prototype.init = function () { resetCamera(this); };
+    SceneCtor.prototype.create = function () {
+      this.selectedId = null;
+      resetCamera(this);
+      setupPause(this);
+      addPuzzleHud(this);
+      drawScanlines(this);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, cfg.bg || 0x101828, 1)
+        .setStrokeStyle(3, cfg.stroke || 0x6688ff);
+      this.add.text(GAME_W / 2, 48, cfg.title, {
+        fontFamily: 'Press Start 2P, monospace', fontSize: '9px', color: cfg.titleColor || '#8899ff',
+      }).setOrigin(0.5);
+      this.add.text(GAME_W / 2, 78, cfg.prompt, {
+        fontFamily: 'VT323, monospace', fontSize: '20px', color: '#aabbcc', wordWrap: { width: GAME_W - 80 }, align: 'center',
+      }).setOrigin(0.5);
+      this.optionBtns = [];
+      cfg.options.forEach((opt, i) => {
+        const y = 118 + i * 52;
+        const btn = makeButton(this, GAME_W / 2, y, opt.text, () => {
+          if (this.isPaused) return;
+          sfxClick();
+          this.selectedId = opt.id;
+          this.optionBtns.forEach((b) => b.bg.setStrokeStyle(2, cfg.stroke || 0x6688ff));
+          btn.bg.setStrokeStyle(2, 0x66aaff);
+          this.feedbackText.setText('');
+        }, { fontSize: '7px', color: '#aabbcc' });
+        btn.optId = opt.id;
+        this.optionBtns.push(btn);
+      });
+      this.completeBtn = makeButton(this, GAME_W / 2, 340, '[ COMPLETE MISSION ]', () => this.submitChoice(cfg), { fontSize: '9px' });
+      makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => { sfxClick(); switchScene(this, 'HubScene'); }, { fontSize: '8px', color: '#8899aa' });
+    };
+    SceneCtor.prototype.submitChoice = function (cfg) {
+      if (this.isPaused) return;
+      if (!this.selectedId) {
+        this.feedbackText.setText('Select an answer first.').setColor('#ff3366');
+        return;
+      }
+      const chosen = cfg.options.find((o) => o.id === this.selectedId);
+      if (!chosen) return;
+      if (chosen.correct) {
+        this.registry.set(cfg.flag, true);
+        if (cfg.unlockFlag) this.registry.set(cfg.unlockFlag, true);
+        const score = (this.registry.get('score') ?? START_SCORE) + 200;
+        this.registry.set('score', score);
+        persistProgress(this.registry);
+        sfxRoomComplete(cfg.roomId);
+        this.cameras.main.flash(150, 100, 120, 255);
+        switchScene(this, 'HubScene');
+      } else {
+        sfxError();
+        loseLife(this, cfg.failMsg || 'Incorrect — try again.');
+      }
+    };
+  }
+
+  function PasswordScene() { Phaser.Scene.call(this, { key: 'PasswordScene' }); }
+  PasswordScene.prototype = Object.create(Phaser.Scene.prototype);
+  PasswordScene.prototype.constructor = PasswordScene;
+  createOptionsPuzzleScene(PasswordScene, 'PasswordScene', {
+    title: 'SECTOR 2 — PASSWORD ROTATION',
+    prompt: 'Which password meets enterprise policy?',
+    options: PASSWORD_OPTIONS,
+    flag: 's2PasswordComplete',
+    unlockFlag: 'justUnlockedS2Mfa',
+    roomId: 'password',
+    failMsg: 'Too weak — attackers already have that pattern.',
+    bg: 0x0c1424,
+    stroke: 0x4466cc,
+  });
+
+  function MFAScene() { Phaser.Scene.call(this, { key: 'MFAScene' }); }
+  MFAScene.prototype = Object.create(Phaser.Scene.prototype);
+  MFAScene.prototype.constructor = MFAScene;
+  createOptionsPuzzleScene(MFAScene, 'MFAScene', {
+    title: 'SECTOR 2 — MFA PROTOCOL',
+    prompt: 'A caller claims to be IT support. What do you do?',
+    options: MFA_OPTIONS,
+    flag: 's2MfaComplete',
+    unlockFlag: 'justUnlockedS2Credential',
+    roomId: 'mfa',
+    failMsg: 'Never share MFA codes — that bypasses everything.',
+    bg: 0x140c20,
+    stroke: 0x8844cc,
+  });
+
+  function CredentialScene() { Phaser.Scene.call(this, { key: 'CredentialScene' }); }
+  CredentialScene.prototype = Object.create(Phaser.Scene.prototype);
+  CredentialScene.prototype.constructor = CredentialScene;
+  createOptionsPuzzleScene(CredentialScene, 'CredentialScene', {
+    title: 'SECTOR 2 — CREDENTIAL AUDIT',
+    prompt: 'Shared admin credentials were found on a wiki. Best policy?',
+    options: CREDENTIAL_OPTIONS,
+    flag: 's2CredentialComplete',
+    roomId: 'credential_audit',
+    failMsg: 'Shared credentials are how they got inside.',
+    bg: 0x100818,
+    stroke: 0x5533aa,
+  });
+
   // ─── Game over ──────────────────────────────────────────────────────────
   function GameOverScene() {
     Phaser.Scene.call(this, { key: 'GameOverScene' });
@@ -1975,33 +2394,38 @@
     drawScanlines(this);
     setupPause(this);
 
-    const inbox = !!this.registry.get('inboxComplete');
-    const attach = !!this.registry.get('attachmentComplete');
-    const login = !!this.registry.get('fakeLoginComplete');
+    const isS2 = !!this.registry.get('ch2BossComplete') && (this.registry.get('facilitySector') || 1) >= 2;
+    const strokeCol = isS2 ? 0x6688ff : COLORS.doorOpen;
 
     this.add.rectangle(cx, GAME_H / 2, GAME_W - 32, GAME_H - 32, COLORS.dialogue, 0.95)
-      .setStrokeStyle(4, COLORS.doorOpen);
+      .setStrokeStyle(4, strokeCol);
 
-    this.add.text(cx, 70, 'CHAPTER 1 COMPLETE', {
+    this.add.text(cx, 70, isS2 ? 'SECTOR 2 COMPLETE' : 'CHAPTER 1 COMPLETE', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '14px',
-      color: '#00ff66',
+      color: isS2 ? '#8899ff' : '#00ff66',
       align: 'center',
     }).setOrigin(0.5);
 
-    this.add.text(cx, 102, 'THE EMAIL', {
+    this.add.text(cx, 102, isS2 ? 'THE BREACH' : 'THE EMAIL', {
       fontFamily: 'Press Start 2P, monospace',
       fontSize: '10px',
       color: '#ffb000',
     }).setOrigin(0.5);
 
-    const missionLines = [
-      { label: 'Phishing Inbox', done: inbox },
-      { label: 'Attachment Sandbox', done: attach },
-      { label: 'Fake Login Portal', done: login },
+    const missionLines = isS2 ? [
+      { label: 'Password Rotation', done: !!this.registry.get('s2PasswordComplete') },
+      { label: 'MFA Protocol', done: !!this.registry.get('s2MfaComplete') },
+      { label: 'Credential Audit', done: !!this.registry.get('s2CredentialComplete') },
+    ] : [
+      { label: 'Phishing Inbox', done: !!this.registry.get('inboxComplete') },
+      { label: 'Attachment Sandbox', done: !!this.registry.get('attachmentComplete') },
+      { label: 'Fake Login Portal', done: !!this.registry.get('fakeLoginComplete') },
     ];
 
-    this.add.text(cx, 132, '"Something got through — then you shut it down."', {
+    this.add.text(cx, 132, isS2
+      ? '"They were inside — then you locked the door."'
+      : '"Something got through — then you shut it down."', {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#aabbcc',
@@ -2041,7 +2465,7 @@
       wordWrap: { width: GAME_W - 80 },
     }).setOrigin(0.5);
 
-    makeButton(this, cx, GAME_H - 72, '[ RETURN TO CORRIDOR ]', () => {
+    makeButton(this, cx, GAME_H - 72, isS2 ? '[ RETURN TO SECTOR 2 ]' : '[ ENTER SECTOR 2 ]', () => {
       sfxClick();
       this.cameras.main.fadeOut(400, 0, 0, 0);
       this.time.delayedCall(420, () => this.scene.start('HubScene'));
@@ -2134,14 +2558,40 @@
     wallChar.destroy();
   }
 
-  function drawPlayerSprite(g, x, y) {
+  function drawPlayerSprite(g, x, y, avatar) {
+    const maps = typeof FacilityCharacter !== 'undefined' ? FacilityCharacter : null;
+    const hairMap = maps ? maps.HAIR : { black: 0x1a1a1a };
+    const skinMap = maps ? maps.SKIN : { light: 0xffddaa };
+    const suitMap = maps ? maps.SUIT : { cyan: 0x00ccaa };
+    const av = avatar || {};
+    const suit = suitMap[av.suit] || suitMap.cyan || 0x00ccaa;
+    const skin = skinMap[av.skin] || skinMap.light || 0xffddaa;
+    const hair = hairMap[av.hair] || hairMap.black || 0x1a1a1a;
+    const headgear = av.headgear || 'none';
+
     g.clear();
-    g.fillStyle(COLORS.playerOutline, 1);
+    g.fillStyle(0x223344, 1);
     g.fillRect(x - 9, y - 12, 18, 24);
-    g.fillStyle(COLORS.player, 1);
+    g.fillStyle(suit, 1);
     g.fillRect(x - 7, y - 10, 14, 20);
-    g.fillStyle(0xffddaa, 1);
+    g.fillStyle(skin, 1);
     g.fillRect(x - 5, y - 14, 10, 8);
+    g.fillStyle(hair, 1);
+    g.fillRect(x - 6, y - 16, 12, 4);
+
+    if (headgear === 'visor') {
+      g.fillStyle(0x44ccff, 0.85);
+      g.fillRect(x - 6, y - 13, 12, 3);
+    } else if (headgear === 'mask') {
+      g.fillStyle(0x334455, 1);
+      g.fillRect(x - 5, y - 10, 10, 6);
+    } else if (headgear === 'headset') {
+      g.fillStyle(0x556677, 1);
+      g.fillRect(x - 9, y - 13, 3, 7);
+      g.fillRect(x + 6, y - 13, 3, 7);
+      g.fillStyle(0x8899aa, 1);
+      g.fillRect(x - 2, y - 16, 4, 2);
+    }
   }
 
   function drawTerminal(scene, x, y, label, glowColor) {

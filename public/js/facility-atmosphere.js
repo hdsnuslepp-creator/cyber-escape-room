@@ -140,20 +140,36 @@
       }
     }
 
-    addEnvironmentalDetails(scene, pal);
+    const fixtures = addEnvironmentalDetails(scene, pal);
+    scene._lightFixtures = fixtures;
     return g;
   }
 
   function addEnvironmentalDetails(scene, pal) {
     const ry = HUB_POSITIONS.roomY;
 
-    // Graffiti scratched into the left wall
+    // Graffiti — previous trainees left warnings
     scene.add.text(18, (ry + 2) * TILE + 6, '581 WAS HERE', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '11px',
-      color: '#2a4455',
-      angle: -4,
+      fontFamily: 'VT323, monospace', fontSize: '11px', color: '#2a4455', angle: -4,
     }).setDepth(1).setAlpha(0.55);
+
+    scene.add.text(8 * TILE + 4, (ry + 4) * TILE + 2, "DON'T TRUST HIM", {
+      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#442233', angle: 2,
+    }).setDepth(1).setAlpha(0.5);
+
+    scene.add.text(14 * TILE, (ry + 1) * TILE + 18, 'TURN BACK', {
+      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#553322', angle: -8,
+    }).setDepth(1).setAlpha(0.45);
+
+    // Crumpled note — first environmental trace of 581 (full message comes after Inbox)
+    const noteG = scene.add.graphics().setDepth(1);
+    noteG.fillStyle(0xccc5aa, 0.85);
+    noteG.fillRect(9 * TILE + 6, (ry + 5) * TILE + 10, 26, 20);
+    noteG.lineStyle(1, 0x998866, 0.6);
+    noteG.strokeRect(9 * TILE + 6, (ry + 5) * TILE + 10, 26, 20);
+    scene.add.text(9 * TILE + 19, (ry + 5) * TILE + 20, '...581...', {
+      fontFamily: 'VT323, monospace', fontSize: '8px', color: '#554433',
+    }).setOrigin(0.5).setDepth(2).setAlpha(0.7).setAngle(-12);
 
     // Broken monitor on the floor
     const monX = 11 * TILE;
@@ -166,25 +182,78 @@
     monG.lineStyle(1, 0x442222, 1);
     monG.lineBetween(monX + 4, monY + 5, monX + 22, monY + 14);
     monG.lineBetween(monX + 20, monY + 4, monX + 8, monY + 15);
+    // Monitor stand + loose cable
+    monG.fillStyle(0x222228, 1);
+    monG.fillRect(monX + 10, monY + 20, 8, 4);
+    monG.lineStyle(2, 0x334455, 0.7);
+    monG.lineBetween(monX + 14, monY + 24, monX + 28, monY + 30);
+    monG.lineBetween(monX + 28, monY + 30, monX + 36, monY + 28);
     scene.add.text(monX + 14, monY + 22, "DON'T TRUST IT", {
-      fontFamily: 'VT323, monospace',
-      fontSize: '9px',
-      color: '#663333',
+      fontFamily: 'VT323, monospace', fontSize: '9px', color: '#663333',
     }).setOrigin(0.5, 0).setDepth(1).setAlpha(0.7);
 
     // Sticky note near archive
     scene.add.rectangle(7 * TILE + 8, (ry + 1) * TILE + 20, 22, 18, 0xffeeaa, 0.85)
       .setDepth(1).setAngle(6);
     scene.add.text(7 * TILE + 8, (ry + 1) * TILE + 20, '1998?', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '10px',
-      color: '#554422',
+      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#554422',
     }).setOrigin(0.5).setDepth(2).setAngle(6);
 
-    // Pipe / conduit along top inner wall
+    // Warning sign near blast door
+    const signG = scene.add.graphics().setDepth(1);
+    const sx = 12 * TILE;
+    const sy = (ry + 1) * TILE + 4;
+    signG.fillStyle(0x221100, 1);
+    signG.fillRect(sx, sy, 36, 22);
+    signG.lineStyle(2, 0xff6600, 0.8);
+    signG.strokeRect(sx, sy, 36, 22);
+    signG.fillStyle(0xff6600, 0.9);
+    for (let i = 0; i < 3; i++) signG.fillRect(sx + 6 + i * 10, sy + 8, 6, 6);
+    scene.add.text(sx + 18, sy + 26, 'RESTRICTED', {
+      fontFamily: 'VT323, monospace', fontSize: '8px', color: '#aa5522',
+    }).setOrigin(0.5, 0).setDepth(1).setAlpha(0.75);
+
+    // Security camera on upper wall
+    const camG = scene.add.graphics().setDepth(2);
+    camG.fillStyle(0x1a2030, 1);
+    camG.fillRect(15 * TILE, (ry + 1) * TILE + 2, 14, 10);
+    camG.fillStyle(0x223344, 1);
+    camG.fillRect(15 * TILE + 3, (ry + 1) * TILE + 4, 8, 6);
+    camG.fillStyle(0xff2233, 0.7);
+    camG.fillCircle(15 * TILE + 7, (ry + 1) * TILE + 7, 2);
+
+    // Floor vent grate
+    const ventG = scene.add.graphics().setDepth(0);
+    ventG.fillStyle(0x0a1018, 1);
+    ventG.fillRect(13 * TILE + 4, (ry + 5) * TILE + 18, 24, 10);
+    ventG.lineStyle(1, 0x223344, 0.6);
+    for (let i = 0; i < 4; i++) {
+      ventG.lineBetween(13 * TILE + 6, (ry + 5) * TILE + 20 + i * 2, 13 * TILE + 26, (ry + 5) * TILE + 20 + i * 2);
+    }
+
+    // Coffee cup + spilled stain
+    const cupG = scene.add.graphics().setDepth(1);
+    cupG.fillStyle(0x332211, 0.4);
+    cupG.fillEllipse(6 * TILE + 10, (ry + 5) * TILE + 22, 14, 6);
+    cupG.fillStyle(0x443322, 1);
+    cupG.fillRect(6 * TILE + 6, (ry + 5) * TILE + 14, 10, 12);
+    cupG.fillStyle(0x221100, 1);
+    cupG.fillRect(6 * TILE + 7, (ry + 5) * TILE + 12, 8, 3);
+
+    // Pipe / conduit along top inner wall + dangling cable
     const pipeG = scene.add.graphics().setDepth(0);
     pipeG.lineStyle(3, pal.wallEdgeDim, 0.3);
     pipeG.lineBetween(4 * TILE, (ry + 1) * TILE, 10 * TILE, (ry + 1) * TILE);
+    pipeG.lineStyle(2, 0x334455, 0.5);
+    pipeG.lineBetween(10 * TILE, (ry + 1) * TILE, 10 * TILE + 4, (ry + 2) * TILE + 8);
+    pipeG.lineBetween(10 * TILE + 4, (ry + 2) * TILE + 8, 10 * TILE + 18, (ry + 2) * TILE + 12);
+
+    // Overhead light fixtures (visual — flicker in createLighting)
+    return [
+      { x: 5 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
+      { x: 10 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
+      { x: 15 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
+    ];
   }
 
   /** CRT login terminal — blue glow, flickering screen, scanline. */
@@ -198,6 +267,12 @@
 
     function drawBody() {
       body.clear();
+      // Desk
+      body.fillStyle(0x141820, 1);
+      body.fillRect(-4, 44, 60, 10);
+      body.lineStyle(1, 0x223344, 0.5);
+      body.strokeRect(-4, 44, 60, 10);
+      // CRT monitor
       body.fillStyle(0x1a2230, 1);
       body.fillRect(0, 18, 52, 34);
       body.fillStyle(0x2a3344, 1);
@@ -206,6 +281,11 @@
       body.fillRect(18, 48, 16, 6);
       body.lineStyle(1, CH1.login, 0.6);
       body.strokeRect(0, 18, 52, 34);
+      // Keyboard
+      body.fillStyle(0x0c1018, 1);
+      body.fillRect(8, 46, 36, 8);
+      body.lineStyle(1, 0x334455, 0.4);
+      for (let k = 0; k < 8; k++) body.strokeRect(10 + k * 4, 48, 3, 4);
     }
 
     let flicker = 1;
@@ -414,8 +494,8 @@
           }
         }
 
-        // Status banner — "SECTOR CLEARED" only when the whole chapter is done
-        const { hasKey, bossDone, pulsing } = state;
+        // Status banner
+        const bossDone = state.bossDone;
         let txt = '';
         let bCol = '#ff3366';
         if (bossDone) { txt = 'CONTAINED'; bCol = '#00ff66'; }
@@ -457,7 +537,7 @@
     return { gfx: g, pos };
   }
 
-  /** Uniform dim overlay — no masks, no fillCircle (avoids white-circle GPU bugs). */
+  /** Dim overlay + flickering overhead fixtures + terminal proximity brighten. */
   function createLighting(scene) {
     const gw = scene.game.config.width;
     const gh = scene.game.config.height;
@@ -466,20 +546,72 @@
       .setDepth(48);
     let dimLevel = 0.52;
     let chimeraDim = 0;
+    let flickerOffset = 0;
+    let nextFlicker = 0;
+
+    const fixtureGfx = scene.add.graphics().setDepth(47);
+    const specs = scene._lightFixtures || [];
+    const fixtureState = specs.map(() => ({ alpha: 0.35, target: 0.35 }));
+
+    function drawFixtures() {
+      fixtureGfx.clear();
+      specs.forEach((f, i) => {
+        const a = fixtureState[i].alpha;
+        fixtureGfx.fillStyle(0xcceeff, a);
+        fixtureGfx.fillRect(f.x, f.y, f.w, f.h);
+        fixtureGfx.fillStyle(0xffffff, a * 0.4);
+        fixtureGfx.fillRect(f.x + 4, f.y + 1, f.w - 8, 2);
+      });
+    }
+    drawFixtures();
 
     return {
       dark,
       setDim(v) { dimLevel = v; dark.setAlpha(v); },
       chimeraPulse() {
         chimeraDim = 0.22;
+        flickerOffset = 0.18;
+        fixtureState.forEach((fs) => { fs.target = 0.08; });
         dark.setAlpha(Math.min(0.82, dimLevel + chimeraDim));
         scene.time.delayedCall(400, () => {
           chimeraDim = 0;
+          flickerOffset = 0;
+          fixtureState.forEach((fs) => { fs.target = 0.35; });
           dark.setAlpha(dimLevel);
         });
       },
-      update(_player, _lightPoints, _time) {
-        dark.setAlpha(Math.min(0.75, dimLevel + chimeraDim));
+      update(player, lightPoints, time) {
+        if (time > nextFlicker) {
+          nextFlicker = time + 800 + Math.random() * 4000;
+          if (Math.random() < 0.55) {
+            flickerOffset = 0.08 + Math.random() * 0.14;
+            const idx = Math.floor(Math.random() * fixtureState.length);
+            if (fixtureState[idx]) fixtureState[idx].target = 0.05 + Math.random() * 0.1;
+            scene.time.delayedCall(30 + Math.random() * 120, () => {
+              flickerOffset = 0;
+              if (fixtureState[idx]) fixtureState[idx].target = 0.35;
+            });
+          }
+        }
+
+        let dim = dimLevel + Math.sin(time / 2800) * 0.025 + flickerOffset + chimeraDim;
+
+        if (player && lightPoints && lightPoints.length) {
+          let nearest = Infinity;
+          for (const lp of lightPoints) {
+            const d = Phaser.Math.Distance.Between(player.x, player.y, lp.x, lp.y);
+            nearest = Math.min(nearest, d);
+          }
+          if (nearest < 130) dim -= (1 - nearest / 130) * 0.14;
+        }
+
+        dark.setAlpha(Phaser.Math.Clamp(dim, 0.36, 0.78));
+
+        fixtureState.forEach((fs, i) => {
+          fs.alpha += (fs.target - fs.alpha) * 0.12;
+          if (Math.random() < 0.004) fs.target = 0.1 + Math.random() * 0.3;
+        });
+        drawFixtures();
       },
     };
   }
@@ -513,6 +645,7 @@
     scene.time.delayedCall(900, () => document.body.classList.remove('chimera-speaking'));
 
     if (typeof AudioFX !== 'undefined' && AudioFX.error) AudioFX.error();
+    if (typeof AudioFX !== 'undefined' && AudioFX.triggerStaticBurst) AudioFX.triggerStaticBurst();
     scene.cameras.main.flash(60, 80, 0, 40);
     scene.cameras.main.shake(120, 0.003);
 

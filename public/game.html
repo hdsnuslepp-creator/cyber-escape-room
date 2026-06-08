@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRAINEE 1998 — Facility Lockdown</title>
 
-  <link rel="stylesheet" href="css/game.css?v=6">
+  <link rel="stylesheet" href="css/game.css?v=7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -55,7 +55,7 @@
     <div id="chimeraBox" class="chimera-dialogue hidden" aria-live="polite">
       <div class="chimera-id">
         <div class="chimera-name">CHIMERA</div>
-        <div class="chimera-wave" id="chimeraWave" aria-hidden="true"></div>
+        <div class="chimera-wave" id="chimeraWave" aria-hidden="true">||||||||||||||||||||</div>
       </div>
       <div class="chimera-body">
         <div id="chimeraText" class="chimera-text"></div>
@@ -73,6 +73,62 @@
 
   </div>
 
+  <!-- Character creator — shown before first run -->
+  <div id="characterCreator" class="character-creator hidden" aria-label="Character creator">
+    <div class="cc-panel">
+      <h1 class="cc-title">SUBJECT REGISTRATION</h1>
+      <p class="cc-sub">Facility Lockdown — trainee profile</p>
+      <div class="cc-layout">
+        <div class="cc-preview-wrap">
+          <canvas id="charPreview" width="96" height="120" aria-hidden="true"></canvas>
+        </div>
+        <div class="cc-form">
+          <label class="cc-label">CODENAME
+            <input id="charName" type="text" maxlength="24" placeholder="TRAINEE 1998" autocomplete="off">
+          </label>
+          <div class="cc-row">
+            <span class="cc-label">HAIR</span>
+            <div class="cc-opts">
+              <button type="button" class="cc-opt selected" data-group="hair" data-opt="black">BLK</button>
+              <button type="button" class="cc-opt" data-group="hair" data-opt="brown">BRN</button>
+              <button type="button" class="cc-opt" data-group="hair" data-opt="blonde">BLD</button>
+              <button type="button" class="cc-opt" data-group="hair" data-opt="ginger">GNG</button>
+              <button type="button" class="cc-opt" data-group="hair" data-opt="white">WHT</button>
+            </div>
+          </div>
+          <div class="cc-row">
+            <span class="cc-label">SKIN</span>
+            <div class="cc-opts">
+              <button type="button" class="cc-opt selected" data-group="skin" data-opt="light">LT</button>
+              <button type="button" class="cc-opt" data-group="skin" data-opt="medium">MD</button>
+              <button type="button" class="cc-opt" data-group="skin" data-opt="dark">DK</button>
+            </div>
+          </div>
+          <div class="cc-row">
+            <span class="cc-label">SUIT</span>
+            <div class="cc-opts">
+              <button type="button" class="cc-opt selected" data-group="suit" data-opt="cyan">CYN</button>
+              <button type="button" class="cc-opt" data-group="suit" data-opt="green">GRN</button>
+              <button type="button" class="cc-opt" data-group="suit" data-opt="purple">PPL</button>
+              <button type="button" class="cc-opt" data-group="suit" data-opt="orange">ORG</button>
+              <button type="button" class="cc-opt" data-group="suit" data-opt="red">RED</button>
+            </div>
+          </div>
+          <div class="cc-row">
+            <span class="cc-label">GEAR</span>
+            <div class="cc-opts">
+              <button type="button" class="cc-opt selected" data-group="headgear" data-opt="none">—</button>
+              <button type="button" class="cc-opt" data-group="headgear" data-opt="visor">VIS</button>
+              <button type="button" class="cc-opt" data-group="headgear" data-opt="mask">MSK</button>
+              <button type="button" class="cc-opt" data-group="headgear" data-opt="headset">HS</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button type="button" id="charConfirm" class="cc-confirm">[ ENTER FACILITY ]</button>
+    </div>
+  </div>
+
   <audio id="chimeraVoiceIntro" src="audio/chimera-intro.mp3" preload="auto"></audio>
   <audio id="chimeraVoiceRoom1" src="audio/chimera-room1.mp3" preload="auto"></audio>
 
@@ -87,10 +143,12 @@
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
   <script src="js/profile-save.js"></script>
   <script src="js/audio.js"></script>
-  <script src="js/chimera-box.js?v=3"></script>
-  <script src="js/facility-ui.js?v=5"></script>
-  <script src="js/facility-atmosphere.js?v=5"></script>
-  <script src="js/phaser-game.js?v=27"></script>
+  <script src="js/chimera-box.js?v=4"></script>
+  <script src="js/facility-ui.js?v=8"></script>
+  <script src="js/facility-character.js?v=1"></script>
+  <script src="js/facility-atmosphere.js?v=6"></script>
+  <script src="js/facility-sector2.js?v=1"></script>
+  <script src="js/phaser-game.js?v=30"></script>
 
 </body>
 

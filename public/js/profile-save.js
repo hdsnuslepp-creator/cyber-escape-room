@@ -59,10 +59,20 @@ const ProfileSave = (() => {
   function getPhaserProgress() {
     return readJson(PHASER_KEY, {
       agentName: '',
+      avatarConfigured: false,
+      avatarHair: 'black',
+      avatarSkin: 'light',
+      avatarSuit: 'cyan',
+      avatarHeadgear: 'none',
+      facilitySector: 1,
       inboxComplete: false,
       attachmentComplete: false,
       fakeLoginComplete: false,
       ch1BossComplete: false,
+      s2PasswordComplete: false,
+      s2MfaComplete: false,
+      s2CredentialComplete: false,
+      ch2BossComplete: false,
       hasKey: false,
       lives: 3,
       score: 1000,
@@ -81,10 +91,20 @@ const ProfileSave = (() => {
     const cur = getPhaserProgress();
     const fresh = {
       agentName: cur.agentName || 'TRAINEE 1998',
+      avatarConfigured: cur.avatarConfigured || false,
+      avatarHair: cur.avatarHair || 'black',
+      avatarSkin: cur.avatarSkin || 'light',
+      avatarSuit: cur.avatarSuit || 'cyan',
+      avatarHeadgear: cur.avatarHeadgear || 'none',
+      facilitySector: 1,
       inboxComplete: false,
       attachmentComplete: false,
       fakeLoginComplete: false,
       ch1BossComplete: false,
+      s2PasswordComplete: false,
+      s2MfaComplete: false,
+      s2CredentialComplete: false,
+      ch2BossComplete: false,
       hasKey: false,
       lives: 3,
       score: 1000,
@@ -103,16 +123,23 @@ const ProfileSave = (() => {
       attachmentComplete: cur.attachmentComplete || set.has('attachment'),
       fakeLoginComplete: cur.fakeLoginComplete || set.has('fake_login'),
       ch1BossComplete: cur.ch1BossComplete || set.has('ch1_boss'),
+      s2PasswordComplete: cur.s2PasswordComplete || set.has('password'),
+      s2MfaComplete: cur.s2MfaComplete || set.has('mfa'),
+      s2CredentialComplete: cur.s2CredentialComplete || set.has('credential_audit'),
+      ch2BossComplete: cur.ch2BossComplete || set.has('ch2_boss'),
     });
   }
 
   function syncTrainingRoomClear(roomId) {
-    const phaser = getPhaserProgress();
     const map = {
       phishing: 'inboxComplete',
       attachment: 'attachmentComplete',
       fake_login: 'fakeLoginComplete',
       ch1_boss: 'ch1BossComplete',
+      password: 's2PasswordComplete',
+      mfa: 's2MfaComplete',
+      credential_audit: 's2CredentialComplete',
+      ch2_boss: 'ch2BossComplete',
     };
     if (map[roomId]) {
       savePhaserProgress({ [map[roomId]]: true });

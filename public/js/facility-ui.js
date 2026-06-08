@@ -28,7 +28,11 @@
 
   function progress() {
     if (typeof ProfileSave === 'undefined') {
-      return { inboxComplete: false, attachmentComplete: false, fakeLoginComplete: false, ch1BossComplete: false };
+      return {
+        facilitySector: 1,
+        inboxComplete: false, attachmentComplete: false, fakeLoginComplete: false, ch1BossComplete: false,
+        s2PasswordComplete: false, s2MfaComplete: false, s2CredentialComplete: false, ch2BossComplete: false,
+      };
     }
     return ProfileSave.getPhaserProgress();
   }
@@ -63,7 +67,7 @@
       cell.appendChild(name);
       if (!sec.core) cell.appendChild(sub);
       grid.appendChild(cell);
-      return { sec, cell, lock };
+      return { sec, cell, lock, sub };
     });
   }
 
@@ -81,16 +85,36 @@
     }
   }
 
-  function refresh() {
+  function refreshAgent() {
     const p = progress();
+    const name = (p.agentName || 'TRAINEE 1998').toUpperCase();
+    const title = document.querySelector('.ftb-title');
+    const sector = p.facilitySector || (p.ch1BossComplete ? 2 : 1);
+    if (title) {
+      if (sector >= 2 && p.ch1BossComplete && !p.ch2BossComplete) {
+        title.textContent = `${name} — SECTOR 2: THE BREACH`;
+      } else {
+        title.textContent = `${name} — FACILITY LOCKDOWN`;
+      }
+    }
+  }
 
-    // Sector mapping for the current slice: Chapter 1 == Sector 1.
+  function refresh() {
+    refreshAgent();
+    const p = progress();
+    const sector = p.facilitySector || (p.ch1BossComplete ? 2 : 1);
     const sector1Cleared = !!p.ch1BossComplete;
+    const sector2Cleared = !!p.ch2BossComplete;
+
     cells.forEach((entry) => {
       const { sec } = entry;
       if (sec.n === 1) {
         setCellState(entry, sector1Cleared ? 'cleared' : 'active');
-      } else if (sec.n === 2 && sector1Cleared) {
+      } else if (sec.n === 2) {
+        if (!sector1Cleared) setCellState(entry, 'locked');
+        else setCellState(entry, sector2Cleared ? 'cleared' : 'active');
+        if (entry.sub) entry.sub.textContent = sector1Cleared ? 'BREACH' : '???';
+      } else if (sec.n === 3 && sector2Cleared) {
         setCellState(entry, 'active');
       } else {
         setCellState(entry, 'locked');
@@ -100,7 +124,14 @@
     const obj = document.getElementById('objectiveText');
     if (obj) {
       let text;
-      if (!p.inboxComplete) text = 'Initialize breach at the LOGIN terminal (Sector 1 — INBOX)';
+      if (sector >= 2 && sector1Cleared && !sector2Cleared) {
+        if (!p.s2PasswordComplete) text = 'Sector 2: rotate credentials at PASSWORD vault';
+        else if (!p.s2MfaComplete) text = 'Sector 2: secure MFA at the kiosk';
+        else if (!p.s2CredentialComplete) text = 'Sector 2: run CREDENTIAL audit (bottom-left)';
+        else text = 'Sector 2: pick up KEY — final lockdown at DOOR';
+      } else if (sector2Cleared) {
+        text = 'Sector 2 cleared — Sector 3 unlocks soon';
+      } else if (!p.inboxComplete) text = 'Initialize breach at the LOGIN terminal (Sector 1 — INBOX)';
       else if (!p.attachmentComplete) text = 'Sector 1: breach the SERVER (Attachment)';
       else if (!p.fakeLoginComplete) text = 'Sector 1: clear the LOGIN portal';
       else if (!p.ch1BossComplete) text = 'Sector 1: final breach at the DOOR';
@@ -156,7 +187,6 @@
   }
 
   function init() {
-    buildWave();
     buildMap();
     refresh();
     tick();
@@ -188,6 +218,6 @@
     document.body.classList.toggle('cinematic', !!on);
   }
 
-  window.FacilityUI = { showChimeraDialogue, refresh, setCinematic, resetTimer: () => { startTime = Date.now(); } };
+  window.FacilityUI = { showChimeraDialogue, refresh, refreshAgent, setCinematic, resetTimer: () => { startTime = Date.now(); } };
   window.showChimeraDialogue = showChimeraDialogue;
 })();
