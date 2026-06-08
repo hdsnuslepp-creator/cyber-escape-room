@@ -1310,7 +1310,8 @@
       const active = FacilitySectors.getActiveMission(registryProgress(this.registry), this.sector);
       if (!active && this.allMissionsDone) return 'All missions cleared — pick up KEY for blast door';
       if (active) {
-        const term = this.sectorConfig.terminals[active.terminal] || active.terminal;
+        const terms = this.sectorConfig.terminals || {};
+        const term = terms[active.terminal] || active.terminal;
         return `[ E ] at ${term} terminal`;
       }
     }

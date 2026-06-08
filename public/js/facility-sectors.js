@@ -28,6 +28,7 @@
       bossFlag: 'ch2BossComplete',
       nextId: 3,
       module: 'FacilitySector2',
+      terminals: { pc: 'PASSWORD', archive: 'MFA', server: 'AUDIT' },
       missions: [
         { flag: 's2PasswordComplete', terminal: 'pc', panelTitle: 'PASSWORD VAULT', panelSub: 'Rotate compromised credentials', scene: 'PasswordScene' },
         { flag: 's2MfaComplete', terminal: 'archive', panelTitle: 'MFA KIOSK', panelSub: 'Never share verification codes', scene: 'MFAScene', requires: 's2PasswordComplete' },
