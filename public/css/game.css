@@ -330,6 +330,21 @@ body.game-body .crt-vignette {
   display: none !important;
 }
 
+/* Cinematic / intro mode: hide the HUD and let the canvas fill the screen so the
+   opening boot sequence stays clean and atmospheric. */
+body.cinematic #facility-ui {
+  display: none;
+}
+
+body.cinematic #game-canvas-wrap {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: none;
+  box-shadow: none;
+}
+
 /* ── Touch controls ───────────────────────────────────────────────────── */
 .touch-dpad {
   position: fixed;

@@ -149,6 +149,11 @@
     init();
   }
 
-  window.FacilityUI = { showChimeraDialogue, refresh, resetTimer: () => { startTime = Date.now(); } };
+  // Toggle the clean fullscreen intro/cinematic look (HUD hidden) vs framed gameplay.
+  function setCinematic(on) {
+    document.body.classList.toggle('cinematic', !!on);
+  }
+
+  window.FacilityUI = { showChimeraDialogue, refresh, setCinematic, resetTimer: () => { startTime = Date.now(); } };
   window.showChimeraDialogue = showChimeraDialogue;
 })();

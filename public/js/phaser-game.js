@@ -186,6 +186,25 @@
     if (!v) return;
     try { v.pause(); v.currentTime = 0; } catch (e) { /* noop */ }
   }
+
+  // Toggle DOM HUD chrome: cinematic (fullscreen, no HUD) vs framed gameplay.
+  // The canvas parent (#game-canvas-wrap) changes size with the CSS class, so we
+  // must wait for layout to reflow before telling Phaser to refit — otherwise it
+  // measures the old size and the canvas gets clipped.
+  function setSceneChrome(scene, cinematic) {
+    if (window.FacilityUI && typeof FacilityUI.setCinematic === 'function') {
+      FacilityUI.setCinematic(cinematic);
+    }
+    const refit = () => {
+      if (scene && scene.scale && typeof scene.scale.refresh === 'function') {
+        scene.scale.refresh();
+      }
+    };
+    refit();
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => { refit(); try { window.dispatchEvent(new Event('resize')); } catch (e) { /* noop */ } });
+    }
+  }
   function unlockAchievement(scene, id) {
     const def = ACH_DEFS[id];
     if (!def) return;
@@ -453,6 +472,7 @@
   TitleScene.prototype.constructor = TitleScene;
 
   TitleScene.prototype.create = function () {
+    setSceneChrome(this, true);
     const cx = GAME_W / 2;
     this.add.rectangle(cx, GAME_H / 2, GAME_W, GAME_H, 0x000000, 1);
     drawScanlines(this);
@@ -629,6 +649,7 @@
   HubScene.prototype.constructor = HubScene;
 
   HubScene.prototype.create = function () {
+    setSceneChrome(this, false);
     this.inboxDone = !!this.registry.get('inboxComplete');
     this.attachmentDone = !!this.registry.get('attachmentComplete');
     this.loginDone = !!this.registry.get('fakeLoginComplete');
@@ -1815,6 +1836,7 @@
   GameOverScene.prototype.constructor = GameOverScene;
 
   GameOverScene.prototype.create = function () {
+    setSceneChrome(this, true);
     const cx = GAME_W / 2;
     drawScanlines(this);
     if (typeof AudioFX !== 'undefined') AudioFX.gameOver();
@@ -1864,6 +1886,7 @@
   ChapterCompleteScene.prototype.constructor = ChapterCompleteScene;
 
   ChapterCompleteScene.prototype.create = function () {
+    setSceneChrome(this, true);
     const cx = GAME_W / 2;
     drawScanlines(this);
     setupPause(this);
@@ -2232,6 +2255,7 @@
   function launchGame() {
     if (game) return;
     game = new Phaser.Game(config);
+    window.__game = game;
   }
 
   if (document.readyState === 'loading') {
