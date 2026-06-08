@@ -111,9 +111,30 @@
 
   function tick() {
     const el = document.getElementById('stTime');
-    if (!el) return;
-    const s = Math.floor((Date.now() - startTime) / 1000);
-    el.textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+    if (el) {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      el.textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+    }
+    syncStats();
+  }
+
+  // Mirror the live gameplay stats (lives/score/key) from the Phaser registry
+  // into the framed status strip so they don't have to be drawn on the canvas.
+  function syncStats() {
+    const game = window.__game;
+    if (!game || !game.registry) return;
+    const lives = game.registry.get('lives');
+    const score = game.registry.get('score');
+    const hasKey = game.registry.get('hasKey');
+    const lv = document.getElementById('stLives');
+    if (lv && typeof lives === 'number') lv.textContent = lives > 0 ? '\u2665'.repeat(lives) : '\u2014';
+    const sc = document.getElementById('stScore');
+    if (sc && typeof score === 'number') sc.textContent = String(score);
+    const ky = document.getElementById('stKey');
+    if (ky) {
+      ky.textContent = hasKey ? '\u2713' : '\u2014';
+      ky.classList.toggle('has-key', !!hasKey);
+    }
   }
 
   // Public API: drive CHIMERA dialogue + optional voice clip.
@@ -141,6 +162,8 @@
     tick();
     setInterval(tick, 1000);
     setInterval(refresh, 1000);
+    // Stats (lives/score/key) change mid-action, so poll them quickly.
+    setInterval(syncStats, 250);
   }
 
   if (document.readyState === 'loading') {

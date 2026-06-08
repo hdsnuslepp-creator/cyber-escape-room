@@ -11,19 +11,15 @@
   const GAME_W = MAP_W * TILE;
   const GAME_H = MAP_H * TILE;
 
-  /** ASCII hub layout — matches 20×7 room centered in the map
-   *  █  PC       DOOR   █
-   *  █        🧍        █
-   *  █  SERVER     KEY  █
-   */
+  /** Hub positions — floor plan lives in facility-atmosphere.js */
   const HUB = {
     roomY: 2,
     roomRows: 7,
-    pc: { c: 3, r: 3 },
-    door: { c: 14, r: 3 },
+    pc: { c: 2, r: 3 },
+    door: { c: 13, r: 2 },
     player: { c: 10, r: 5 },
-    server: { c: 3, r: 7 },
-    key: { c: 14, r: 7 },
+    server: { c: 2, r: 7 },
+    key: { c: 17, r: 7 },
     archive: { c: 9, r: 3 },
   };
 
@@ -142,6 +138,13 @@
 
   function chimeraOpen() {
     return typeof ChimeraBox !== 'undefined' && ChimeraBox.isOpen();
+  }
+
+  function chimeraEnvironmentPulse(scene) {
+    if (!scene || scene.scene.key !== 'HubScene') return;
+    if (typeof FacilityAtmosphere !== 'undefined') {
+      FacilityAtmosphere.triggerChimeraEnvironment(scene, scene.facilityLighting, scene.facilityProps);
+    }
   }
 
   // ─── In-game achievements (localStorage) ────────────────────────────────
@@ -401,16 +404,19 @@
   function addPuzzleHud(scene) {
     const lives = scene.registry.get('lives') ?? START_LIVES;
     const score = scene.registry.get('score') ?? START_SCORE;
+    // Lives/score are shown in the framed DOM status strip; keep these in-canvas
+    // copies (scenes call setText on them) but hidden so they don't overlap the
+    // puzzle panels.
     scene.livesText = scene.add.text(GAME_W - 12, 8, `LIVES: ${'♥'.repeat(lives)}`, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#ff3366',
-    }).setOrigin(1, 0).setDepth(50);
+    }).setOrigin(1, 0).setDepth(50).setVisible(false);
     scene.scoreText = scene.add.text(GAME_W - 12, 28, `SCORE: ${score}`, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#ffb000',
-    }).setOrigin(1, 0).setDepth(50);
+    }).setOrigin(1, 0).setDepth(50).setVisible(false);
     scene.feedbackText = scene.add.text(GAME_W / 2, GAME_H - 52, '', {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
@@ -668,6 +674,10 @@
     initTouchControls(this);
 
     buildCorridorMap(this);
+    if (typeof FacilityAtmosphere !== 'undefined') {
+      this.facilityProps = FacilityAtmosphere.createProps(this);
+      this.facilityLighting = FacilityAtmosphere.createLighting(this);
+    }
 
     const spawn = tilePx(HUB.player.c, HUB.player.r);
     this.player = this.add.sprite(spawn.x, spawn.y, 'pixel');
@@ -683,63 +693,47 @@
     this.serverPos = tilePx(HUB.server.c, HUB.server.r);
     this.pcPos = tilePx(HUB.pc.c, HUB.pc.r);
 
-    this.doorGfx = this.add.graphics().setDepth(2);
-    this.doorLabel = this.add.text(doorPos.x, doorPos.y - TILE * 0.55, 'DOOR', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '7px',
-      color: this.getDoorColor(),
-      align: 'center',
-    }).setOrigin(0.5).setDepth(3);
-
-    this.doorLockIcon = this.add.text(doorPos.x, doorPos.y + 4, this.getDoorStatus(), {
-      fontFamily: 'VT323, monospace',
-      fontSize: '14px',
-      color: this.getDoorColor(),
-    }).setOrigin(0.5).setDepth(3);
-
-    this.doorSubLabel = this.add.text(doorPos.x, doorPos.y + 18, this.getDoorSubLabel(), {
-      fontFamily: 'VT323, monospace',
-      fontSize: '12px',
-      color: '#8899aa',
-    }).setOrigin(0.5).setDepth(3);
+    if (typeof FacilityAtmosphere !== 'undefined') {
+      this.blastDoor = FacilityAtmosphere.createBlastDoor(this, doorPos);
+    } else {
+      this.doorGfx = this.add.graphics().setDepth(2);
+    }
 
     this.doorPos = doorPos;
-    this.doorInteractZone = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2, TILE * 1.6, 0xffffff, 0)
+    this.doorInteractZone = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2.4, TILE * 2, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.doorInteractZone.on('pointerdown', () => this.tryInteract('door'));
 
-    this.drawDoor(this.inboxDone);
+    this.redrawDoor();
 
-    const pcXY = tileXY(HUB.pc.c - 1, HUB.pc.r);
-    drawTerminal(this, pcXY.x, pcXY.y - 8, 'LOGIN', COLORS.terminal);
     this.pcInteractZone = this.add.rectangle(this.pcPos.x, this.pcPos.y, TILE * 2.2, TILE * 1.8, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.pcInteractZone.on('pointerdown', () => this.tryInteract('pc'));
 
-    const srvXY = tileXY(HUB.server.c - 1, HUB.server.r);
-    drawTerminal(this, srvXY.x, srvXY.y - 8, 'SERVER', COLORS.server);
     this.serverInteractZone = this.add.rectangle(this.serverPos.x, this.serverPos.y, TILE * 2.2, TILE * 1.8, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.serverInteractZone.on('pointerdown', () => this.tryInteract('server'));
 
     this.archivePos = tilePx(HUB.archive.c, HUB.archive.r);
-    const archXY = tileXY(HUB.archive.c - 1, HUB.archive.r);
-    drawTerminal(this, archXY.x, archXY.y - 8, 'ARCHIVE', 0xff66cc);
-    this.archiveInteractZone = this.add.rectangle(this.archivePos.x, this.archivePos.y, TILE * 2.2, TILE * 1.8, 0xffffff, 0)
+    this.archiveInteractZone = this.add.rectangle(this.archivePos.x, this.archivePos.y, TILE * 2.4, TILE * 2, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.archiveInteractZone.on('pointerdown', () => this.tryInteract('archive'));
 
     this.keyPos = tilePx(HUB.key.c, HUB.key.r);
     this.hasKey = !!this.registry.get('hasKey');
-    const keyXY = tileXY(HUB.key.c - 1, HUB.key.r);
-    this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
+    if (typeof FacilityAtmosphere !== 'undefined') {
+      this.keyObjects = FacilityAtmosphere.createKeycardProp(this, HUB.key.c, HUB.key.r);
+    } else {
+      const keyXY = tileXY(HUB.key.c - 1, HUB.key.r);
+      this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
+    }
     if (this.hasKey) {
       this.keyObjects.gfx.setVisible(false);
-      this.keyObjects.label.setVisible(false);
+      if (this.keyObjects.label) this.keyObjects.label.setVisible(false);
     } else {
       this.keyClickZone = this.add.circle(this.keyPos.x, this.keyPos.y, 24, 0xffffff, 0)
         .setInteractive({ useHandCursor: true })
@@ -750,36 +744,39 @@
     const lives = this.registry.get('lives') ?? START_LIVES;
     const score = this.registry.get('score') ?? START_SCORE;
 
+    // The agent name, lives, score, key and status are mirrored in the framed
+    // DOM HUD (topbar + status strip), so the in-canvas copies are kept but
+    // hidden to avoid cluttering the corridor view.
     const agent = this.registry.get('agentName') || 'TRAINEE 1998';
     this.add.text(8, 8, agent, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#00ffcc',
-    }).setScrollFactor(0).setDepth(20);
+    }).setScrollFactor(0).setDepth(20).setVisible(false);
 
     this.livesHud = this.add.text(8, 28, `LIVES: ${'♥'.repeat(lives)}`, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#ff3366',
-    }).setScrollFactor(0).setDepth(20);
+    }).setScrollFactor(0).setDepth(20).setVisible(false);
 
     this.scoreHud = this.add.text(8, 48, `SCORE: ${score}`, {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: '#ffb000',
-    }).setScrollFactor(0).setDepth(20);
+    }).setScrollFactor(0).setDepth(20).setVisible(false);
 
     this.keyHud = this.add.text(GAME_W - 12, 8, this.hasKey ? 'KEY: ✓' : 'KEY: —', {
       fontFamily: 'VT323, monospace',
       fontSize: '18px',
       color: this.hasKey ? '#ffb000' : '#556677',
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(20);
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(20).setVisible(false);
 
     this.statusText = this.add.text(8, 68, this.getStatusLine(), {
       fontFamily: 'VT323, monospace',
       fontSize: '16px',
       color: '#ff3366',
-    }).setScrollFactor(0).setDepth(20);
+    }).setScrollFactor(0).setDepth(20).setVisible(false);
 
     this.promptText = this.add.text(GAME_W / 2, (HUB.roomY + HUB.roomRows) * TILE + 28, this.getDefaultPrompt(), {
       fontFamily: 'VT323, monospace',
@@ -1005,8 +1002,23 @@
     return 'Find the KEY (bottom-right), then unlock the DOOR';
   };
 
+  HubScene.prototype.redrawDoor = function (openOverride) {
+    const open = openOverride != null ? openOverride : this.inboxDone;
+    if (this.blastDoor) {
+      this.blastDoor.draw({
+        open,
+        boss: this.bossDone,
+        bossDone: this.bossDone,
+        inboxDone: this.inboxDone,
+        allMissionsDone: this.allMissionsDone,
+      });
+      return;
+    }
+    this.drawDoor(open);
+  };
+
   HubScene.prototype.drawDoor = function (open) {
-    this.doorGfx.clear();
+    if (!this.doorGfx) return;
     const c = HUB.door.c;
     const r = HUB.door.r;
     const x = (c - 1) * TILE;
@@ -1040,13 +1052,14 @@
       repeat: 10,
       callback: () => {
         step += 1;
-        this.drawDoor(step % 2 === 0);
+        this.redrawDoor(step % 2 === 0);
       },
     });
 
     this.time.delayedCall(1400, () => {
       pulse.destroy();
-      this.drawDoor(this.inboxDone);
+      this.redrawDoor(this.inboxDone);
+      if (this.blastDoor) this.blastDoor.pulseGrant();
       this.input.enabled = true;
       if (opts.chimera) this.showChimera(dialogue);
       else this.showDialogue(dialogue);
@@ -1082,6 +1095,7 @@
     if (typeof ChimeraBox !== 'undefined') {
       ChimeraBox.speak(text, { onDone: onClose });
     } else {
+      chimeraEnvironmentPulse(this);
       this.dialogueBox.show(text, onClose, { speaker: 'CHIMERA', color: '#ff66cc', typewriter: true });
     }
   };
@@ -1110,12 +1124,13 @@
     let step = 0;
     const pulse = this.time.addEvent({
       delay: 120, repeat: 10,
-      callback: () => { step += 1; this.drawDoor(step % 2 === 0); },
+      callback: () => { step += 1; this.redrawDoor(step % 2 === 0); },
     });
 
     this.time.delayedCall(1500, () => {
       pulse.destroy();
-      this.drawDoor(this.inboxDone);
+      this.redrawDoor(this.inboxDone);
+      if (this.blastDoor) this.blastDoor.pulseGrant();
       this.input.enabled = true;
       unlockAchievement(this, 'first_breach');
       playVoiceClip('chimeraVoiceRoom1');
@@ -1267,7 +1282,7 @@
     persistProgress(this.registry);
     if (this.keyObjects) {
       this.keyObjects.gfx.setVisible(false);
-      this.keyObjects.label.setVisible(false);
+      if (this.keyObjects.label) this.keyObjects.label.setVisible(false);
     }
     if (this.keyClickZone) {
       this.keyClickZone.destroy();
@@ -1428,9 +1443,13 @@
   };
 
   HubScene.prototype.clampPlayer = function () {
-    // Keep the player on the corridor floor (inside the walls), not the whole
-    // canvas — otherwise they wander into the empty void above/below the room
-    // and the door/terminals become hard to reach.
+    if (typeof FacilityAtmosphere !== 'undefined') {
+      FacilityAtmosphere.clampToCorridor(this.player);
+      if (this._prevX != null) {
+        FacilityAtmosphere.resolveWallCollision(this.player, this._prevX, this._prevY);
+      }
+      return;
+    }
     const half = 12;
     const minX = TILE + half;
     const maxX = (MAP_W - 1) * TILE - half;
@@ -1441,8 +1460,18 @@
   };
 
   HubScene.prototype.update = function (time, delta) {
-    if (!this.player || this.isPaused || this.overrideActive || chimeraOpen()) return;
+    if (!this.player) return;
 
+    if (this.facilityProps) this.facilityProps.update(time);
+    if (this.facilityLighting && !this.isPaused && !this.overrideActive) {
+      const lights = this.facilityProps ? this.facilityProps.lightPoints : [];
+      this.facilityLighting.update(this.player, lights, time);
+    }
+
+    if (this.isPaused || this.overrideActive || chimeraOpen()) return;
+
+    this._prevX = this.player.x;
+    this._prevY = this.player.y;
     applyTouchMovement(this, 200, delta);
     this.clampPlayer();
     drawPlayerSprite(this.playerGfx, this.player.x, this.player.y);
@@ -1999,6 +2028,10 @@
   }
 
   function buildCorridorMap(scene) {
+    if (typeof FacilityAtmosphere !== 'undefined') {
+      FacilityAtmosphere.buildMap(scene);
+      return;
+    }
     const g = scene.add.graphics().setDepth(0);
     const labelLayer = scene.add.container(0, 0).setDepth(0);
 
@@ -2256,6 +2289,10 @@
     if (game) return;
     game = new Phaser.Game(config);
     window.__game = game;
+    window.addEventListener('chimera:speak', () => {
+      const hub = game.scene.getScene('HubScene');
+      if (hub && hub.scene.isActive()) chimeraEnvironmentPulse(hub);
+    });
   }
 
   if (document.readyState === 'loading') {

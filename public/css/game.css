@@ -326,8 +326,51 @@ body.game-body .crt-vignette {
   font-weight: normal;
 }
 
+.status-strip b.st-lives {
+  color: #ff3366;
+  letter-spacing: 2px;
+}
+
+.status-strip b.st-score {
+  color: #ffb000;
+}
+
+.status-strip b.st-key {
+  color: #556677;
+}
+
+.status-strip b.st-key.has-key {
+  color: #ffb000;
+}
+
 .hidden {
   display: none !important;
+}
+
+/* CHIMERA speaking — red scanline + UI flicker */
+body.chimera-speaking .scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 0, 60, 0.08) 0px,
+    rgba(255, 0, 60, 0.08) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  animation: chimera-scan 0.12s steps(2) infinite;
+}
+
+body.chimera-speaking #facility-ui {
+  animation: chimera-ui-flicker 0.15s steps(2) 3;
+}
+
+@keyframes chimera-scan {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+@keyframes chimera-ui-flicker {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(0.75) hue-rotate(-20deg); }
 }
 
 /* Cinematic / intro mode: hide the HUD and let the canvas fill the screen so the
