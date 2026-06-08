@@ -1232,8 +1232,8 @@
 
     updateHintBar(this.getDefaultPrompt());
     resetCamera(this);
-    if (this.isSector1) {
-      this.setupSector1ExploreCamera();
+    if (this.useExploreCamera()) {
+      this.setupExploreCamera();
     }
     this.cameras.main.setAlpha(1);
   };
@@ -1295,7 +1295,7 @@
       if (typeof AudioFX !== 'undefined') AudioFX.click();
       o.destroy();
       this.overrideActive = false;
-      restoreSector1ExploreCamera(this);
+      restoreExploreCamera(this);
     };
     const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 22, '[ DISMISS ]', close, { fontSize: '7px', color: '#ff8fdc' });
     o.pinButton(btn, 2);
@@ -1550,12 +1550,20 @@
   };
 
   // Show a queue of CHIMERA lines back-to-back
-  HubScene.prototype.setupSector1ExploreCamera = function () {
+  HubScene.prototype.useExploreCamera = function () {
+    return this.isSector1 || this.isSector2;
+  };
+
+  HubScene.prototype.setupExploreCamera = function () {
     const cam = this.cameras.main;
     if (!cam || !this.player) return;
     cam.setZoom(2);
     cam.startFollow(this.player, true, 0.14, 0.14);
     cam.setBounds(0, 0, GAME_W, GAME_H);
+  };
+
+  HubScene.prototype.setupSector1ExploreCamera = function () {
+    this.setupExploreCamera();
   };
 
   HubScene.prototype.chainChimera = function (lines, onDone) {
@@ -1676,7 +1684,7 @@
       this.cameras.main.shake(220, 0.006);
       o.destroy();
       this.overrideActive = false;
-      restoreSector1ExploreCamera(this);
+      restoreExploreCamera(this);
       if (onDone) onDone();
     };
     const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 22, '[ CLOSE ]', close, { fontSize: '7px', color: '#9addff' });
@@ -1752,7 +1760,7 @@
       sfxClick();
       o.destroy();
       this.overrideActive = false;
-      restoreSector1ExploreCamera(this);
+      restoreExploreCamera(this);
       if (firstOpen) {
         this.chainChimera([
           'You found the old records.',
@@ -2128,7 +2136,7 @@
     this._prevY = this.player.y;
     applyTouchMovement(this, 200, delta);
     this.clampPlayer();
-    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y + breathe, this.avatar, breathe, this.isSector1 ? 1.5 : 1);
+    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y + breathe, this.avatar, breathe, this.useExploreCamera() ? 1.5 : 1);
 
     this.nearDoor = this.isNearDoor();
     this.nearServer = this.isNearServer();
@@ -3199,10 +3207,14 @@
     };
   }
 
-  function restoreSector1ExploreCamera(scene) {
-    if (scene.isSector1 && typeof scene.setupSector1ExploreCamera === 'function') {
-      scene.setupSector1ExploreCamera();
+  function restoreExploreCamera(scene) {
+    if (scene.useExploreCamera && scene.useExploreCamera() && typeof scene.setupExploreCamera === 'function') {
+      scene.setupExploreCamera();
     }
+  }
+
+  function restoreSector1ExploreCamera(scene) {
+    restoreExploreCamera(scene);
   }
 
   function switchScene(scene, key) {
