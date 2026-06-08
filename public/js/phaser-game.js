@@ -662,6 +662,11 @@
     this.bossDone = !!this.registry.get('ch1BossComplete');
     this.allMissionsDone = this.inboxDone && this.attachmentDone && this.loginDone;
 
+    // Key only unlocks the final blast door — clear stale saves from the old door-first flow.
+    if (!this.allMissionsDone && this.registry.get('hasKey')) {
+      this.registry.set('hasKey', false);
+    }
+
     this.interactHint = null;
     this.nearDoor = false;
     this.nearServer = false;
@@ -971,9 +976,9 @@
   };
 
   HubScene.prototype.getDoorSubLabel = function () {
-    if (this.allMissionsDone) return 'EXIT';
-    if (this.inboxDone) return 'CLEARED';
-    return 'INBOX';
+    if (this.allMissionsDone) return 'FINAL';
+    if (this.inboxDone) return 'SEALED';
+    return 'SEALED';
   };
 
   HubScene.prototype.getStatusLine = function () {
@@ -1309,7 +1314,7 @@
   };
 
   HubScene.prototype.isNearKey = function () {
-    if (this.hasKey || !this.keyPos) return false;
+    if (!this.keyActive || this.hasKey || !this.keyPos) return false;
     return this.isNear(this.keyPos, KEY_INTERACT_RADIUS);
   };
 
@@ -1449,7 +1454,11 @@
 
   HubScene.prototype.handlePcInteract = function () {
     if (!this.isNearPc()) {
-      this.flashPrompt('Move closer to the LOGIN terminal (top-left)', '#ff3366');
+      this.flashPrompt('Move closer to the LOGIN terminal (left alcove)', '#ff3366');
+      return;
+    }
+    if (!this.inboxDone) {
+      this.showInitializeBreachPanel();
       return;
     }
     if (!this.attachmentDone) {
@@ -1537,8 +1546,11 @@
     if (this.promptFlash || this.dialogueBox.visible) return;
 
     if (this.nearKey) {
-      this.promptText.setText('[ E ] or click KEY — pick up access key');
+      this.promptText.setText('[ E ] or click KEY — pick up blast-door access key');
       this.promptText.setColor('#ffb000');
+    } else if (this.nearPc && !this.inboxDone) {
+      this.promptText.setText('[ E ] LOGIN — Initialize Breach (Sector 1 INBOX)');
+      this.promptText.setColor('#44ccff');
     } else if (this.nearArchive) {
       this.promptText.setText('[ E ] ARCHIVE — trainee records');
       this.promptText.setColor('#ff66cc');
@@ -1549,19 +1561,18 @@
       this.promptText.setText('[ E ] LOGIN — Fake Login Portal');
       this.promptText.setColor('#00ccff');
     } else if (this.nearDoor && this.allMissionsDone && !this.bossDone) {
-      this.promptText.setText('[ E ] DOOR — final breach / chapter boss');
+      if (this.hasKey) {
+        this.promptText.setText('[ E ] DOOR — final breach / confront CHIMERA');
+      } else {
+        this.promptText.setText('DOOR LOCKED — pick up KEY (bottom-right) first');
+      }
       this.promptText.setColor('#ffb000');
     } else if (this.nearDoor && !this.inboxDone) {
-      if (this.hasKey) {
-        this.promptText.setText('[ E ] Use KEY on DOOR — enter Inbox Room');
-        this.promptText.setColor('#ffb000');
-      } else {
-        this.promptText.setText('DOOR LOCKED — get the KEY (bottom-right) first');
-        this.promptText.setColor('#ff3366');
-      }
-    } else if (this.nearDoor && this.inboxDone) {
-      this.promptText.setText('DOOR — Inbox cleared ✓');
-      this.promptText.setColor('#00ff66');
+      this.promptText.setText('DOOR LOCKED — use LOGIN terminal to initialize breach');
+      this.promptText.setColor('#ff3366');
+    } else if (this.nearDoor && this.inboxDone && !this.allMissionsDone) {
+      this.promptText.setText('DOOR sealed — clear SERVER and LOGIN first');
+      this.promptText.setColor('#8899aa');
     } else {
       this.refreshPrompt();
     }
