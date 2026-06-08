@@ -445,7 +445,10 @@
   }
 
   /** Blast door with status banner — replaces flat DOOR label. */
-  function createBlastDoor(scene, doorPos) {
+  function createBlastDoor(scene, doorPos, opts) {
+    opts = opts || {};
+    const doorCell = opts.doorCell || HUB_POSITIONS.door;
+    const pal = opts.palette || CH1;
     const gfx = scene.add.graphics().setDepth(3);
     const banner = scene.add.text(doorPos.x, doorPos.y - 46, '', {
       fontFamily: 'Press Start 2P, monospace',
@@ -459,8 +462,8 @@
       banner,
       draw(state) {
         const { open, inboxDone, allMissionsDone, hasKey, pulsing } = state;
-        const c = HUB_POSITIONS.door.c;
-        const r = HUB_POSITIONS.door.r;
+        const c = doorCell.c;
+        const r = doorCell.r;
         const x = (c - 1) * TILE - 4;
         const y = (r - 1) * TILE - 2;
         const w = TILE * 2.6;
@@ -469,7 +472,7 @@
 
         const isBoss = allMissionsDone && !state.bossDone;
         const panelsOpen = pulsing ? !!open : (isBoss && !!hasKey);
-        const col = isBoss ? CH1.doorBoss : (panelsOpen ? CH1.doorOpen : CH1.doorLocked);
+        const col = isBoss ? pal.doorBoss : (panelsOpen ? pal.doorOpen : pal.doorLocked);
 
         // Door frame
         gfx.fillStyle(0x0a1018, 1);
@@ -492,7 +495,7 @@
           for (let i = 0; i < 5; i++) {
             gfx.fillRect(x + 4 + i * 12, y + 8 + (i % 2) * 10, 8, 4);
           }
-          gfx.lineStyle(1, CH1.doorLocked, 0.6);
+          gfx.lineStyle(1, pal.doorLocked, 0.6);
           gfx.strokeRect(x + 2, y + 2, w - 4, h - 4);
         }
 

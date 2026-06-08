@@ -39,7 +39,7 @@
     mfa: { c: 9, r: 3 },
     credential: { c: 2, r: 7 },
     door: { c: 13, r: 2 },
-    player: { c: 10, r: 5 },
+    player: { c: 7, r: 5 },
     key: { c: 17, r: 7 },
     relay: { c: 6, r: 4 },
   };
@@ -104,6 +104,12 @@
     badge.fillRect(11 * TILE, (ry + 4) * TILE + 6, 20, 14);
     badge.lineStyle(1, 0x664488, 0.6);
     badge.strokeRect(11 * TILE, (ry + 4) * TILE + 6, 20, 14);
+
+    scene._lightFixtures = [
+      { x: 5 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
+      { x: 10 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
+      { x: 15 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
+    ];
 
     return g;
   }

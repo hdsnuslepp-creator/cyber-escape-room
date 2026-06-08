@@ -14,6 +14,7 @@
       bossFlag: 'ch1BossComplete',
       nextId: 2,
       legacy: true,
+      terminals: { pc: 'LOGIN', archive: 'ARCHIVE', server: 'SERVER' },
       missions: [
         { flag: 'inboxComplete', terminal: 'pc', scene: 'PhishingScene', usePanel: 'initialize' },
         { flag: 'attachmentComplete', terminal: 'server', scene: 'AttachmentScene' },

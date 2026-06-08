@@ -522,9 +522,12 @@
     this.registry.set('ch1BossComplete', !!p.ch1BossComplete);
     this.registry.set('ch2BossComplete', !!p.ch2BossComplete);
     hydrateAllSectorFlags(this.registry, p);
-    this.registry.set('facilitySector', p.facilitySector || (typeof FacilitySectors !== 'undefined'
-      ? FacilitySectors.resolveFacilitySector(p)
-      : (p.ch1BossComplete ? 2 : 1)));
+    this.registry.set('facilitySector', (() => {
+      const raw = p.facilitySector || (typeof FacilitySectors !== 'undefined'
+        ? FacilitySectors.resolveFacilitySector(p)
+        : (p.ch1BossComplete ? 2 : 1));
+      return raw === 'core' ? 'core' : (Number(raw) || 1);
+    })());
     this.registry.set('hasKey', !!p.hasKey);
     this.registry.set('lives', p.lives ?? START_LIVES);
     this.registry.set('score', p.score ?? START_SCORE);
@@ -795,10 +798,16 @@
     this.keyActive = this.allMissionsDone && !this.bossDone;
   };
 
+  HubScene.prototype.normalizeSector = function (raw) {
+    if (raw === 'core') return 'core';
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  };
+
   HubScene.prototype.syncFacilitySector = function () {
     if (typeof FacilitySectors === 'undefined') return;
     const resolved = FacilitySectors.resolveFacilitySector(registryProgress(this.registry));
-    const cur = this.registry.get('facilitySector') || 1;
+    const cur = this.normalizeSector(this.registry.get('facilitySector') || 1);
     if (resolved !== cur) {
       this.registry.set('facilitySector', resolved);
       this.registry.set('hasKey', false);
@@ -808,7 +817,7 @@
 
   HubScene.prototype.loadHubSectorState = function () {
     this.syncFacilitySector();
-    this.sector = this.registry.get('facilitySector') || 1;
+    this.sector = this.normalizeSector(this.registry.get('facilitySector') || 1);
     this.sectorConfig = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(this.sector) : null;
     this.isSector1 = this.sector === 1;
     this.isSector2 = this.sector === 2;
@@ -832,17 +841,24 @@
       this.s2PasswordDone = !!this.registry.get('s2PasswordComplete');
       this.s2MfaDone = !!this.registry.get('s2MfaComplete');
       this.s2CredentialDone = !!this.registry.get('s2CredentialComplete');
-      this.hubPos = {
-        pc: FacilitySector2.S2_POSITIONS.password,
-        archive: FacilitySector2.S2_POSITIONS.mfa,
-        server: FacilitySector2.S2_POSITIONS.credential,
-        door: FacilitySector2.S2_POSITIONS.door,
-        player: FacilitySector2.S2_POSITIONS.player,
-        key: FacilitySector2.S2_POSITIONS.key,
-        roomY: FacilitySector2.S2_POSITIONS.roomY,
-        roomRows: FacilitySector2.S2_POSITIONS.roomRows,
-      };
+      if (typeof FacilitySector2 === 'undefined') {
+        this.hubPos = FacilitySectorGeneric.hubPos();
+      } else {
+        this.hubPos = {
+          pc: FacilitySector2.S2_POSITIONS.password,
+          archive: FacilitySector2.S2_POSITIONS.mfa,
+          server: FacilitySector2.S2_POSITIONS.credential,
+          door: FacilitySector2.S2_POSITIONS.door,
+          player: FacilitySector2.S2_POSITIONS.player,
+          key: FacilitySector2.S2_POSITIONS.key,
+          roomY: FacilitySector2.S2_POSITIONS.roomY,
+          roomRows: FacilitySector2.S2_POSITIONS.roomRows,
+        };
+      }
     } else if (typeof FacilitySectorGeneric !== 'undefined') {
+      this.hubPos = FacilitySectorGeneric.hubPos();
+    }
+    if (!this.hubPos && typeof FacilitySectorGeneric !== 'undefined') {
       this.hubPos = FacilitySectorGeneric.hubPos();
     }
 
@@ -938,7 +954,9 @@
     setupPause(this);
     initTouchControls(this);
 
-    if (this.isSector2 && typeof FacilitySector2 !== 'undefined') {
+    const useSector2Hub = (this.sectorConfig && this.sectorConfig.module === 'FacilitySector2')
+      || (this.isSector2 && typeof FacilitySector2 !== 'undefined');
+    if (useSector2Hub) {
       FacilitySector2.buildMap(this);
       this.facilityProps = FacilitySector2.createProps(this);
     } else if (this.isMultiSector && typeof FacilitySectorGeneric !== 'undefined' && this.sectorConfig) {
@@ -955,6 +973,11 @@
     }
 
     const pos = this.hubPos;
+    if (!pos) {
+      console.error('HubScene: missing hubPos for sector', this.sector);
+      this.scene.start('TitleScene');
+      return;
+    }
     const spawn = tilePx(pos.player.c, pos.player.r);
     this.player = this.add.sprite(spawn.x, spawn.y, 'pixel');
     this.player.setDisplaySize(20, 28);
@@ -975,7 +998,13 @@
     this.pcPos = tilePx(pos.pc.c, pos.pc.r);
 
     if (typeof FacilityAtmosphere !== 'undefined') {
-      this.blastDoor = FacilityAtmosphere.createBlastDoor(this, doorPos);
+      const doorPal = useSector2Hub && typeof FacilitySector2 !== 'undefined'
+        ? FacilitySector2.CH2
+        : FacilityAtmosphere.CH1;
+      this.blastDoor = FacilityAtmosphere.createBlastDoor(this, doorPos, {
+        doorCell: { c: pos.door.c, r: pos.door.r },
+        palette: doorPal,
+      });
     } else {
       this.doorGfx = this.add.graphics().setDepth(2);
     }
@@ -1117,6 +1146,12 @@
       this.registry.set('justUnlockedLogin', false);
       this.playMissionUnlockAnimation('LOGIN PORTAL — ARMED',
         "You don't trust the obvious link.\nNeither do I.", { chimera: true });
+    } else if (this.registry.get('justUnlockedS2Mfa')) {
+      this.registry.set('justUnlockedS2Mfa', false);
+      this.playMissionUnlockAnimation('MFA KIOSK — ONLINE', 'Good. Codes are not passwords.', { chimera: true });
+    } else if (this.registry.get('justUnlockedS2Credential')) {
+      this.registry.set('justUnlockedS2Credential', false);
+      this.playMissionUnlockAnimation('CREDENTIAL AUDIT — PASS', 'Policy applied. They will try again.', { chimera: true });
     } else if (this.isMultiSector) {
       const introKey = 'introSeen_' + this.sector;
       if (!this.registry.get(introKey) && this.sectorConfig && this.sectorConfig.intro) {
@@ -1124,12 +1159,6 @@
         persistProgress(this.registry);
         this.time.delayedCall(800, () => this.chainChimera(this.sectorConfig.intro));
       }
-    } else if (this.registry.get('justUnlockedS2Mfa')) {
-      this.registry.set('justUnlockedS2Mfa', false);
-      this.playMissionUnlockAnimation('MFA KIOSK — ONLINE', 'Good. Codes are not passwords.', { chimera: true });
-    } else if (this.registry.get('justUnlockedS2Credential')) {
-      this.registry.set('justUnlockedS2Credential', false);
-      this.playMissionUnlockAnimation('CREDENTIAL AUDIT — PASS', 'Policy applied. They will try again.', { chimera: true });
     }
 
     this.overrideActive = false;
@@ -1143,7 +1172,8 @@
     });
 
     updateHintBar(this.getDefaultPrompt());
-    this.cameras.main.fadeIn(500, 0, 0, 0);
+    resetCamera(this);
+    this.cameras.main.setAlpha(1);
   };
 
   HubScene.prototype.scheduleChimeraEvent = function () {
