@@ -11,17 +11,19 @@
   const GAME_W = MAP_W * TILE;
   const GAME_H = MAP_H * TILE;
 
-  /** Hub positions — floor plan lives in facility-atmosphere.js */
-  const HUB = {
-    roomY: 2,
-    roomRows: 7,
-    pc: { c: 2, r: 3 },
-    door: { c: 13, r: 2 },
-    player: { c: 10, r: 5 },
-    server: { c: 2, r: 7 },
-    key: { c: 17, r: 7 },
-    archive: { c: 9, r: 3 },
-  };
+  /** Hub positions — synced from facility-atmosphere.js when loaded. */
+  const HUB = (typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.HUB_POSITIONS)
+    ? FacilityAtmosphere.HUB_POSITIONS
+    : {
+      roomY: 1,
+      roomRows: 11,
+      player: { c: 3, r: 3 },
+      pc: { c: 2, r: 5 },
+      archive: { c: 3, r: 9 },
+      door: { c: 3, r: 10 },
+      server: { c: 3, r: 9 },
+      key: { c: 3, r: 10 },
+    };
 
   const INTERACT_RADIUS = 80;
   const KEY_INTERACT_RADIUS = 52;
@@ -30,34 +32,51 @@
   const WRONG_PENALTY = 100;
 
   const FAKE_LOGIN_OPTIONS = [
-    { id: 'a', text: 'https://login.acmecorp.com/auth', correct: true },
-    { id: 'b', text: 'https://login-acmecorp.com/auth', correct: false },
-    { id: 'c', text: 'https://acmecorp-secure.com/login', correct: false },
-    { id: 'd', text: 'https://acmec0rp.com/signin', correct: false },
+    { id: 'a', text: 'EP-01  login.acmecorp.com/auth          TLS OK', correct: true },
+    { id: 'b', text: 'EP-02  login-acmecorp.com/auth          SPOOF', correct: false },
+    { id: 'c', text: 'EP-03  acmecorp-secure.com/login        SPOOF', correct: false },
+    { id: 'd', text: 'EP-04  acmec0rp.com/signin               SPOOF', correct: false },
   ];
 
   const PASSWORD_OPTIONS = [
-    { id: 'a', text: 'password123', correct: false },
-    { id: 'b', text: 'Summer2024!', correct: false },
-    { id: 'c', text: 'Tr0ub4dor&3', correct: false },
-    { id: 'd', text: 'k9#mP2$vL8@xQ4!nR', correct: true },
+    { id: 'a', text: 'KEY-001  password123           CRACK: 0.02s', correct: false },
+    { id: 'b', text: 'KEY-002  Summer2024!           CRACK: 4m', correct: false },
+    { id: 'c', text: 'KEY-003  Tr0ub4dor&3           CRACK: 3d', correct: false },
+    { id: 'd', text: 'KEY-004  k9#mP2$vL8@xQ4!nR      POLICY: PASS', correct: true },
   ];
 
   const MFA_OPTIONS = [
-    { id: 'a', text: 'Read the code aloud to the agent', correct: false },
-    { id: 'b', text: 'Never share MFA codes — hang up', correct: true },
-    { id: 'c', text: 'Text the code to verify faster', correct: false },
+    { id: 'a', text: 'ACK  read code to caller — expedite verify', correct: false },
+    { id: 'b', text: 'DENY  refuse code transfer — out-of-band verify', correct: true },
+    { id: 'c', text: 'ACK  SMS code to callback number', correct: false },
   ];
 
   const CREDENTIAL_OPTIONS = [
-    { id: 'a', text: 'Rotate passwords quarterly only', correct: false },
-    { id: 'b', text: 'Unique creds per user + vault + disable shared accounts', correct: true },
-    { id: 'c', text: 'Post new passwords on the intranet', correct: false },
-    { id: 'd', text: 'Same passphrase for all admins', correct: false },
+    { id: 'a', text: 'POL-A  rotate passwords quarterly only', correct: false },
+    { id: 'b', text: 'POL-B  unique creds + vault + kill shared accounts', correct: true },
+    { id: 'c', text: 'POL-C  publish new passwords on intranet', correct: false },
+    { id: 'd', text: 'POL-D  single passphrase for all admins', correct: false },
   ];
 
   function tilePx(c, r) {
     return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
+  }
+
+  /** Hub layout coords → world pixels (Sector 1 uses a horizontal room offset). */
+  function hubTilePx(scene, c, r) {
+    const useSector2Hub = scene && ((scene.sectorConfig && scene.sectorConfig.module === 'FacilitySector2')
+      || (scene.isSector2 && typeof FacilitySector2 !== 'undefined'));
+    if (useSector2Hub && typeof FacilitySector2 !== 'undefined' && FacilitySector2.tilePx) {
+      return FacilitySector2.tilePx(c, r);
+    }
+    if (scene && scene.isMultiSector && !scene.isSector2
+      && typeof FacilitySectorGeneric !== 'undefined' && FacilitySectorGeneric.tilePx) {
+      return FacilitySectorGeneric.tilePx(c, r);
+    }
+    if (typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.tilePx) {
+      return FacilityAtmosphere.tilePx(c, r);
+    }
+    return tilePx(c, r);
   }
 
   function tileXY(c, r) {
@@ -495,7 +514,7 @@
   BootScene.prototype.constructor = BootScene;
 
   BootScene.prototype.preload = function () {
-    this.load.image('pixel', createPixelTexture(this));
+    createPixelTexture(this);
   };
 
   BootScene.prototype.create = function () {
@@ -770,7 +789,11 @@
     if (!this.allMissionsDone && this.registry.get('hasKey')) {
       this.registry.set('hasKey', false);
     }
-    this.keyActive = this.allMissionsDone && !this.bossDone;
+    this.keyActive = false;
+  };
+
+  HubScene.prototype.doorBossReady = function () {
+    return this.allMissionsDone && !this.bossDone && (this.isSector1 || this.hasKey);
   };
 
   HubScene.prototype.loadSector2State = function () {
@@ -876,8 +899,12 @@
       this.flashPrompt(`Move closer to the ${label} terminal`, '#ff3366');
       return;
     }
-    const mission = FacilitySectors.getMissionByTerminal(this.sector, terminal);
+    const mission = FacilitySectors.getMissionByTerminal(this.sector, terminal, registryProgress(this.registry));
     if (!mission) return;
+    if (mission.usePanel === 'initialize') {
+      this.showInitializeBreachPanel();
+      return;
+    }
     if (mission.requires && !this.registry.get(mission.requires)) {
       const prior = this.sectorConfig.missions.find((m) => m.flag === mission.requires);
       const priorLabel = prior ? (terms[prior.terminal] || 'prior terminal') : 'prior mission';
@@ -891,8 +918,8 @@
     if (mission.puzzleId) {
       const puzzle = FacilitySectors.getPuzzle(mission.puzzleId);
       this.showMissionPanel(
-        puzzle ? puzzle.title.replace(/^SECTOR \d+ — /, '') : label,
-        puzzle ? puzzle.prompt.slice(0, 48) : 'Begin mission',
+        puzzle ? (puzzle.nodeTitle || puzzle.title || label) : label,
+        puzzle ? (puzzle.status || 'Link pending') : 'System repair protocol active',
         'GenericPuzzleScene',
         mission.puzzleId,
       );
@@ -965,7 +992,10 @@
     } else {
       buildCorridorMap(this);
       if (typeof FacilityAtmosphere !== 'undefined') {
-        this.facilityProps = FacilityAtmosphere.createProps(this);
+        this.facilityProps = FacilityAtmosphere.createProps(this, {
+          skipServer: this.isSector1,
+          decorative: this.isSector1 ? { server: true } : {},
+        });
       }
     }
     if (typeof FacilityAtmosphere !== 'undefined') {
@@ -978,9 +1008,9 @@
       this.scene.start('TitleScene');
       return;
     }
-    const spawn = tilePx(pos.player.c, pos.player.r);
+    const spawn = hubTilePx(this, pos.player.c, pos.player.r);
     this.player = this.add.sprite(spawn.x, spawn.y, 'pixel');
-    this.player.setDisplaySize(20, 28);
+    this.player.setVisible(false);
     this.avatar = {
       hair: this.registry.get('avatarHair') || 'black',
       skin: this.registry.get('avatarSkin') || 'light',
@@ -990,12 +1020,12 @@
     this.player.setDepth(4);
 
     this.playerGfx = this.add.graphics();
-    this.playerGfx.setDepth(5);
-    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y, this.avatar);
+    this.playerGfx.setDepth(51);
+    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y, this.avatar, 0, this.useExploreCamera() ? 1.5 : 1);
 
-    const doorPos = tilePx(pos.door.c, pos.door.r);
-    this.serverPos = tilePx(pos.server.c, pos.server.r);
-    this.pcPos = tilePx(pos.pc.c, pos.pc.r);
+    const doorPos = hubTilePx(this, pos.door.c, pos.door.r);
+    this.serverPos = hubTilePx(this, pos.server.c, pos.server.r);
+    this.pcPos = hubTilePx(this, pos.pc.c, pos.pc.r);
 
     if (typeof FacilityAtmosphere !== 'undefined') {
       const doorPal = useSector2Hub && typeof FacilitySector2 !== 'undefined'
@@ -1004,13 +1034,18 @@
       this.blastDoor = FacilityAtmosphere.createBlastDoor(this, doorPos, {
         doorCell: { c: pos.door.c, r: pos.door.r },
         palette: doorPal,
+        wall: this.isSector1 ? 'south' : 'north',
       });
     } else {
       this.doorGfx = this.add.graphics().setDepth(2);
     }
 
-    this.doorPos = doorPos;
-    this.doorInteractZone = this.add.rectangle(doorPos.x, doorPos.y, TILE * 2.4, TILE * 2, 0xffffff, 0)
+    this.doorPos = this.isSector1
+      ? doorPos
+      : { x: doorPos.x, y: doorPos.y + TILE * 0.85 };
+    const doorZoneW = this.isSector1 ? TILE * 3.4 : TILE * 3.8;
+    const doorZoneH = this.isSector1 ? TILE * 2.2 : TILE * 3.2;
+    this.doorInteractZone = this.add.rectangle(this.doorPos.x, this.doorPos.y, doorZoneW, doorZoneH, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.doorInteractZone.on('pointerdown', () => this.tryInteract('door'));
@@ -1022,34 +1057,40 @@
       .setDepth(15);
     this.pcInteractZone.on('pointerdown', () => this.tryInteract('pc'));
 
-    this.serverInteractZone = this.add.rectangle(this.serverPos.x, this.serverPos.y, TILE * 2.2, TILE * 1.8, 0xffffff, 0)
-      .setInteractive({ useHandCursor: true })
-      .setDepth(15);
-    this.serverInteractZone.on('pointerdown', () => this.tryInteract('server'));
+    this.serverInteractZone = null;
+    if (!this.isSector1) {
+      this.serverInteractZone = this.add.rectangle(this.serverPos.x, this.serverPos.y, TILE * 2.2, TILE * 1.8, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(15);
+      this.serverInteractZone.on('pointerdown', () => this.tryInteract('server'));
+    }
 
-    this.archivePos = tilePx(pos.archive.c, pos.archive.r);
-    this.archiveInteractZone = this.add.rectangle(this.archivePos.x, this.archivePos.y, TILE * 2.4, TILE * 2, 0xffffff, 0)
+    this.archivePos = hubTilePx(this, pos.archive.c, pos.archive.r);
+    this.archiveInteractZone = this.add.rectangle(this.archivePos.x, this.archivePos.y, TILE * 1.8, TILE * 1.6, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .setDepth(15);
     this.archiveInteractZone.on('pointerdown', () => this.tryInteract('archive'));
 
-    this.keyPos = tilePx(pos.key.c, pos.key.r);
-    // Key only matters for the final blast-door breach — not for starting Sector 1.
+    this.keyPos = this.isSector1 ? null : hubTilePx(this, pos.key.c, pos.key.r);
     this.hasKey = !!this.registry.get('hasKey');
-    if (typeof FacilityAtmosphere !== 'undefined') {
-      this.keyObjects = FacilityAtmosphere.createKeycardProp(this, pos.key.c, pos.key.r);
+    if (!this.isSector1) {
+      if (typeof FacilityAtmosphere !== 'undefined') {
+        this.keyObjects = FacilityAtmosphere.createKeycardProp(this, pos.key.c, pos.key.r);
+      } else {
+        const keyXY = tileXY(pos.key.c - 1, pos.key.r);
+        this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
+      }
+      if (!this.keyActive || this.hasKey) {
+        this.keyObjects.gfx.setVisible(false);
+        if (this.keyObjects.label) this.keyObjects.label.setVisible(false);
+      } else {
+        this.keyClickZone = this.add.circle(this.keyPos.x, this.keyPos.y, 24, 0xffffff, 0)
+          .setInteractive({ useHandCursor: true })
+          .setDepth(16);
+        this.keyClickZone.on('pointerdown', () => this.tryPickupKey(true));
+      }
     } else {
-      const keyXY = tileXY(pos.key.c - 1, pos.key.r);
-      this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
-    }
-    if (!this.keyActive || this.hasKey) {
-      this.keyObjects.gfx.setVisible(false);
-      if (this.keyObjects.label) this.keyObjects.label.setVisible(false);
-    } else {
-      this.keyClickZone = this.add.circle(this.keyPos.x, this.keyPos.y, 24, 0xffffff, 0)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(16);
-      this.keyClickZone.on('pointerdown', () => this.tryPickupKey(true));
+      this.keyObjects = null;
     }
 
     const lives = this.registry.get('lives') ?? START_LIVES;
@@ -1120,7 +1161,19 @@
       this.game.canvas.focus();
     }
 
-    if (!this.isSector2 && !this.registry.get('hubIntroSeen')) {
+    if (this.isSector1 && !this.registry.get('hubIntroSeen')) {
+      this.registry.set('hubIntroSeen', true);
+      this.time.delayedCall(900, () => {
+        this.chainChimera([
+          'You wake on cold concrete.',
+          'I am CHIMERA.',
+          'This sector is not one room.',
+          'Find your way out.',
+        ], () => {
+          this.flashPrompt('Walk south — discover what is ahead', '#44ccff');
+        });
+      });
+    } else if (!this.isSector2 && !this.registry.get('hubIntroSeen')) {
       this.registry.set('hubIntroSeen', true);
       this.time.delayedCall(1200, () => {
         this.chainChimera([
@@ -1137,10 +1190,11 @@
 
     if (this.registry.get('justUnlockedInbox')) {
       this.registry.set('justUnlockedInbox', false);
-      this.time.delayedCall(600, () => this.playInboxAftermath());
+      this.overrideActive = true;
+      this.time.delayedCall(800, () => this.playInboxAftermath());
     } else if (this.registry.get('justUnlockedAttachment')) {
       this.registry.set('justUnlockedAttachment', false);
-      this.playMissionUnlockAnimation('ATTACHMENT SANDBOX — ONLINE',
+      this.playMissionUnlockAnimation('ARCHIVE QUARANTINE — ONLINE',
         'You are faster than 1997.\nThat unsettles me.', { chimera: true });
     } else if (this.registry.get('justUnlockedLogin')) {
       this.registry.set('justUnlockedLogin', false);
@@ -1152,6 +1206,11 @@
     } else if (this.registry.get('justUnlockedS2Credential')) {
       this.registry.set('justUnlockedS2Credential', false);
       this.playMissionUnlockAnimation('CREDENTIAL AUDIT — PASS', 'Policy applied. They will try again.', { chimera: true });
+    } else if (this.registry.get('read581WallLogPending') && !this.registry.get('justUnlockedInbox')) {
+      this.registry.set('read581WallLogPending', false);
+      this.time.delayedCall(500, () => {
+        this.flashPrompt('Check the CRT — there is another note on the screen bezel', '#8899aa');
+      });
     } else if (this.isMultiSector) {
       const introKey = 'introSeen_' + this.sector;
       if (!this.registry.get(introKey) && this.sectorConfig && this.sectorConfig.intro) {
@@ -1173,6 +1232,9 @@
 
     updateHintBar(this.getDefaultPrompt());
     resetCamera(this);
+    if (this.isSector1) {
+      this.setupSector1ExploreCamera();
+    }
     this.cameras.main.setAlpha(1);
   };
 
@@ -1217,56 +1279,82 @@
     if (typeof AudioFX !== 'undefined' && AudioFX.error) AudioFX.error();
     this.cameras.main.flash(120, 60, 0, 40);
 
-    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(70).setScrollFactor(0);
-    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.55)
-      .setInteractive();
-    const panel = this.add.rectangle(0, 0, 304, 156, 0x140008, 0.98).setStrokeStyle(3, 0xff3366);
-    const head = this.add.text(0, -54, '\u26A0 CHIMERA OVERRIDE', {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '9px', color: '#ff3366',
-    }).setOrigin(0.5);
-    const msg = this.add.text(0, -6, Phaser.Math.RND.pick(CHIMERA_OVERRIDE_LINES), {
-      fontFamily: 'VT323, monospace', fontSize: '19px', color: '#ffd9f2',
-      align: 'center', wordWrap: { width: 272 },
-    }).setOrigin(0.5);
+    const o = openHubOverlay(this, 70);
+    const panelW = 288;
+    const panelH = 148;
+    o.pin(this.add.rectangle(o.cx, o.cy, o.gw, o.gh, 0x000000, 0.55));
+    o.pin(this.add.rectangle(o.cx, o.cy, panelW, panelH, 0x140008, 0.98).setStrokeStyle(2, 0xff3366), 1);
+    const head = o.pin(this.add.text(o.cx, o.cy - 46, '\u26A0 CHIMERA OVERRIDE', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '7px', color: '#ff3366',
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy - 4, Phaser.Math.RND.pick(CHIMERA_OVERRIDE_LINES), {
+      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#ffd9f2',
+      align: 'center', wordWrap: { width: panelW - 24 },
+    }).setOrigin(0.5), 2);
     const close = () => {
       if (typeof AudioFX !== 'undefined') AudioFX.click();
-      c.destroy();
+      o.destroy();
       this.overrideActive = false;
+      restoreSector1ExploreCamera(this);
     };
-    const btn = makeButton(this, 0, 54, '[ DISMISS ]', close, { fontSize: '8px', color: '#ff8fdc' });
-    c.add([dim, panel, head, msg, btn.bg, btn.text]);
+    const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 22, '[ DISMISS ]', close, { fontSize: '7px', color: '#ff8fdc' });
+    o.pinButton(btn, 2);
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.4 }, duration: 140, yoyo: true, repeat: -1 });
   };
 
   // Generic CHIMERA moral choice (two options). choices: [{label, stance, response, onClose}]
   HubScene.prototype.showChimeraChoice = function (prompt, choices) {
+    this.enteringRoom = false;
     this.overrideActive = true;
+    this.input.enabled = true;
     if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
     this.cameras.main.flash(120, 60, 0, 60);
 
-    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
-    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
-    const panel = this.add.rectangle(0, 0, 340, 196, 0x140012, 0.98).setStrokeStyle(3, 0xff66cc);
-    const head = this.add.text(0, -74, 'CHIMERA', {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '9px', color: '#ff66cc',
-    }).setOrigin(0.5);
-    const msg = this.add.text(0, -38, prompt, {
-      fontFamily: 'VT323, monospace', fontSize: '19px', color: '#ffd9f2',
-      align: 'center', wordWrap: { width: 300 },
-    }).setOrigin(0.5);
-    const items = [dim, panel, head, msg];
+    const o = openHubOverlay(this, 72);
+    const panelW = 300;
+    const panelH = Math.min(210, 118 + choices.length * 36);
+    o.pin(this.add.rectangle(o.cx, o.cy, o.gw, o.gh, 0x000000, 0.62));
+    o.pin(this.add.rectangle(o.cx, o.cy, panelW, panelH, 0x140012, 0.98).setStrokeStyle(2, 0xff66cc), 1);
+    const head = o.pin(this.add.text(o.cx, o.cy - panelH / 2 + 18, 'CHIMERA', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '7px', color: '#ff66cc',
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy - panelH / 2 + 42, prompt, {
+      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#ffd9f2',
+      align: 'center', wordWrap: { width: panelW - 28 },
+    }).setOrigin(0.5), 2);
+
+    let picked = false;
+    const pick = (ch) => {
+      if (picked) return;
+      picked = true;
+      if (typeof AudioFX !== 'undefined') AudioFX.click();
+      recordStance(ch.stance);
+      this.registry.set('chimeraStance', ch.stance);
+      o.destroy();
+      this.overrideActive = false;
+      this.showChimera(ch.response, ch.onClose);
+    };
+
     choices.forEach((ch, i) => {
-      const btn = makeButton(this, 0, 20 + i * 42, ch.label, () => {
-        if (typeof AudioFX !== 'undefined') AudioFX.click();
-        recordStance(ch.stance);
-        this.registry.set('chimeraStance', ch.stance);
-        c.destroy();
-        this.overrideActive = false;
-        this.showChimera(ch.response, ch.onClose);
-      }, { fontSize: '8px', color: i === 0 ? '#ff8fdc' : '#9addff' });
-      items.push(btn.bg, btn.text);
+      const btnY = o.cy - panelH / 2 + 78 + i * 36;
+      const btn = makeButton(this, o.cx, btnY, ch.label, () => pick(ch), {
+        fontSize: '7px', color: i === 0 ? '#ff8fdc' : '#9addff',
+      });
+      o.pinButton(btn, 2);
     });
-    c.add(items);
+
+    const onKey = (e) => {
+      const n = parseInt(e.key, 10);
+      if (n >= 1 && n <= choices.length) {
+        e.preventDefault();
+        pick(choices[n - 1]);
+      }
+    };
+    if (this.input.keyboard) {
+      this.input.keyboard.on('keydown', onKey);
+      o.onDestroy(() => this.input.keyboard.off('keydown', onKey));
+    }
+
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.45 }, duration: 160, yoyo: true, repeat: -1 });
   };
 
@@ -1327,7 +1415,7 @@
     if (this.allMissionsDone) return 'FINAL BREACH — DOOR READY';
     if (this.loginDone) return 'ALL ROOMS CLEARED — DOOR';
     if (this.attachmentDone) return 'LOGIN TERMINAL — ACTIVE';
-    if (this.inboxDone) return 'SERVER TERMINAL — ACTIVE';
+    if (this.inboxDone) return 'ARCHIVE — ACTIVE';
     return 'LOCKDOWN — CHIMERA ACTIVE';
   };
 
@@ -1346,23 +1434,22 @@
       }
     }
     if (this.allMissionsDone && !this.bossDone) {
-      if (this.hasKey) return '[ E ] at DOOR — final breach / confront CHIMERA';
-      return 'Pick up the KEY (bottom-right), then breach the DOOR';
+      return '[ E ] at BLAST DOOR — final breach / confront CHIMERA';
     }
     if (this.loginDone) {
-      return 'All missions cleared — pick up KEY for the blast door';
+      return 'All missions cleared — breach the BLAST DOOR';
     }
     if (this.attachmentDone && !this.loginDone) {
       return '[ E ] at LOGIN terminal — Fake Login Portal';
     }
     if (this.inboxDone && !this.attachmentDone) {
-      return '[ E ] at SERVER — Attachment Sandbox';
+      return '[ E ] records cabinet — quarantine the attachment';
     }
-    return '[ E ] at LOGIN terminal — Initialize Breach (Sector 1 INBOX)';
+    return 'Walk south — find the login terminal';
   };
 
   HubScene.prototype.redrawDoor = function (openOverride, pulsing) {
-    const isBossReady = this.allMissionsDone && !this.bossDone && this.hasKey;
+    const isBossReady = this.doorBossReady();
     const visuallyOpen = openOverride != null ? openOverride : isBossReady;
     if (this.blastDoor) {
       this.blastDoor.draw({
@@ -1372,7 +1459,7 @@
         bossDone: this.bossDone,
         inboxDone: this.inboxDone,
         allMissionsDone: this.allMissionsDone,
-        hasKey: this.hasKey,
+        hasKey: this.doorBossReady(),
       });
       return;
     }
@@ -1463,6 +1550,14 @@
   };
 
   // Show a queue of CHIMERA lines back-to-back
+  HubScene.prototype.setupSector1ExploreCamera = function () {
+    const cam = this.cameras.main;
+    if (!cam || !this.player) return;
+    cam.setZoom(2);
+    cam.startFollow(this.player, true, 0.14, 0.14);
+    cam.setBounds(0, 0, GAME_W, GAME_H);
+  };
+
   HubScene.prototype.chainChimera = function (lines, onDone) {
     if (typeof ChimeraBox !== 'undefined') {
       ChimeraBox.speakQueue(lines, { onDone });
@@ -1475,30 +1570,78 @@
     next(0);
   };
 
-  // After the phishing room: metallic clunk, Sector 2 unlock, TRAINEE 581 message
+  // After phishing: room freezes → CHIMERA owns the moment → door awakens
   HubScene.prototype.playInboxAftermath = function () {
+    this.overrideActive = true;
     this.input.enabled = false;
-    this.cameras.main.flash(220, 0, 255, 102);
-    this.cameras.main.shake(280, 0.005);
-    this.statusText.setText('SECTOR 2 — UNLOCKED');
-    if (typeof AudioFX !== 'undefined') AudioFX.doorUnlock();
+    this.loadSector1State();
 
-    let step = 0;
-    const pulse = this.time.addEvent({
-      delay: 120, repeat: 10,
-      callback: () => { step += 1; this.redrawDoor(step % 2 === 0, true); },
-    });
+    const freezeRoom = () => {
+      if (this.facilityProps && this.facilityProps.freezeRoom) this.facilityProps.freezeRoom();
+      if (this.blastDoor && this.blastDoor.setBeaconEnabled) this.blastDoor.setBeaconEnabled(false);
+      if (this.facilityLighting) {
+        this.facilityLighting.setZoneEnabled('all', false);
+        this.facilityLighting.setDim(0.84);
+      }
+    };
 
-    this.time.delayedCall(1500, () => {
-      pulse.destroy();
-      this.redrawDoor(false, false);
-      if (this.blastDoor) this.blastDoor.pulseGrant();
-      this.input.enabled = true;
-      unlockAchievement(this, 'first_breach');
-      playVoiceClip('chimeraVoiceRoom1');
-      this.chainChimera(['Interesting.', 'You questioned what you saw.', 'That puts you ahead of most.'], () => {
-        this.show581Message(() => {
-          this.chainChimera(['581 usually waits longer.', 'He must like you.']);
+    const doorAwakens = () => {
+      if (typeof AudioFX !== 'undefined' && AudioFX.doorHeavy) AudioFX.doorHeavy();
+      else if (typeof AudioFX !== 'undefined' && AudioFX.doorUnlock) AudioFX.doorUnlock();
+      this.cameras.main.flash(180, 255, 48, 48);
+      this.cameras.main.shake(220, 0.004);
+      if (this.statusText) this.statusText.setText('SEAL INTEGRITY — COMPROMISED');
+
+      let step = 0;
+      const pulse = this.time.addEvent({
+        delay: 110,
+        repeat: 14,
+        callback: () => {
+          step += 1;
+          this.redrawDoor(step % 2 === 0, true);
+        },
+      });
+
+      this.time.delayedCall(1700, () => {
+        pulse.destroy();
+        this.redrawDoor(false, false);
+        if (this.blastDoor) {
+          this.blastDoor.setBeaconEnabled(true);
+          this.blastDoor.pulseGrant();
+          this.blastDoor.flashWarning(1600);
+        }
+        if (this.facilityLighting) {
+          this.facilityLighting.setZoneEnabled('all', true);
+          this.facilityLighting.setDim(0.58);
+        }
+        if (this.facilityProps && this.facilityProps.unfreezeRoom) this.facilityProps.unfreezeRoom();
+        if (this.facilityProps && this.facilityProps.login && this.facilityProps.login.revealStickyWarning) {
+          this.facilityProps.login.revealStickyWarning();
+        }
+        unlockAchievement(this, 'first_breach');
+        if ((this.registry.get('graffiti581Phase') || 0) < 2) {
+          this.registry.set('graffiti581Phase', 2);
+        }
+        this.overrideActive = false;
+        this.input.enabled = true;
+        this.refreshPrompt();
+        this.flashPrompt('The east wall exhales. Something unlocked.', '#8899aa');
+      });
+    };
+
+    this.time.delayedCall(350, () => {
+      freezeRoom();
+      if (typeof AudioFX !== 'undefined' && AudioFX.error) AudioFX.error();
+      if (this.facilityLighting && this.facilityLighting.setBlackout) {
+        this.facilityLighting.setBlackout(true);
+      }
+      this.time.delayedCall(700, () => {
+        playVoiceClip('chimeraVoiceRoom1');
+        this.chainChimera(['Good.', "You're learning."], () => {
+          if (this.facilityLighting && this.facilityLighting.setBlackout) {
+            this.facilityLighting.setBlackout(false);
+          }
+          this.time.delayedCall(300, doorAwakens);
         });
       });
     });
@@ -1509,39 +1652,53 @@
     if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
     unlockAchievement(this, 'signal_581');
 
-    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
-    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.6).setInteractive();
-    const panel = this.add.rectangle(0, 0, 332, 184, 0x04121a, 0.98).setStrokeStyle(3, 0x00ccff);
-    const head = this.add.text(0, -72, 'NEW MESSAGE RECEIVED', {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#00ccff',
-    }).setOrigin(0.5);
-    const sender = this.add.text(0, -48, 'SENDER: UNKNOWN', {
-      fontFamily: 'VT323, monospace', fontSize: '15px', color: '#7790a0',
-    }).setOrigin(0.5);
-    const body = this.add.text(0, -4, '"If you\'re reading this,\ndon\'t answer CHIMERA."', {
-      fontFamily: 'VT323, monospace', fontSize: '20px', color: '#cfeeff',
-      align: 'center', wordWrap: { width: 296 },
-    }).setOrigin(0.5);
-    const sign = this.add.text(0, 46, '\u2014 Trainee 581', {
-      fontFamily: 'VT323, monospace', fontSize: '17px', color: '#ffb000',
-    }).setOrigin(0.5);
+    const o = openHubOverlay(this, 72);
+    const panelW = 300;
+    const panelH = 168;
+    o.pin(this.add.rectangle(o.cx, o.cy, o.gw, o.gh, 0x000000, 0.6));
+    o.pin(this.add.rectangle(o.cx, o.cy, panelW, panelH, 0x04121a, 0.98).setStrokeStyle(3, 0x00ccff), 1);
+    const head = o.pin(this.add.text(o.cx, o.cy - 58, 'NEW MESSAGE RECEIVED', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '7px', color: '#00ccff',
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy - 38, 'SENDER: UNKNOWN', {
+      fontFamily: 'VT323, monospace', fontSize: '14px', color: '#7790a0',
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy - 4, '"If you\'re reading this,\ndon\'t answer CHIMERA."', {
+      fontFamily: 'VT323, monospace', fontSize: '17px', color: '#cfeeff',
+      align: 'center', wordWrap: { width: panelW - 28 },
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy + 36, '\u2014 Trainee 581', {
+      fontFamily: 'VT323, monospace', fontSize: '15px', color: '#ffb000',
+    }).setOrigin(0.5), 2);
     const close = () => {
       if (typeof AudioFX !== 'undefined') AudioFX.error();
       this.cameras.main.flash(150, 255, 90, 90);
       this.cameras.main.shake(220, 0.006);
-      c.destroy();
+      o.destroy();
       this.overrideActive = false;
+      restoreSector1ExploreCamera(this);
       if (onDone) onDone();
     };
-    const btn = makeButton(this, 0, 76, '[ CLOSE ]', close, { fontSize: '8px', color: '#9addff' });
-    c.add([dim, panel, head, sender, body, sign, btn.bg, btn.text]);
+    const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 22, '[ CLOSE ]', close, { fontSize: '7px', color: '#9addff' });
+    o.pinButton(btn, 2);
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
   };
 
   HubScene.prototype.handleArchiveInteract = function () {
-    if (this.isMultiSector) return this.handleMultiTerminal('archive');
     if (!this.isNearArchive()) {
-      this.flashPrompt('Move closer to the ARCHIVE (top-center)', '#ff3366');
+      this.flashPrompt('Move closer to the records cabinet', '#ff3366');
+      return;
+    }
+    if (this.isMultiSector) return this.handleMultiTerminal('archive');
+    if (this.isSector1) {
+      const active = typeof FacilitySectors !== 'undefined'
+        ? FacilitySectors.getActiveMission(registryProgress(this.registry), 1)
+        : null;
+      if (active && active.terminal === 'archive') {
+        return this.handleMultiTerminal('archive');
+      }
+      sfxClick();
+      this.showArchivePanel();
       return;
     }
     sfxClick();
@@ -1564,35 +1721,38 @@
       { id: '#1998', status: 'ACTIVE  \u25c4 YOU', color: '#00ffcc' },
     ];
 
-    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
-    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
-    const panel = this.add.rectangle(0, 0, 360, 252, 0x140a16, 0.98).setStrokeStyle(3, 0xff66cc);
-    const head = this.add.text(0, -104, 'TRAINEE RECORDS', {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '10px', color: '#ff66cc',
-    }).setOrigin(0.5);
-    const sub = this.add.text(0, -84, 'ARCHIVE \u2014 [CORRUPTED]', {
-      fontFamily: 'VT323, monospace', fontSize: '15px', color: '#9a6a86',
-    }).setOrigin(0.5);
-    c.add([dim, panel, head, sub]);
+    const o = openHubOverlay(this, 72);
+    const panelW = 310;
+    const panelH = 220;
+    const left = o.cx - panelW / 2 + 14;
+    o.pin(this.add.rectangle(o.cx, o.cy, o.gw, o.gh, 0x000000, 0.62));
+    o.pin(this.add.rectangle(o.cx, o.cy, panelW, panelH, 0x140a16, 0.98).setStrokeStyle(2, 0xff66cc), 1);
+    const head = o.pin(this.add.text(o.cx, o.cy - panelH / 2 + 18, 'TRAINEE RECORDS', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '7px', color: '#ff66cc',
+    }).setOrigin(0.5), 2);
+    o.pin(this.add.text(o.cx, o.cy - panelH / 2 + 34, 'ARCHIVE \u2014 [CORRUPTED]', {
+      fontFamily: 'VT323, monospace', fontSize: '14px', color: '#9a6a86',
+    }).setOrigin(0.5), 2);
 
     records.forEach((rec, i) => {
-      const y = -48 + i * 30;
-      c.add(this.add.text(-150, y, rec.id, {
-        fontFamily: 'VT323, monospace', fontSize: '20px', color: rec.color,
-      }).setOrigin(0, 0.5));
-      c.add(this.add.text(150, y, rec.status, {
-        fontFamily: 'VT323, monospace', fontSize: '18px', color: rec.color,
-      }).setOrigin(1, 0.5));
+      const y = o.cy - panelH / 2 + 58 + i * 24;
+      o.pin(this.add.text(left, y, rec.id, {
+        fontFamily: 'VT323, monospace', fontSize: '16px', color: rec.color,
+      }).setOrigin(0, 0.5), 2);
+      o.pin(this.add.text(o.cx + panelW / 2 - 14, y, rec.status, {
+        fontFamily: 'VT323, monospace', fontSize: '14px', color: rec.color,
+      }).setOrigin(1, 0.5), 2);
     });
 
-    c.add(this.add.text(0, 84, 'NONE REACHED THE CORE.', {
-      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#ff5577',
-    }).setOrigin(0.5));
+    o.pin(this.add.text(o.cx, o.cy + panelH / 2 - 52, 'NONE REACHED THE CORE.', {
+      fontFamily: 'VT323, monospace', fontSize: '14px', color: '#ff5577',
+    }).setOrigin(0.5), 2);
 
     const close = () => {
       sfxClick();
-      c.destroy();
+      o.destroy();
       this.overrideActive = false;
+      restoreSector1ExploreCamera(this);
       if (firstOpen) {
         this.chainChimera([
           'You found the old records.',
@@ -1602,9 +1762,22 @@
         ]);
       }
     };
-    const btn = makeButton(this, 0, 110, '[ CLOSE ]', close, { fontSize: '8px', color: '#ffaad8' });
-    c.add([btn.bg, btn.text]);
+    const btn = makeButton(this, o.cx, o.cy + panelH / 2 - 22, '[ CLOSE ]', close, { fontSize: '7px', color: '#ffaad8' });
+    o.pinButton(btn, 2);
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.55 }, duration: 600, yoyo: true, repeat: -1 });
+  };
+
+  HubScene.prototype.launchTerminalSession = function (cfg) {
+    const launch = () => {
+      this.enteringRoom = true;
+      if (cfg.puzzleId) this.registry.set('pendingPuzzleId', cfg.puzzleId);
+      switchScene(this, cfg.sceneKey);
+    };
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.startSession(this, cfg, launch);
+      return;
+    }
+    launch();
   };
 
   HubScene.prototype.showInitializeBreachPanel = function () {
@@ -1612,70 +1785,22 @@
       this.flashPrompt('Move closer to the LOGIN terminal (left alcove)', '#ff3366');
       return;
     }
-    this.overrideActive = true;
     sfxClick();
-    if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
-
-    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
-    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
-    const panel = this.add.rectangle(0, 0, 340, 168, 0x041018, 0.98).setStrokeStyle(3, 0x2288ff);
-    const head = this.add.text(0, -58, 'LOGIN TERMINAL — SECTOR 1', {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#44ccff',
-    }).setOrigin(0.5);
-    const sub = this.add.text(0, -32, 'INBOX / PHISHING VECTOR', {
-      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#7799aa',
-    }).setOrigin(0.5);
-    const body = this.add.text(0, -2, 'CHIMERA is watching.\nInitialize breach protocol?', {
-      fontFamily: 'VT323, monospace', fontSize: '18px', color: '#cfeeff',
-      align: 'center',
-    }).setOrigin(0.5);
-
-    const close = () => {
-      sfxClick();
-      c.destroy();
-      this.overrideActive = false;
-    };
-    const launch = () => {
-      c.destroy();
-      this.overrideActive = false;
-      this.enteringRoom = true;
-      this.cameras.main.flash(180, 0, 255, 102);
-      if (typeof AudioFX !== 'undefined' && AudioFX.doorUnlock) AudioFX.doorUnlock();
-      switchScene(this, 'PhishingScene');
-    };
-
-    const btnGo = makeButton(this, 0, 36, '[ INITIALIZE BREACH ]', launch, { fontSize: '8px', color: '#00ffcc' });
-    const btnCancel = makeButton(this, 0, 68, '[ CANCEL ]', close, { fontSize: '8px', color: '#8899aa' });
-    c.add([dim, panel, head, sub, body, btnGo.bg, btnGo.text, btnCancel.bg, btnCancel.text]);
-    this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
+    this.launchTerminalSession({
+      sceneKey: 'PhishingScene',
+      nodeTitle: 'MAIL SHIELD NODE 01',
+      nodeSub: 'Inbox vector detected — purge required',
+    });
   };
 
   HubScene.prototype.showMissionPanel = function (title, subtitle, sceneKey, puzzleId) {
-    this.overrideActive = true;
     sfxClick();
-    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
-    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
-    const panel = this.add.rectangle(0, 0, 340, 168, 0x0c1020, 0.98).setStrokeStyle(3, 0x6688ff);
-    const head = this.add.text(0, -58, title, {
-      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#8899ff',
-    }).setOrigin(0.5);
-    const sub = this.add.text(0, -32, subtitle, {
-      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#7788aa',
-    }).setOrigin(0.5);
-    const close = () => { sfxClick(); c.destroy(); this.overrideActive = false; };
-    const launch = () => {
-      c.destroy();
-      this.overrideActive = false;
-      this.enteringRoom = true;
-      this.cameras.main.flash(180, 100, 120, 255);
-      if (sceneKey === 'GenericPuzzleScene' && puzzleId) {
-        this.registry.set('pendingPuzzleId', puzzleId);
-      }
-      switchScene(this, sceneKey);
-    };
-    const btnGo = makeButton(this, 0, 36, '[ BEGIN MISSION ]', launch, { fontSize: '8px', color: '#8899ff' });
-    const btnCancel = makeButton(this, 0, 68, '[ CANCEL ]', close, { fontSize: '8px', color: '#8899aa' });
-    c.add([dim, panel, head, sub, btnGo.bg, btnGo.text, btnCancel.bg, btnCancel.text]);
+    this.launchTerminalSession({
+      sceneKey,
+      puzzleId,
+      nodeTitle: title,
+      nodeSub: subtitle,
+    });
   };
 
   HubScene.prototype.showSector2MissionPanel = function (title, subtitle, sceneKey) {
@@ -1700,6 +1825,7 @@
   };
 
   HubScene.prototype.isNearServer = function () {
+    if (this.isSector1) return false;
     return this.isNear(this.serverPos, INTERACT_RADIUS);
   };
 
@@ -1712,6 +1838,7 @@
   };
 
   HubScene.prototype.isNearKey = function () {
+    if (this.isSector1) return false;
     if (!this.keyActive || this.hasKey || !this.keyPos) return false;
     return this.isNear(this.keyPos, KEY_INTERACT_RADIUS);
   };
@@ -1794,12 +1921,45 @@
       return;
     }
 
-    this.flashPrompt('Move closer to KEY, DOOR, SERVER, LOGIN, or ARCHIVE', '#ff3366');
+    this.flashPrompt(this.isSector1
+      ? 'Move closer to the LOGIN terminal, records cabinet, or blast door'
+      : 'Move closer to KEY, DOOR, SERVER, LOGIN, or ARCHIVE', '#ff3366');
+  };
+
+  // Sector 1 boss: red flash → clunk → door opens → CHIMERA speaks
+  HubScene.prototype.playSector1BossDoorOpen = function (onDone) {
+    this.overrideActive = true;
+    this.input.enabled = false;
+    if (this.blastDoor) this.blastDoor.flashWarning(2200);
+    this.cameras.main.flash(350, 255, 40, 40);
+    this.cameras.main.shake(280, 0.005);
+    if (typeof AudioFX !== 'undefined' && AudioFX.doorHeavy) AudioFX.doorHeavy();
+    else if (typeof AudioFX !== 'undefined' && AudioFX.doorUnlock) AudioFX.doorUnlock();
+
+    let step = 0;
+    const pulse = this.time.addEvent({
+      delay: 95,
+      repeat: 18,
+      callback: () => {
+        step += 1;
+        this.redrawDoor(step % 2 === 0, true);
+      },
+    });
+
+    this.time.delayedCall(2000, () => {
+      pulse.destroy();
+      this.redrawDoor(true, false);
+      this.overrideActive = false;
+      this.input.enabled = true;
+      if (onDone) onDone();
+    });
   };
 
   HubScene.prototype.handleDoorInteract = function () {
     if (!this.isNearDoor()) {
-      this.flashPrompt('Move closer to the DOOR (top-right)', '#ff3366');
+      this.flashPrompt(this.isSector1
+        ? 'Move closer to the blast door at the end of the corridor'
+        : 'Move closer to the DOOR (top-right)', '#ff3366');
       return;
     }
 
@@ -1828,35 +1988,35 @@
     }
 
     if (this.allMissionsDone && !this.bossDone) {
-      if (!this.hasKey) {
-        sfxError();
-        this.flashPrompt('Blast door locked — pick up the KEY (bottom-right) first', '#ff3366');
-        return;
-      }
       sfxClick();
       this.enteringRoom = true;
-      this.showChimera(
-        'Three vectors contained… but I am still in the wire.',
-        () => this.showDoorChoice()
-      );
+      this.playSector1BossDoorOpen(() => {
+        this.showChimera(
+          'Three vectors contained… but I am still in the wire.',
+          () => this.showDoorChoice()
+        );
+      });
       return;
     }
 
     if (this.inboxDone) {
       if (this.loginDone) {
-        this.flashPrompt('All rooms cleared — pick up KEY for final breach', '#ffb000');
+        this.flashPrompt('Eastern seal ready — proceed to the blast door', '#ffb000');
+      } else if (!this.attachmentDone) {
+        this.flashPrompt('SEAL INTEGRITY: ACTIVE — records cabinet requires clearance', '#8899aa');
       } else {
-        this.flashPrompt('Inbox cleared — use SERVER or LOGIN terminals', '#00ff66');
+        this.flashPrompt('LOGIN terminal still armed — finish authentication sweep', '#00ff66');
       }
       return;
     }
 
     sfxError();
     this.cameras.main.flash(100, 255, 51, 102);
-    this.flashPrompt('DOOR LOCKED — initialize breach at the LOGIN terminal', '#ff3366');
+    this.flashPrompt('AUTHORIZATION REQUIRED — begin at the LOGIN terminal', '#ff3366');
   };
 
   HubScene.prototype.handleServerInteract = function () {
+    if (this.isSector1) return;
     if (this.isMultiSector) return this.handleMultiTerminal('server');
     if (!this.isNearServer()) {
       this.flashPrompt('Move closer to the SERVER (bottom-left)', '#ff3366');
@@ -1871,12 +2031,15 @@
       return;
     }
     sfxClick();
-    this.enteringRoom = true;
-    switchScene(this, 'AttachmentScene');
+    this.launchTerminalSession({
+      sceneKey: 'AttachmentScene',
+      nodeTitle: 'SANDBOX NODE 02',
+      nodeSub: 'Attachment quarantine — analyze payload',
+    });
   };
 
   HubScene.prototype.handlePcInteract = function () {
-    if (this.isMultiSector) return this.handleMultiTerminal('pc');
+    if (this.isSector1 || this.isMultiSector) return this.handleMultiTerminal('pc');
     if (!this.isNearPc()) {
       this.flashPrompt('Move closer to the LOGIN terminal (left alcove)', '#ff3366');
       return;
@@ -1886,16 +2049,18 @@
       return;
     }
     if (!this.attachmentDone) {
-      this.flashPrompt('Clear the SERVER room (Attachment) first', '#ff3366');
+      this.flashPrompt('Clear the ARCHIVE (Attachment) first', '#ff3366');
       return;
     }
     if (this.loginDone) {
-      this.flashPrompt('LOGIN complete — pick up KEY (bottom-right) for final breach', '#00ff66');
+      this.flashPrompt('LOGIN complete — breach the BLAST DOOR', '#00ff66');
       return;
     }
-    sfxClick();
-    this.enteringRoom = true;
-    switchScene(this, 'FakeLoginScene');
+    this.launchTerminalSession({
+      sceneKey: 'FakeLoginScene',
+      nodeTitle: 'WEB SHIELD NODE 01',
+      nodeSub: 'Authentication gateway compromised',
+    });
   };
 
   HubScene.prototype.flashPrompt = function (text, color) {
@@ -1946,10 +2111,15 @@
   HubScene.prototype.update = function (time, delta) {
     if (!this.player) return;
 
-    if (this.facilityProps) this.facilityProps.update(time);
+    const breathe = Math.sin(time / 680) * 1.8;
+    if (this.facilityProps && this.facilityProps.update) {
+      this.facilityProps.update(time, this.player, this.registry);
+    } else if (this.facilityProps) {
+      this.facilityProps.update(time);
+    }
+    if (this.blastDoor && this.blastDoor.update) this.blastDoor.update(time);
     if (this.facilityLighting && !this.isPaused && !this.overrideActive) {
-      const lights = this.facilityProps ? this.facilityProps.lightPoints : [];
-      this.facilityLighting.update(this.player, lights, time);
+      this.facilityLighting.update(this.player, null, time);
     }
 
     if (this.isPaused || this.overrideActive || chimeraOpen()) return;
@@ -1958,13 +2128,19 @@
     this._prevY = this.player.y;
     applyTouchMovement(this, 200, delta);
     this.clampPlayer();
-    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y, this.avatar);
+    drawPlayerSprite(this.playerGfx, this.player.x, this.player.y + breathe, this.avatar, breathe, this.isSector1 ? 1.5 : 1);
 
     this.nearDoor = this.isNearDoor();
     this.nearServer = this.isNearServer();
     this.nearPc = this.isNearPc();
     this.nearArchive = this.isNearArchive();
     this.nearKey = this.isNearKey();
+
+    if (this.facilityProps && this.facilityProps.setTerminalNear) {
+      this.facilityProps.setTerminalNear('pc', this.nearPc);
+      this.facilityProps.setTerminalNear('archive', this.nearArchive);
+      this.facilityProps.setTerminalNear('server', this.nearServer);
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.E) || Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) {
       if (this.dialogueBox.visible) {
@@ -1998,30 +2174,26 @@
         this.promptText.setText('DOOR LOCKED — pick up KEY (bottom-right) first');
       }
       this.promptText.setColor('#ffb000');
-    } else if (!this.isSector2 && this.nearPc && !this.inboxDone) {
-      this.promptText.setText('[ E ] LOGIN — Initialize Breach (Sector 1 INBOX)');
+    } else if (this.isSector1 && this.nearPc && !this.inboxDone) {
+      this.promptText.setText('[ E ] LOGIN terminal — read the inbox');
       this.promptText.setColor('#44ccff');
-    } else if (!this.isSector2 && this.nearArchive) {
-      this.promptText.setText('[ E ] ARCHIVE — trainee records');
+    } else if (this.isSector1 && this.nearArchive && this.inboxDone && !this.attachmentDone) {
+      this.promptText.setText('[ E ] records cabinet — quarantine the attachment');
       this.promptText.setColor('#ff66cc');
-    } else if (!this.isSector2 && this.nearServer && this.inboxDone && !this.attachmentDone) {
-      this.promptText.setText('[ E ] SERVER — Attachment Sandbox');
-      this.promptText.setColor('#aa88ff');
-    } else if (!this.isSector2 && this.nearPc && this.attachmentDone && !this.loginDone) {
+    } else if (this.isSector1 && this.nearArchive && (!this.inboxDone || this.attachmentDone)) {
+      this.promptText.setText('[ E ] records cabinet — trainee files');
+      this.promptText.setColor('#ff66cc');
+    } else if (this.isSector1 && this.nearPc && this.attachmentDone && !this.loginDone) {
       this.promptText.setText('[ E ] LOGIN — Fake Login Portal');
       this.promptText.setColor('#00ccff');
-    } else if (!this.isSector2 && this.nearDoor && this.allMissionsDone && !this.bossDone) {
-      if (this.hasKey) {
-        this.promptText.setText('[ E ] DOOR — final breach / confront CHIMERA');
-      } else {
-        this.promptText.setText('DOOR LOCKED — pick up KEY (bottom-right) first');
-      }
+    } else if (this.isSector1 && this.nearDoor && this.allMissionsDone && !this.bossDone) {
+      this.promptText.setText('[ E ] BLAST DOOR — final breach / confront CHIMERA');
       this.promptText.setColor('#ffb000');
-    } else if (!this.isSector2 && this.nearDoor && !this.inboxDone) {
-      this.promptText.setText('DOOR LOCKED — use LOGIN terminal to initialize breach');
+    } else if (this.isSector1 && this.nearDoor && !this.inboxDone) {
+      this.promptText.setText('ACCESS DENIED — FACILITY LOCKDOWN ACTIVE');
       this.promptText.setColor('#ff3366');
-    } else if (!this.isSector2 && this.nearDoor && this.inboxDone && !this.allMissionsDone) {
-      this.promptText.setText('DOOR sealed — clear SERVER and LOGIN first');
+    } else if (this.isSector1 && this.nearDoor && this.inboxDone && !this.allMissionsDone) {
+      this.promptText.setText('SEAL INTEGRITY: ACTIVE — AUTHORIZATION REQUIRED');
       this.promptText.setColor('#8899aa');
     } else {
       this.refreshPrompt();
@@ -2047,65 +2219,88 @@
     setupPause(this);
     addPuzzleHud(this);
 
-    drawScanlines(this);
-    this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
-      .setStrokeStyle(3, 0x000080);
+    const frame = typeof FacilityTerminal !== 'undefined'
+      ? FacilityTerminal.buildCompactScreen(this, {
+        width: 392,
+        height: 252,
+        title: 'MAIL SHIELD NODE 01',
+        subtitle: 'Mark all red flags in the message',
+      })
+      : null;
 
-    this.add.rectangle(GAME_W / 2, 28, GAME_W - 24, 28, 0x000080).setOrigin(0.5);
-    this.add.text(GAME_W / 2, 28, "MAIL CLIENT '98 — INBOX ROOM", {
-      fontFamily: 'VT323, monospace',
-      fontSize: '20px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
+    const L = frame ? frame.contentLeft : 40;
+    const T = frame ? frame.contentTop : 56;
+    const W = frame ? frame.contentW : GAME_W - 80;
+    const D = frame ? frame.depth : 1;
+    this._termW = W;
 
-    this.add.text(40, 58, 'From:', { fontFamily: 'VT323, monospace', fontSize: '18px', color: '#111' });
-    this.makeFlag(40, 78, 'IT Support <it-support@microsft-security.com>', 'sender', 0xffcccc);
+    if (frame) {
+      drawScanlines(this);
+    } else {
+      drawScanlines(this);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
+        .setStrokeStyle(3, 0x000080);
+    }
 
-    this.add.text(40, 118, 'Subject:', { fontFamily: 'VT323, monospace', fontSize: '18px', color: '#111' });
-    this.makeFlag(40, 138, 'URGENT: Account suspended — verify in 2 hours!', 'urgency', 0xffcccc);
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.addLoreTabs(this, {
+        logs: 'LOG ENTRY\n\nSomeone keeps writing on the walls.\nMaintenance has been informed.\n\nSubject 581 stopped responding\nat this terminal.',
+      }, {
+        tabStartX: frame ? frame.left + frame.panelW - 158 : GAME_W - 200,
+        tabY: frame ? frame.top + 5 : 24,
+        bodyX: frame ? frame.left + frame.panelW - 158 : GAME_W - 200,
+        bodyY: frame ? frame.top + 22 : 48,
+        bodyW: 148,
+      });
+    }
 
-    this.add.text(40, 178, 'Body:', { fontFamily: 'VT323, monospace', fontSize: '18px', color: '#111' });
-    this.add.text(40, 200, 'Click to verify your account:', { fontFamily: 'VT323, monospace', fontSize: '16px', color: '#333' });
-    this.makeFlag(40, 222, 'https://company-login.secure-verify.net/auth', 'link', 0xccccff);
+    const lbl = { fontFamily: 'VT323, monospace', fontSize: '14px', color: '#111' };
+    const msgY = T;
+    this.add.text(L, msgY, 'From:', lbl).setDepth(D);
+    this.makeFlag(L, msgY + 16, 'IT Support <it-support@microsft-security.com>', 'sender', 0xffcccc);
 
-    this.makeDecoy(40, 258, 'Best regards, IT Support Team', 'safe');
+    this.add.text(L, msgY + 44, 'Subject:', lbl).setDepth(D);
+    this.makeFlag(L, msgY + 60, 'URGENT: Account suspended — verify in 2 hours!', 'urgency', 0xffcccc);
 
-    this.flagCounter = this.add.text(GAME_W / 2, 290, 'Red flags: 0 / 3', {
+    this.add.text(L, msgY + 88, 'Body:', lbl).setDepth(D);
+    this.add.text(L, msgY + 104, 'Click to verify your account:', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#333',
+    }).setDepth(D);
+    this.makeFlag(L, msgY + 120, 'https://company-login.secure-verify.net/auth', 'link', 0xccccff);
+
+    this.makeDecoy(L, msgY + 148, 'Best regards, IT Support Team', 'safe');
+
+    const footY = frame ? frame.top + frame.panelH - 38 : 328;
+    this.flagCounter = this.add.text(frame ? frame.cx : GAME_W / 2, footY, 'VECTORS MARKED: 0 / 3', {
       fontFamily: 'Press Start 2P, monospace',
-      fontSize: '9px',
+      fontSize: '7px',
       color: '#ff3366',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(D);
 
-    this.completeBtn = makeButton(this, GAME_W / 2, 328, '[ COMPLETE MISSION ]', () => this.submitPhishing(), {
-      fontSize: '9px',
+    this.completeBtn = makeButton(this, frame ? frame.cx : GAME_W / 2, footY + 22, '[ EXECUTE PURGE ]', () => this.submitPhishing(), {
+      fontSize: '7px',
       disabled: true,
     });
     this.completeBtn.bg.setAlpha(0.45);
     this.completeBtn.text.setAlpha(0.45);
 
-    this.add.text(GAME_W / 2, 358, 'Click suspicious parts of the email', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '18px',
-      color: '#333',
-    }).setOrigin(0.5);
-
-    makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => {
+    makeButton(this, frame ? frame.left + 52 : 70, frame ? frame.top + frame.panelH - 10 : GAME_H - 36, '[ DISCONNECT ]', () => {
       sfxClick();
       switchScene(this, 'HubScene');
-    }, { fontSize: '8px', color: '#8899aa' });
+    }, { fontSize: '7px', color: '#8899aa' });
   };
 
   PhishingScene.prototype.makeFlag = function (x, y, label, flagKey, bgColor) {
-    const w = GAME_W - 80;
-    const h = 28;
+    const w = this._termW || (GAME_W - 80);
+    const h = 22;
     const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, bgColor, 1)
       .setStrokeStyle(1, 0x888888)
       .setInteractive({ useHandCursor: true });
-    const txt = this.add.text(x + 8, y + 6, label, {
+    const txt = this.add.text(x + 6, y + 4, label, {
       fontFamily: 'VT323, monospace',
-      fontSize: '17px',
+      fontSize: '13px',
       color: '#111',
-      wordWrap: { width: w - 16 },
+      wordWrap: { width: w - 12 },
     });
 
     bg.on('pointerdown', () => {
@@ -2116,7 +2311,7 @@
         this.foundFlags.add(flagKey);
         bg.setFillStyle(0x00ff66, 0.35).setStrokeStyle(2, 0x00aa44);
         txt.setColor('#004422');
-        this.flagCounter.setText(`Red flags: ${this.foundFlags.size} / 3`);
+        this.flagCounter.setText(`VECTORS MARKED: ${this.foundFlags.size} / 3`);
         if (this.foundFlags.size >= 3) {
           this.completeBtn.bg.setAlpha(1);
           this.completeBtn.text.setAlpha(1);
@@ -2127,33 +2322,44 @@
   };
 
   PhishingScene.prototype.makeDecoy = function (x, y, label, decoyKey) {
-    const w = GAME_W - 80;
-    const h = 28;
+    const w = this._termW || (GAME_W - 80);
+    const h = 22;
     const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xeeeeee, 1)
       .setStrokeStyle(1, 0x888888)
       .setInteractive({ useHandCursor: true });
-    this.add.text(x + 8, y + 6, label, {
+    this.add.text(x + 6, y + 4, label, {
       fontFamily: 'VT323, monospace',
-      fontSize: '17px',
+      fontSize: '13px',
       color: '#333',
     });
     bg.on('pointerdown', () => {
       if (this.isPaused) return;
-      sfxError();
-      loseLife(this, 'That looks legitimate — keep hunting red flags.');
+      if (typeof FacilityTerminal !== 'undefined') {
+        FacilityTerminal.accessDenied(this, 'Not a phishing vector — keep scanning.', (msg) => loseLife(this, msg));
+      } else {
+        sfxError();
+        loseLife(this, 'That looks legitimate — keep hunting red flags.');
+      }
     });
   };
 
   PhishingScene.prototype.submitPhishing = function () {
     if (this.foundFlags.size < 3 || this.completeBtn.disabled) return;
-    this.registry.set('inboxComplete', true);
-    this.registry.set('justUnlockedInbox', true);
-    const score = (this.registry.get('score') ?? START_SCORE) + 200;
-    this.registry.set('score', score);
-    persistProgress(this.registry);
-    sfxRoomComplete('phishing');
-    this.cameras.main.flash(150, 0, 255, 102);
-    switchScene(this, 'HubScene');
+    const finish = () => {
+      this.registry.set('inboxComplete', true);
+      this.registry.set('justUnlockedInbox', true);
+      const score = (this.registry.get('score') ?? START_SCORE) + 200;
+      this.registry.set('score', score);
+      persistProgress(this.registry);
+      sfxRoomComplete('phishing');
+      switchScene(this, 'HubScene');
+    };
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.accessVerified(this, finish);
+    } else {
+      this.cameras.main.flash(150, 0, 255, 102);
+      finish();
+    }
   };
 
   // ─── Attachment puzzle ──────────────────────────────────────────────────
@@ -2175,69 +2381,81 @@
     setupPause(this);
     addPuzzleHud(this);
 
+    const frame = typeof FacilityTerminal !== 'undefined'
+      ? FacilityTerminal.buildCompactScreen(this, {
+        width: 392,
+        height: 252,
+        title: 'SANDBOX NODE 02',
+        subtitle: 'Isolate threats before execution',
+      })
+      : null;
+
+    const L = frame ? frame.contentLeft : 40;
+    const T = frame ? frame.contentTop : 56;
+    const W = frame ? frame.contentW : GAME_W - 80;
+    const D = frame ? frame.depth : 1;
+    this._termW = W;
+
     drawScanlines(this);
-    this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
-      .setStrokeStyle(3, 0x000080);
+    if (!frame) {
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0xc0c0c0, 1)
+        .setStrokeStyle(3, 0x000080);
+    }
 
-    this.add.rectangle(GAME_W / 2, 28, GAME_W - 24, 28, 0x000080).setOrigin(0.5);
-    this.add.text(GAME_W / 2, 28, 'PDF ANALYZER — ATTACHMENT SANDBOX', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '18px',
-      color: '#ffffff',
-    }).setOrigin(0.5);
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.addLoreTabs(this, {
+        logs: 'LOG ENTRY\n\nSomeone keeps writing on the walls.\nMaintenance has been informed.',
+      }, {
+        tabStartX: frame ? frame.left + frame.panelW - 158 : GAME_W - 200,
+        tabY: frame ? frame.top + 5 : 32,
+        bodyX: frame ? frame.left + frame.panelW - 158 : GAME_W - 200,
+        bodyY: frame ? frame.top + 22 : 56,
+        bodyW: 148,
+      });
+    }
 
-    this.add.text(GAME_W / 2, 52, 'Invoice_2024.pdf — SANDBOX PREVIEW', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '16px',
-      color: '#333',
-    }).setOrigin(0.5);
+    const y0 = T;
+    this.makePdfTarget(L, y0, 'URGENT: Overdue Payment — Action Required', 'title', 0xffeecc, false);
+    this.add.text(L, y0 + 28, 'Please review the attached invoice immediately.', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#333',
+    }).setDepth(D);
+    this.makePdfTarget(L, y0 + 48, '⚠ This document contains macros. Enable content to view.', 'macro', 0xffcccc, true);
+    this.makePdfTarget(L, y0 + 74, 'Download updated invoice: http://paypa1-invoice.com/view', 'link', 0xccccff, true);
+    this.add.text(L, y0 + 100, 'Vendor: Acme Corp — Ref #8821', {
+      fontFamily: 'VT323, monospace', fontSize: '13px', color: '#228822',
+    }).setDepth(D);
 
-    this.makePdfTarget(40, 72, 'URGENT: Overdue Payment — Action Required', 'title', 0xffeecc, false);
-    this.add.text(40, 108, 'Please review the attached invoice immediately.', {
-      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#333',
-    });
-    this.makePdfTarget(40, 132, '⚠ This document contains macros. Enable content to view.', 'macro', 0xffcccc, true);
-    this.makePdfTarget(40, 168, 'Download updated invoice: http://paypa1-invoice.com/view', 'link', 0xccccff, true);
-    this.add.text(40, 204, 'Vendor: Acme Corp — Ref #8821', {
-      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#228822',
-    });
-
-    this.flagCounter = this.add.text(GAME_W / 2, 248, 'Threats found: 0 / 2', {
+    const footY = frame ? frame.top + frame.panelH - 38 : 248;
+    this.flagCounter = this.add.text(frame ? frame.cx : GAME_W / 2, footY, 'THREATS ISOLATED: 0 / 2', {
       fontFamily: 'Press Start 2P, monospace',
-      fontSize: '9px',
+      fontSize: '7px',
       color: '#ff3366',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(D);
 
-    this.completeBtn = makeButton(this, GAME_W / 2, 288, '[ COMPLETE MISSION ]', () => this.submitAttachment(), {
-      fontSize: '9px',
+    this.completeBtn = makeButton(this, frame ? frame.cx : GAME_W / 2, footY + 22, '[ QUARANTINE ]', () => this.submitAttachment(), {
+      fontSize: '7px',
       disabled: true,
     });
     this.completeBtn.bg.setAlpha(0.45);
     this.completeBtn.text.setAlpha(0.45);
 
-    this.add.text(GAME_W / 2, 328, 'Click 2 suspicious parts (macro + fake link)', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '18px',
-      color: '#333',
-    }).setOrigin(0.5);
-
-    makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => {
+    makeButton(this, frame ? frame.left + 52 : 70, frame ? frame.top + frame.panelH - 10 : GAME_H - 36, '[ DISCONNECT ]', () => {
       sfxClick();
       switchScene(this, 'HubScene');
-    }, { fontSize: '8px', color: '#8899aa' });
+    }, { fontSize: '7px', color: '#8899aa' });
   };
 
   AttachmentScene.prototype.makePdfTarget = function (x, y, label, flagKey, bgColor, isThreat) {
-    const w = GAME_W - 80;
-    const h = 28;
+    const w = this._termW || (GAME_W - 80);
+    const h = 22;
     const bg = this.add.rectangle(x + w / 2, y + h / 2, w, h, bgColor, 1)
       .setStrokeStyle(1, 0x888888)
       .setInteractive({ useHandCursor: true });
-    const txt = this.add.text(x + 8, y + 6, label, {
+    const txt = this.add.text(x + 6, y + 4, label, {
       fontFamily: 'VT323, monospace',
-      fontSize: '16px',
+      fontSize: '13px',
       color: '#111',
-      wordWrap: { width: w - 16 },
+      wordWrap: { width: w - 12 },
     });
 
     bg.on('pointerdown', () => {
@@ -2248,7 +2466,7 @@
         this.foundFlags.add(flagKey);
         bg.setFillStyle(0x00ff66, 0.35).setStrokeStyle(2, 0x00aa44);
         txt.setColor('#004422');
-        this.flagCounter.setText(`Threats found: ${this.foundFlags.size} / 2`);
+        this.flagCounter.setText(`THREATS ISOLATED: ${this.foundFlags.size} / 2`);
         if (this.foundFlags.size >= 2) {
           this.completeBtn.bg.setAlpha(1);
           this.completeBtn.text.setAlpha(1);
@@ -2257,22 +2475,33 @@
       } else if (flagKey === 'title') {
         this.feedbackText.setText('Urgency is suspicious — focus on macro + fake link.').setColor('#8899aa');
       } else {
-        sfxError();
-        loseLife(this, 'Not a PDF threat — try macro warning or fake link.');
+        if (typeof FacilityTerminal !== 'undefined') {
+          FacilityTerminal.accessDenied(this, 'Not a threat vector.', (msg) => loseLife(this, msg));
+        } else {
+          sfxError();
+          loseLife(this, 'Not a PDF threat — try macro warning or fake link.');
+        }
       }
     });
   };
 
   AttachmentScene.prototype.submitAttachment = function () {
     if (this.foundFlags.size < 2 || this.completeBtn.disabled) return;
-    this.registry.set('attachmentComplete', true);
-    this.registry.set('justUnlockedAttachment', true);
-    const score = (this.registry.get('score') ?? START_SCORE) + 200;
-    this.registry.set('score', score);
-    persistProgress(this.registry);
-    sfxRoomComplete('attachment');
-    this.cameras.main.flash(150, 0, 255, 102);
-    switchScene(this, 'HubScene');
+    const finish = () => {
+      this.registry.set('attachmentComplete', true);
+      this.registry.set('justUnlockedAttachment', true);
+      const score = (this.registry.get('score') ?? START_SCORE) + 200;
+      this.registry.set('score', score);
+      persistProgress(this.registry);
+      sfxRoomComplete('attachment');
+      switchScene(this, 'HubScene');
+    };
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.accessVerified(this, finish);
+    } else {
+      this.cameras.main.flash(150, 0, 255, 102);
+      finish();
+    }
   };
 
   // ─── Fake login puzzle ──────────────────────────────────────────────────
@@ -2288,27 +2517,37 @@
 
   FakeLoginScene.prototype.create = function () {
     this.selectedId = null;
-
+    this._terminalChimeraShown = false;
     resetCamera(this);
     setupPause(this);
     addPuzzleHud(this);
-
     drawScanlines(this);
+
+    const self = this;
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.buildOptionsPuzzle(this, {
+        bg: 0x041018,
+        stroke: COLORS.terminal,
+        nodeTitle: 'WEB SHIELD NODE 01',
+        status: 'AUTH GATEWAY COMPROMISED',
+        briefing: 'Spoofed login endpoints detected on external subnet.\nOne legitimate route remains — restore before breach spreads.',
+        instruction: 'SELECT ENDPOINT TO RESTORE ACCESS',
+        actionLabel: '[ RESTORE ACCESS ]',
+        options: FAKE_LOGIN_OPTIONS,
+        lore: {
+          logs: 'LOG ENTRY 0443\n\nGateway spoof detected.\nOne legitimate endpoint remains.',
+        },
+        onSubmit: () => self.submitFakeLogin(),
+        onExit: () => switchScene(self, 'HubScene'),
+      });
+      return;
+    }
+
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, 0x1a2a3a, 1)
       .setStrokeStyle(3, COLORS.terminal);
-
-    this.add.text(GAME_W / 2, 48, 'WEB SHIELD — FAKE LOGIN PORTAL', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '9px',
-      color: '#00ffcc',
+    this.add.text(GAME_W / 2, 78, 'Authentication gateway compromised.', {
+      fontFamily: 'VT323, monospace', fontSize: '20px', color: '#aabbcc',
     }).setOrigin(0.5);
-
-    this.add.text(GAME_W / 2, 78, 'Which URL is the legitimate company login?', {
-      fontFamily: 'VT323, monospace',
-      fontSize: '20px',
-      color: '#aabbcc',
-    }).setOrigin(0.5);
-
     this.optionBtns = [];
     FAKE_LOGIN_OPTIONS.forEach((opt, i) => {
       const y = 118 + i * 52;
@@ -2316,46 +2555,43 @@
         if (this.isPaused) return;
         sfxClick();
         this.selectedId = opt.id;
-        this.optionBtns.forEach((b) => {
-          b.bg.setStrokeStyle(2, COLORS.dialogueBorder);
-        });
+        this.optionBtns.forEach((b) => b.bg.setStrokeStyle(2, COLORS.dialogueBorder));
         btn.bg.setStrokeStyle(2, COLORS.doorOpen);
         this.feedbackText.setText('');
       }, { fontSize: '7px', color: '#aabbcc' });
       btn.optId = opt.id;
       this.optionBtns.push(btn);
     });
-
-    this.completeBtn = makeButton(this, GAME_W / 2, 340, '[ COMPLETE MISSION ]', () => this.submitFakeLogin(), {
-      fontSize: '9px',
-    });
-
-    makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => {
-      sfxClick();
-      switchScene(this, 'HubScene');
-    }, { fontSize: '8px', color: '#8899aa' });
+    this.completeBtn = makeButton(this, GAME_W / 2, 340, '[ RESTORE ACCESS ]', () => this.submitFakeLogin(), { fontSize: '9px' });
+    makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => { sfxClick(); switchScene(this, 'HubScene'); }, { fontSize: '8px', color: '#8899aa' });
   };
 
   FakeLoginScene.prototype.submitFakeLogin = function () {
     if (this.isPaused) return;
     if (!this.selectedId) {
-      this.feedbackText.setText('Select a URL first.').setColor('#ff3366');
+      if (this.feedbackText) this.feedbackText.setText('>> NO TARGET SELECTED').setColor('#ff3366');
       return;
     }
     const chosen = FAKE_LOGIN_OPTIONS.find((o) => o.id === this.selectedId);
     if (!chosen) return;
+    const self = this;
     if (chosen.correct) {
-      this.registry.set('fakeLoginComplete', true);
-      this.registry.set('justUnlockedLogin', true);
-      const score = (this.registry.get('score') ?? START_SCORE) + 200;
-      this.registry.set('score', score);
-      persistProgress(this.registry);
-      sfxRoomComplete('fake_login');
-      this.cameras.main.flash(150, 0, 255, 102);
-      switchScene(this, 'HubScene');
+      const finish = () => {
+        self.registry.set('fakeLoginComplete', true);
+        self.registry.set('justUnlockedLogin', true);
+        const score = (self.registry.get('score') ?? START_SCORE) + 200;
+        self.registry.set('score', score);
+        persistProgress(self.registry);
+        sfxRoomComplete('fake_login');
+        switchScene(self, 'HubScene');
+      };
+      if (typeof FacilityTerminal !== 'undefined') FacilityTerminal.accessVerified(self, finish);
+      else { self.cameras.main.flash(150, 0, 255, 102); finish(); }
+    } else if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.accessDenied(self, 'Typosquatted endpoint — breach spreading.', (msg) => loseLife(self, msg));
     } else {
       sfxError();
-      loseLife(this, 'Typosquatted URL — check the domain carefully.');
+      loseLife(self, 'Typosquatted URL — check the domain carefully.');
     }
   };
 
@@ -2364,10 +2600,42 @@
     SceneCtor.prototype.init = function () { resetCamera(this); };
     SceneCtor.prototype.create = function () {
       this.selectedId = null;
+      this._terminalChimeraShown = false;
       resetCamera(this);
       setupPause(this);
       addPuzzleHud(this);
       drawScanlines(this);
+      const self = this;
+      if (typeof FacilityTerminal !== 'undefined') {
+        FacilityTerminal.buildOptionsPuzzle(this, {
+          bg: cfg.bg || 0x101828,
+          stroke: cfg.stroke || 0x6688ff,
+          nodeTitle: cfg.nodeTitle || cfg.title,
+          status: cfg.status,
+          briefing: cfg.briefing || cfg.prompt,
+          instruction: cfg.instruction,
+          feed: cfg.feed,
+          actionLabel: cfg.actionLabel || '[ VERIFY ]',
+          options: cfg.options,
+          lore: cfg.lore,
+          onSubmit: () => FacilityTerminal.submitOptionChoice(self, {
+            options: cfg.options,
+            failMsg: cfg.failMsg,
+            loseLife: (msg) => loseLife(self, msg),
+            onSuccess: () => {
+              self.registry.set(cfg.flag, true);
+              if (cfg.unlockFlag) self.registry.set(cfg.unlockFlag, true);
+              const score = (self.registry.get('score') ?? START_SCORE) + 200;
+              self.registry.set('score', score);
+              persistProgress(self.registry);
+              sfxRoomComplete(cfg.roomId);
+              switchScene(self, 'HubScene');
+            },
+          }),
+          onExit: () => switchScene(self, 'HubScene'),
+        });
+        return;
+      }
       this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, cfg.bg || 0x101828, 1)
         .setStrokeStyle(3, cfg.stroke || 0x6688ff);
       this.add.text(GAME_W / 2, 48, cfg.title, {
@@ -2390,7 +2658,7 @@
         btn.optId = opt.id;
         this.optionBtns.push(btn);
       });
-      this.completeBtn = makeButton(this, GAME_W / 2, 340, '[ COMPLETE MISSION ]', () => this.submitChoice(cfg), { fontSize: '9px' });
+      this.completeBtn = makeButton(this, GAME_W / 2, 340, cfg.actionLabel || '[ VERIFY ]', () => this.submitChoice(cfg), { fontSize: '9px' });
       makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => { sfxClick(); switchScene(this, 'HubScene'); }, { fontSize: '8px', color: '#8899aa' });
     };
     SceneCtor.prototype.submitChoice = function (cfg) {
@@ -2421,13 +2689,16 @@
   PasswordScene.prototype = Object.create(Phaser.Scene.prototype);
   PasswordScene.prototype.constructor = PasswordScene;
   createOptionsPuzzleScene(PasswordScene, 'PasswordScene', {
-    title: 'SECTOR 2 — PASSWORD ROTATION',
-    prompt: 'Which password meets enterprise policy?',
+    nodeTitle: 'VAULT NODE 03',
+    status: 'CREDENTIAL ROTATION REQUIRED',
+    briefing: 'Stolen password hashes recovered from breach dump.\nDeploy policy-compliant key to re-seal vault.',
+    instruction: 'SELECT KEY FOR DEPLOYMENT',
+    actionLabel: '[ RESTORE ACCESS ]',
     options: PASSWORD_OPTIONS,
     flag: 's2PasswordComplete',
     unlockFlag: 'justUnlockedS2Mfa',
     roomId: 'password',
-    failMsg: 'Too weak — attackers already have that pattern.',
+    failMsg: 'Weak pattern — attackers already have that one.',
     bg: 0x0c1424,
     stroke: 0x4466cc,
   });
@@ -2436,8 +2707,11 @@
   MFAScene.prototype = Object.create(Phaser.Scene.prototype);
   MFAScene.prototype.constructor = MFAScene;
   createOptionsPuzzleScene(MFAScene, 'MFAScene', {
-    title: 'SECTOR 2 — MFA PROTOCOL',
-    prompt: 'A caller claims to be IT support. What do you do?',
+    nodeTitle: 'AUTH NODE 04',
+    status: 'VERIFICATION CHANNEL UNDER ATTACK',
+    briefing: 'Inbound call flagged: caller ID spoofed as IT support.\nAgent requesting live MFA code transfer.',
+    instruction: 'EXECUTE RESPONSE PROTOCOL',
+    actionLabel: '[ EXECUTE ]',
     options: MFA_OPTIONS,
     flag: 's2MfaComplete',
     unlockFlag: 'justUnlockedS2Credential',
@@ -2451,8 +2725,11 @@
   CredentialScene.prototype = Object.create(Phaser.Scene.prototype);
   CredentialScene.prototype.constructor = CredentialScene;
   createOptionsPuzzleScene(CredentialScene, 'CredentialScene', {
-    title: 'SECTOR 2 — CREDENTIAL AUDIT',
-    prompt: 'Shared admin credentials were found on a wiki. Best policy?',
+    nodeTitle: 'AUDIT NODE 05',
+    status: 'SHARED ADMIN CREDENTIALS DETECTED',
+    briefing: 'Intranet scan found shared admin login posted in plaintext.\nApply access policy to contain lateral movement.',
+    instruction: 'DEPLOY ACCESS POLICY',
+    actionLabel: '[ VERIFY ]',
     options: CREDENTIAL_OPTIONS,
     flag: 's2CredentialComplete',
     roomId: 'credential_audit',
@@ -2471,10 +2748,28 @@
     if (!cfg) { switchScene(this, 'HubScene'); return; }
     this.puzzleCfg = cfg;
     this.selectedId = null;
+    this._terminalChimeraShown = false;
     resetCamera(this);
     setupPause(this);
     addPuzzleHud(this);
     drawScanlines(this);
+    const self = this;
+    if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.buildOptionsPuzzle(this, {
+        bg: cfg.bg || 0x101828,
+        stroke: cfg.stroke || 0x6688ff,
+        nodeTitle: cfg.nodeTitle || (cfg.title || 'FACILITY NODE').replace(/^SECTOR \d+ — /, '').replace(/^CORE — /, ''),
+        status: cfg.status,
+        briefing: cfg.briefing || cfg.prompt,
+        instruction: cfg.instruction,
+        feed: cfg.feed,
+        actionLabel: cfg.actionLabel || '[ VERIFY ]',
+        options: cfg.options,
+        onSubmit: () => self.submitGeneric(),
+        onExit: () => switchScene(self, 'HubScene'),
+      });
+      return;
+    }
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 24, GAME_H - 24, cfg.bg || 0x101828, 1)
       .setStrokeStyle(3, cfg.stroke || 0x6688ff);
     this.add.text(GAME_W / 2, 48, cfg.title, {
@@ -2496,31 +2791,37 @@
       }, { fontSize: '7px', color: '#aabbcc' });
       this.optionBtns.push(btn);
     });
-    makeButton(this, GAME_W / 2, 340, '[ COMPLETE MISSION ]', () => this.submitGeneric(), { fontSize: '9px' });
+    makeButton(this, GAME_W / 2, 340, '[ VERIFY ]', () => this.submitGeneric(), { fontSize: '9px' });
     makeButton(this, 70, GAME_H - 36, '[ EXIT ]', () => { sfxClick(); switchScene(this, 'HubScene'); }, { fontSize: '8px', color: '#8899aa' });
   };
   GenericPuzzleScene.prototype.submitGeneric = function () {
     const cfg = this.puzzleCfg;
     if (this.isPaused || !cfg) return;
     if (!this.selectedId) {
-      this.feedbackText.setText('Select an answer first.').setColor('#ff3366');
+      if (this.feedbackText) this.feedbackText.setText('>> NO TARGET SELECTED').setColor('#ff3366');
       return;
     }
     const chosen = cfg.options.find((o) => o.id === this.selectedId);
     if (!chosen) return;
+    const self = this;
     if (chosen.correct) {
-      this.registry.set(cfg.flag, true);
-      if (cfg.unlockFlag) this.registry.set(cfg.unlockFlag, true);
-      this.registry.set('pendingPuzzleId', null);
-      const score = (this.registry.get('score') ?? START_SCORE) + 200;
-      this.registry.set('score', score);
-      persistProgress(this.registry);
-      sfxRoomComplete(cfg.roomId);
-      this.cameras.main.flash(150, 100, 120, 255);
-      switchScene(this, 'HubScene');
+      const finish = () => {
+        self.registry.set(cfg.flag, true);
+        if (cfg.unlockFlag) self.registry.set(cfg.unlockFlag, true);
+        self.registry.set('pendingPuzzleId', null);
+        const score = (self.registry.get('score') ?? START_SCORE) + 200;
+        self.registry.set('score', score);
+        persistProgress(self.registry);
+        sfxRoomComplete(cfg.roomId);
+        switchScene(self, 'HubScene');
+      };
+      if (typeof FacilityTerminal !== 'undefined') FacilityTerminal.accessVerified(self, finish);
+      else { self.cameras.main.flash(150, 100, 120, 255); finish(); }
+    } else if (typeof FacilityTerminal !== 'undefined') {
+      FacilityTerminal.accessDenied(self, cfg.failMsg || 'Incorrect — try again.', (msg) => loseLife(self, msg));
     } else {
       sfxError();
-      loseLife(this, cfg.failMsg || 'Incorrect — try again.');
+      loseLife(self, cfg.failMsg || 'Incorrect — try again.');
     }
   };
 
@@ -2756,7 +3057,8 @@
     wallChar.destroy();
   }
 
-  function drawPlayerSprite(g, x, y, avatar) {
+  function drawPlayerSprite(g, x, y, avatar, _breathe, scale) {
+    const s = scale || 1;
     const maps = typeof FacilityCharacter !== 'undefined' ? FacilityCharacter : null;
     const hairMap = maps ? maps.HAIR : { black: 0x1a1a1a };
     const skinMap = maps ? maps.SKIN : { light: 0xffddaa };
@@ -2768,27 +3070,29 @@
     const headgear = av.headgear || 'none';
 
     g.clear();
+    g.fillStyle(0x223344, 0.35);
+    g.fillCircle(x, y + 10 * s, 10 * s);
     g.fillStyle(0x223344, 1);
-    g.fillRect(x - 9, y - 12, 18, 24);
+    g.fillRect(x - 11 * s, y - 14 * s, 22 * s, 28 * s);
     g.fillStyle(suit, 1);
-    g.fillRect(x - 7, y - 10, 14, 20);
+    g.fillRect(x - 9 * s, y - 12 * s, 18 * s, 24 * s);
     g.fillStyle(skin, 1);
-    g.fillRect(x - 5, y - 14, 10, 8);
+    g.fillRect(x - 6 * s, y - 17 * s, 12 * s, 10 * s);
     g.fillStyle(hair, 1);
-    g.fillRect(x - 6, y - 16, 12, 4);
+    g.fillRect(x - 7 * s, y - 19 * s, 14 * s, 5 * s);
 
     if (headgear === 'visor') {
       g.fillStyle(0x44ccff, 0.85);
-      g.fillRect(x - 6, y - 13, 12, 3);
+      g.fillRect(x - 7 * s, y - 16 * s, 14 * s, 3 * s);
     } else if (headgear === 'mask') {
       g.fillStyle(0x334455, 1);
-      g.fillRect(x - 5, y - 10, 10, 6);
+      g.fillRect(x - 6 * s, y - 13 * s, 12 * s, 7 * s);
     } else if (headgear === 'headset') {
       g.fillStyle(0x556677, 1);
-      g.fillRect(x - 9, y - 13, 3, 7);
-      g.fillRect(x + 6, y - 13, 3, 7);
+      g.fillRect(x - 11 * s, y - 16 * s, 3 * s, 8 * s);
+      g.fillRect(x + 8 * s, y - 16 * s, 3 * s, 8 * s);
       g.fillStyle(0x8899aa, 1);
-      g.fillRect(x - 2, y - 16, 4, 2);
+      g.fillRect(x - 2 * s, y - 19 * s, 4 * s, 2 * s);
     }
   }
 
@@ -2843,7 +3147,6 @@
   function resetCamera(scene) {
     const cam = scene.cameras.main;
     if (!cam) return;
-    // Phaser 3.80 camera effects expose reset()/resetFX(), not stop().
     if (typeof cam.resetFX === 'function') {
       cam.resetFX();
     } else {
@@ -2851,6 +3154,55 @@
       if (cam.flashEffect && cam.flashEffect.reset) cam.flashEffect.reset();
     }
     cam.setAlpha(1);
+    cam.setZoom(1);
+    if (typeof cam.stopFollow === 'function') cam.stopFollow();
+  }
+
+  /** Pin overlay UI to viewport — resets hub explore zoom first. */
+  function openHubOverlay(scene, depth) {
+    depth = depth || 72;
+    const gw = scene.game.config.width;
+    const gh = scene.game.config.height;
+    resetCamera(scene);
+    const ui = [];
+    const cleanups = [];
+    return {
+      gw,
+      gh,
+      cx: gw / 2,
+      cy: gh / 2,
+      pin(obj, layer) {
+        obj.setScrollFactor(0).setDepth(depth + (layer || 0));
+        ui.push(obj);
+        return obj;
+      },
+      /** Button pinned to viewport — interactive AFTER scrollFactor so clicks register. */
+      pinButton(btn, layer) {
+        if (btn.bg) {
+          if (btn.bg.input) btn.bg.disableInteractive();
+          this.pin(btn.bg, layer);
+        }
+        if (btn.text) {
+          if (btn.text.input) btn.text.disableInteractive();
+          this.pin(btn.text, layer + 1);
+        }
+        if (btn.rewireInteractive) btn.rewireInteractive();
+        return btn;
+      },
+      onDestroy(fn) {
+        cleanups.push(fn);
+      },
+      destroy() {
+        cleanups.forEach((fn) => { try { fn(); } catch (e) { /* noop */ } });
+        ui.forEach((o) => { if (o && o.destroy) o.destroy(); });
+      },
+    };
+  }
+
+  function restoreSector1ExploreCamera(scene) {
+    if (scene.isSector1 && typeof scene.setupSector1ExploreCamera === 'function') {
+      scene.setupSector1ExploreCamera();
+    }
   }
 
   function switchScene(scene, key) {
@@ -2877,11 +3229,10 @@
       fontFamily: 'Press Start 2P, monospace',
       fontSize,
       color,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5);
 
     const bg = scene.add.rectangle(x, y, text.width + padX, text.height + padY, 0x000000, 0.7)
-      .setStrokeStyle(2, COLORS.dialogueBorder)
-      .setInteractive({ useHandCursor: true });
+      .setStrokeStyle(2, opts.stroke != null ? opts.stroke : COLORS.dialogueBorder);
     text.setDepth(1);
     bg.setDepth(0);
 
@@ -2890,10 +3241,16 @@
       if (btn.disabled) return;
       callback();
     };
-    bg.on('pointerdown', click);
-    text.on('pointerdown', click);
+    const wire = (target) => {
+      if (!target || !target.setInteractive) return;
+      target.setInteractive({ useHandCursor: true });
+      target.on('pointerdown', click);
+    };
+    wire(bg);
+    wire(text);
     bg.on('pointerover', () => bg.setFillStyle(0x003322, 0.9));
     bg.on('pointerout', () => bg.setFillStyle(0x000000, 0.7));
+    btn.rewireInteractive = () => { wire(bg); wire(text); };
     btn.setAlpha = (a) => {
       bg.setAlpha(a);
       text.setAlpha(a);

@@ -7,12 +7,12 @@
   const TILE = 32;
 
   const LAYOUT = [
-    'WWWWWWWWWWWWDDWWWWWW',
-    'WAAW....BB....DD...W',
-    'W..WWWW.......WW...W',
-    'W......@.........WW',
-    'W..WWWWW...........W',
-    'WCCW............KKKW',
+    'WWWWWWWWWWWWWWWDDWWW',
+    'WAAW........BB.....W',
+    'W..................W',
+    'W..................W',
+    'W.........@........W',
+    'WCCW.............KKW',
     'WWWWWWWWWWWWWWWWWWWW',
   ];
 
@@ -20,10 +20,10 @@
     roomY: 2,
     roomRows: 7,
     pc: { c: 2, r: 3 },
-    archive: { c: 9, r: 3 },
+    archive: { c: 12, r: 3 },
     server: { c: 2, r: 7 },
-    door: { c: 13, r: 2 },
-    player: { c: 10, r: 5 },
+    door: { c: 16, r: 2 },
+    player: { c: 10, r: 6 },
     key: { c: 17, r: 7 },
   };
 
@@ -75,33 +75,31 @@
         const x = c * TILE;
         const y = r * TILE;
         const isWall = LAYOUT[ri][c] === 'W';
-        const isAlt = (c + r) % 2 === 0;
         if (isWall) {
           g.fillStyle(pal.wall, 1);
           g.fillRect(x, y, TILE, TILE);
-          g.lineStyle(1, pal.wallEdgeDim, 0.45);
-          g.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
-          if (ri > 0 && LAYOUT[ri - 1][c] === '.') {
-            g.lineStyle(2, pal.wallEdge, 0.25);
-            g.lineBetween(x + 2, y + 1, x + TILE - 2, y + 1);
-          }
         } else {
-          g.fillStyle(isAlt ? pal.floorAlt : pal.floor, 1);
+          g.fillStyle(pal.floor, 1);
           g.fillRect(x, y, TILE, TILE);
         }
       }
     }
 
     const ry = POSITIONS.roomY;
+    const wallSpots = [{ col: 19, row: ry + 3, face: 'west' }];
     const graffiti = sec.graffiti || ['581 WAS HERE'];
-    graffiti.forEach((txt, i) => {
-      scene.add.text(14 + i * 48, (ry + 2 + i) * TILE + 4, txt, {
-        fontFamily: 'VT323, monospace',
-        fontSize: i === 0 ? '10px' : '9px',
-        color: '#334455',
-        angle: -3 + i * 4,
-      }).setDepth(1).setAlpha(0.5 + i * 0.05);
-    });
+    const gr = graffiti[0];
+    if (gr && typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.addWallGraffiti) {
+      const spot = wallSpots[0];
+      FacilityAtmosphere.addWallGraffiti(scene, gr, {
+        col: spot.col,
+        row: spot.row,
+        face: spot.face,
+        fontSize: '10px',
+        color: '#445566',
+        alpha: 0.5,
+      });
+    }
 
     if (sec.isCore) {
       scene.add.text(gw / 2, (ry + 1) * TILE, 'PROJECT CHIMERA', {

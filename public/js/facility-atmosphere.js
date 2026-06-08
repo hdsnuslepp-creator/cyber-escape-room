@@ -1,13 +1,11 @@
 /**
- * Facility atmosphere — irregular layout, pixel props, darkness + flashlight,
- * terminal glow, CHIMERA environment pulses. Chapter 1 palette: cyan / green.
+ * Facility atmosphere — Sector 1 room composition, zone lighting, wall structure.
  */
 (function () {
   'use strict';
 
   const TILE = 32;
 
-  // Chapter 1 — cyan + green facility mood
   const CH1 = {
     void: 0x020408,
     wall: 0x0a1218,
@@ -26,34 +24,57 @@
     doorBoss: 0xffb000,
     accent: 0x00ffcc,
     green: 0x00ff66,
-    graffiti: 0x334455,
     note: 0xffdd88,
   };
 
-  // L-shaped corridor with alcoves — . = floor, W = wall
+  // Sector 1 — connected rooms: A spawn → B login → C archive → D blast door
+  const ROOM_OFFSET_C = 5;
+  const CORRIDOR_C = 4;
   const HUB_LAYOUT = [
-    'WWWWWWWWWWWWDDWWWWWW',
-    'WLLW....AA....DD...W',
-    'W..WWWW.......WW...W',
-    'W......@.........WW',
-    'W..WWWWW...........W',
-    'WSSW............KKKW',
-    'WWWWWWWWWWWWWWWWWWWW',
+    'WWWWWWWWWW',
+    'W..AAAA..W',
+    'W..AAAA..W',
+    'W...A....W',
+    'WLLLA....W',
+    'WLLLA....W',
+    'W...A....W',
+    'W.AAAA...W',
+    'W.AAAA...W',
+    'W..DDDD..W',
+    'WWWWWWWWWW',
   ];
 
   const HUB_POSITIONS = {
-    roomY: 2,
-    roomRows: 7,
-    pc: { c: 2, r: 3 },
-    door: { c: 13, r: 2 },
-    player: { c: 10, r: 5 },
-    server: { c: 2, r: 7 },
-    key: { c: 17, r: 7 },
-    archive: { c: 9, r: 3 },
+    roomY: 1,
+    roomRows: 11,
+    pc: { c: 2, r: 5 },
+    archive: { c: 3, r: 9 },
+    door: { c: 3, r: 10 },
+    player: { c: 3, r: 3 },
+    server: { c: 3, r: 9 },
+    key: { c: 3, r: 10 },
   };
 
+  function mapC(c) { return c + ROOM_OFFSET_C; }
+
+  function floorZone(c, r) {
+    if (r >= 2 && r <= 3 && c >= 2 && c <= 5) return 'spawn';
+    if (r >= 4 && r <= 5 && c >= 1 && c <= 3) return 'blue';
+    if (r >= 8 && r <= 9 && c >= 2 && c <= 5) return 'purple';
+    if (r === 10 && c >= 2 && c <= 5) return 'red';
+    return null;
+  }
+
+  function zoneFloorColor(base, zone) {
+    if (zone === 'spawn') return 0x0c141c;
+    if (zone === 'blue') return 0x0a1828;
+    if (zone === 'purple') return 0x120a1c;
+    if (zone === 'red') return 0x180810;
+    return base;
+  }
+
   function tilePx(c, r) {
-    return { x: c * TILE + TILE / 2, y: r * TILE + TILE / 2 };
+    return { x: mapC(c) * TILE + TILE / 2, y: r * TILE + TILE / 2 };
   }
 
   function parseLayout() {
@@ -61,7 +82,7 @@
     for (let ri = 0; ri < HUB_LAYOUT.length; ri++) {
       const row = HUB_LAYOUT[ri];
       for (let c = 0; c < row.length; c++) {
-        if (row[c] === 'W') walls.add(`${c},${HUB_POSITIONS.roomY + ri}`);
+        if (row[c] === 'W') walls.add(`${mapC(c)},${HUB_POSITIONS.roomY + ri}`);
       }
     }
     return walls;
@@ -69,18 +90,59 @@
 
   const WALLS = parseLayout();
 
+  const GRAFFITI_WALLS = {
+    door: { text: 'HE IS LISTENING', col: 1, rowOff: 9, face: 'east', color: '#994466', fontSize: '10px' },
+  };
+
+  function wallGraffitiAnchor(col, row, face) {
+    const x0 = col * TILE;
+    const y0 = row * TILE;
+    switch (face) {
+      case 'north':
+        return { x: x0 + TILE / 2, y: y0 + 5, angle: 0, ox: 0.5, oy: 0 };
+      case 'east':
+        return { x: x0 + TILE - 6, y: y0 + TILE / 2, angle: -90, ox: 0.5, oy: 0.5 };
+      case 'west':
+        return { x: x0 + 6, y: y0 + TILE / 2, angle: 90, ox: 0.5, oy: 0.5 };
+      case 'south':
+      default:
+        return { x: x0 + TILE / 2, y: y0 + TILE - 4, angle: 0, ox: 0.5, oy: 1 };
+    }
+  }
+
+  function addWallGraffiti(scene, text, opts) {
+    opts = opts || {};
+    const anchor = wallGraffitiAnchor(opts.col, opts.row, opts.face || 'south');
+    const smudge = scene.add.graphics().setDepth(1);
+    const smLen = Math.min(TILE - 2, Math.max(28, text.length * 5.5));
+    smudge.fillStyle(0x141c28, 0.25);
+    if (anchor.angle === 0) {
+      smudge.fillRect(anchor.x - smLen / 2, anchor.y - 11, smLen, 11);
+    } else {
+      smudge.fillRect(anchor.x - 5, anchor.y - smLen / 2, 10, smLen);
+    }
+    const label = scene.add.text(anchor.x, anchor.y, text, {
+      fontFamily: 'VT323, monospace',
+      fontSize: opts.fontSize || '11px',
+      color: opts.color || '#556677',
+    }).setOrigin(anchor.ox, anchor.oy).setAngle(anchor.angle).setDepth(1).setAlpha(opts.alpha != null ? opts.alpha : 0.85);
+    label._wallX = anchor.x;
+    label._wallY = anchor.y;
+    label._smudge = smudge;
+    return label;
+  }
+
   function isWallTile(c, r) {
     return WALLS.has(`${c},${r}`);
   }
 
-  /** Push the player out of wall tiles using a small footprint sample. */
   function resolveWallCollision(sprite, prevX, prevY) {
     const pts = [
       [sprite.x, sprite.y],
-      [sprite.x - 8, sprite.y],
-      [sprite.x + 8, sprite.y],
-      [sprite.x, sprite.y - 10],
-      [sprite.x, sprite.y + 10],
+      [sprite.x - 10, sprite.y],
+      [sprite.x + 10, sprite.y],
+      [sprite.x, sprite.y - 12],
+      [sprite.x, sprite.y + 12],
     ];
     for (const [px, py] of pts) {
       const c = Math.floor(px / TILE);
@@ -93,350 +155,363 @@
     }
   }
 
-  /** Outer corridor bounds for clamping. */
   function clampToCorridor(sprite) {
-    const half = 12;
-    const minX = TILE + half;
-    const maxX = (HUB_LAYOUT[0].length - 1) * TILE - half;
+    const half = 14;
+    const minX = mapC(0) * TILE + TILE + half;
+    const maxX = mapC(HUB_LAYOUT[0].length - 1) * TILE - TILE - half;
     const minY = (HUB_POSITIONS.roomY + 1) * TILE + half;
-    const maxY = (HUB_POSITIONS.roomY + HUB_POSITIONS.roomRows - 1) * TILE - half;
+    const maxY = (HUB_POSITIONS.roomY + HUB_LAYOUT.length - 1) * TILE - TILE - half;
     sprite.x = Phaser.Math.Clamp(sprite.x, minX, maxX);
     sprite.y = Phaser.Math.Clamp(sprite.y, minY, maxY);
+  }
+
+  /** Bare wall trim — no scattered dressing. */
+  function drawWallStructure(g) {
+    const ry = HUB_POSITIONS.roomY;
+    const roomTop = ry * TILE;
+    const roomBot = (ry + HUB_LAYOUT.length - 1) * TILE;
+    const roomLeft = mapC(0) * TILE;
+    const roomRight = mapC(HUB_LAYOUT[0].length - 1) * TILE;
+
+    g.fillStyle(0x060a10, 0.85);
+    g.fillRect(roomLeft, roomTop + TILE, 4, roomBot - roomTop - TILE * 2);
+    g.fillRect(roomRight - 4, roomTop + TILE, 4, roomBot - roomTop - TILE * 2);
+  }
+
+  /** Single coffee cup — spawn room only. */
+  function addFloorCoffeeCup(scene) {
+    const px = tilePx(2, HUB_POSITIONS.player.r);
+    const g = scene.add.graphics().setDepth(1);
+    g.fillStyle(0x5a4030, 0.9);
+    g.fillCircle(px.x, px.y + 3, 5);
+    g.fillStyle(0x887766, 0.75);
+    g.fillCircle(px.x - 1, px.y + 1, 3);
   }
 
   function buildMap(scene) {
     const g = scene.add.graphics().setDepth(0);
     const pal = CH1;
-
-    g.fillStyle(pal.void, 1);
     const gw = scene.game.config.width;
     const gh = scene.game.config.height;
+
+    g.fillStyle(pal.void, 1);
     g.fillRect(0, 0, gw, gh);
 
     for (let ri = 0; ri < HUB_LAYOUT.length; ri++) {
       const row = HUB_LAYOUT[ri];
       for (let c = 0; c < row.length; c++) {
         const r = HUB_POSITIONS.roomY + ri;
-        const x = c * TILE;
+        const x = mapC(c) * TILE;
         const y = r * TILE;
-        const ch = row[c];
-        const isWall = ch === 'W';
-        const isAlt = (c + r) % 2 === 0;
+        const isWall = row[c] === 'W';
 
         if (isWall) {
           g.fillStyle(pal.wall, 1);
           g.fillRect(x, y, TILE, TILE);
-          g.lineStyle(1, pal.wallEdgeDim, 0.45);
-          g.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
-          // Top-edge neon trim on inner walls
-          if (ri > 0 && HUB_LAYOUT[ri - 1][c] === '.') {
-            g.lineStyle(2, pal.wallEdge, 0.25);
-            g.lineBetween(x + 2, y + 1, x + TILE - 2, y + 1);
-          }
+          g.fillStyle(0x141c24, 0.35);
+          g.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
         } else {
-          g.fillStyle(isAlt ? pal.floorAlt : pal.floor, 1);
+          const zone = floorZone(c, r);
+          g.fillStyle(zone ? zoneFloorColor(pal.floor, zone) : pal.floor, 1);
           g.fillRect(x, y, TILE, TILE);
         }
       }
     }
 
-    const fixtures = addEnvironmentalDetails(scene, pal);
-    scene._lightFixtures = fixtures;
+    drawWallStructure(g);
+
+    g.lineStyle(1, pal.wallEdge, 0.12);
+    const ry0 = HUB_POSITIONS.roomY * TILE;
+    const rh = HUB_LAYOUT.length * TILE;
+    const rw = HUB_LAYOUT[0].length * TILE;
+    g.strokeRect(mapC(0) * TILE + 2, ry0 + TILE + 2, rw - TILE * 2 - 4, rh - TILE * 2 - 4);
+
+    addEnvironmentalDetails(scene);
     return g;
   }
 
-  function addEnvironmentalDetails(scene, pal) {
+  function addDeliberateGraffiti(scene) {
     const ry = HUB_POSITIONS.roomY;
-
-    // Graffiti — previous trainees left warnings
-    scene.add.text(18, (ry + 2) * TILE + 6, '581 WAS HERE', {
-      fontFamily: 'VT323, monospace', fontSize: '11px', color: '#2a4455', angle: -4,
-    }).setDepth(1).setAlpha(0.55);
-
-    scene.add.text(8 * TILE + 4, (ry + 4) * TILE + 2, "DON'T TRUST HIM", {
-      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#442233', angle: 2,
-    }).setDepth(1).setAlpha(0.5);
-
-    scene.add.text(5 * TILE + 4, (ry + 2) * TILE + 8, 'TURN BACK', {
-      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#553322', angle: -6,
-    }).setDepth(1).setAlpha(0.45);
-
-    // Wall placard beside blast door (left jamb — not on the door itself)
-    const doorC = HUB_POSITIONS.door.c;
-    const doorR = HUB_POSITIONS.door.r;
-    const placardG = scene.add.graphics().setDepth(1);
-    const px = (doorC - 3) * TILE + 6;
-    const py = doorR * TILE + 2;
-    placardG.fillStyle(0x1a1208, 1);
-    placardG.fillRect(px, py, 22, 28);
-    placardG.lineStyle(1, 0xaa6622, 0.55);
-    placardG.strokeRect(px, py, 22, 28);
-    placardG.fillStyle(0xaa6622, 0.75);
-    placardG.fillTriangle(px + 4, py + 10, px + 18, py + 10, px + 11, py + 18);
-    scene.add.text(px + 11, py + 22, 'RESTRICTED', {
-      fontFamily: 'VT323, monospace', fontSize: '7px', color: '#886644',
-    }).setOrigin(0.5, 0).setDepth(1).setAlpha(0.65);
-    const noteG = scene.add.graphics().setDepth(1);
-    noteG.fillStyle(0xccc5aa, 0.85);
-    noteG.fillRect(9 * TILE + 6, (ry + 5) * TILE + 10, 26, 20);
-    noteG.lineStyle(1, 0x998866, 0.6);
-    noteG.strokeRect(9 * TILE + 6, (ry + 5) * TILE + 10, 26, 20);
-    scene.add.text(9 * TILE + 19, (ry + 5) * TILE + 20, '...581...', {
-      fontFamily: 'VT323, monospace', fontSize: '8px', color: '#554433',
-    }).setOrigin(0.5).setDepth(2).setAlpha(0.7).setAngle(-12);
-
-    // Broken monitor on the floor
-    const monX = 11 * TILE;
-    const monY = (ry + 4) * TILE + 4;
-    const monG = scene.add.graphics().setDepth(1);
-    monG.fillStyle(0x1a1a22, 1);
-    monG.fillRect(monX, monY, 28, 20);
-    monG.fillStyle(0x220808, 0.9);
-    monG.fillRect(monX + 3, monY + 3, 22, 12);
-    monG.lineStyle(1, 0x442222, 1);
-    monG.lineBetween(monX + 4, monY + 5, monX + 22, monY + 14);
-    monG.lineBetween(monX + 20, monY + 4, monX + 8, monY + 15);
-    // Monitor stand + loose cable
-    monG.fillStyle(0x222228, 1);
-    monG.fillRect(monX + 10, monY + 20, 8, 4);
-    monG.lineStyle(2, 0x334455, 0.7);
-    monG.lineBetween(monX + 14, monY + 24, monX + 28, monY + 30);
-    monG.lineBetween(monX + 28, monY + 30, monX + 36, monY + 28);
-    scene.add.text(monX + 14, monY + 22, "DON'T TRUST IT", {
-      fontFamily: 'VT323, monospace', fontSize: '9px', color: '#663333',
-    }).setOrigin(0.5, 0).setDepth(1).setAlpha(0.7);
-
-    // Sticky note near archive
-    scene.add.rectangle(7 * TILE + 8, (ry + 1) * TILE + 20, 22, 18, 0xffeeaa, 0.85)
-      .setDepth(1).setAngle(6);
-    scene.add.text(7 * TILE + 8, (ry + 1) * TILE + 20, '1998?', {
-      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#554422',
-    }).setOrigin(0.5).setDepth(2).setAngle(6);
-
-    // Security camera — entrance wall, not over the blast door
-    const camG = scene.add.graphics().setDepth(2);
-    camG.fillStyle(0x1a2030, 1);
-    camG.fillRect(6 * TILE, (ry + 1) * TILE + 2, 14, 10);
-    camG.fillStyle(0x223344, 1);
-    camG.fillRect(6 * TILE + 3, (ry + 1) * TILE + 4, 8, 6);
-    camG.fillStyle(0xff2233, 0.7);
-    camG.fillCircle(6 * TILE + 7, (ry + 1) * TILE + 7, 2);
-
-    // Floor vent grate
-    const ventG = scene.add.graphics().setDepth(0);
-    ventG.fillStyle(0x0a1018, 1);
-    ventG.fillRect(13 * TILE + 4, (ry + 5) * TILE + 18, 24, 10);
-    ventG.lineStyle(1, 0x223344, 0.6);
-    for (let i = 0; i < 4; i++) {
-      ventG.lineBetween(13 * TILE + 6, (ry + 5) * TILE + 20 + i * 2, 13 * TILE + 26, (ry + 5) * TILE + 20 + i * 2);
-    }
-
-    // Coffee cup + spilled stain
-    const cupG = scene.add.graphics().setDepth(1);
-    cupG.fillStyle(0x332211, 0.4);
-    cupG.fillEllipse(6 * TILE + 10, (ry + 5) * TILE + 22, 14, 6);
-    cupG.fillStyle(0x443322, 1);
-    cupG.fillRect(6 * TILE + 6, (ry + 5) * TILE + 14, 10, 12);
-    cupG.fillStyle(0x221100, 1);
-    cupG.fillRect(6 * TILE + 7, (ry + 5) * TILE + 12, 8, 3);
-
-    // Pipe / conduit along top inner wall + dangling cable
-    const pipeG = scene.add.graphics().setDepth(0);
-    pipeG.lineStyle(3, pal.wallEdgeDim, 0.3);
-    pipeG.lineBetween(4 * TILE, (ry + 1) * TILE, 10 * TILE, (ry + 1) * TILE);
-    pipeG.lineStyle(2, 0x334455, 0.5);
-    pipeG.lineBetween(10 * TILE, (ry + 1) * TILE, 10 * TILE + 4, (ry + 2) * TILE + 8);
-    pipeG.lineBetween(10 * TILE + 4, (ry + 2) * TILE + 8, 10 * TILE + 18, (ry + 2) * TILE + 12);
-
-    // Overhead light fixtures (visual — flicker in createLighting)
-    return [
-      { x: 5 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
-      { x: 10 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
-      { x: 15 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },
-    ];
+    const door = addWallGraffiti(scene, GRAFFITI_WALLS.door.text, {
+      col: mapC(GRAFFITI_WALLS.door.col),
+      row: ry + GRAFFITI_WALLS.door.rowOff,
+      face: GRAFFITI_WALLS.door.face,
+      fontSize: GRAFFITI_WALLS.door.fontSize,
+      color: GRAFFITI_WALLS.door.color,
+      alpha: 0.04,
+    });
+    return { door };
   }
 
-  /** CRT login terminal — blue glow, flickering screen, scanline. */
+  function updateDeliberateGraffiti(labels, registry, time, player) {
+    if (!labels || !labels.door) return;
+    const inboxDone = !!registry.get('inboxComplete');
+    const d = player
+      ? Phaser.Math.Distance.Between(player.x, player.y, labels.door._wallX, labels.door._wallY)
+      : 999;
+    labels.door.setText('HE IS LISTENING');
+    labels.door.setColor(inboxDone ? '#994466' : '#775566');
+    labels.door.setAlpha(0.05 + Phaser.Math.Clamp(1 - d / 95, 0, 1) * 0.55);
+  }
+
+  function addEnvironmentalDetails(scene) {
+    scene._hubGraffiti = addDeliberateGraffiti(scene);
+    addFloorCoffeeCup(scene);
+  }
+
+  /** Small paper sticky — sized for CRT bezel / desk placement. */
+  function addStickyNote(scene, x, y, lines, opts) {
+    opts = opts || {};
+    const lineH = opts.lineH || 9;
+    const padY = opts.padY || 3;
+    const padX = opts.padX || 4;
+    const fontSize = opts.fontSize || '10px';
+    const maxLen = Math.max(...lines.map((l) => l.length), 1);
+    const w = opts.w || Math.max(22, maxLen * 5 + padX * 2);
+    const h = opts.h || padY * 2 + lines.length * lineH;
+    const angle = opts.angle || 0;
+    const paper = opts.paper != null ? opts.paper : 0xe8d49c;
+    const ink = opts.ink || '#2a2018';
+
+    const note = scene.add.container(x, y).setAngle(angle);
+    const bg = scene.add.graphics();
+    bg.fillStyle(0x000000, 0.1);
+    bg.fillRect(-w / 2 + 1, -h / 2 + 1, w, h);
+    bg.fillStyle(paper, 1);
+    bg.fillRect(-w / 2, -h / 2, w, h);
+    bg.lineStyle(1, 0xc4a870, 0.4);
+    bg.strokeRect(-w / 2, -h / 2, w, h);
+    bg.fillStyle(0xffffff, 0.07);
+    bg.fillRect(-w / 2 + 1, -h / 2 + 1, w - 2, 1);
+    if (opts.tape) {
+      bg.fillStyle(0x9a9080, 0.55);
+      bg.fillRect(-3, -h / 2 - 1, 6, 3);
+    }
+    if (opts.deskShadow) {
+      bg.fillStyle(0x000000, 0.18);
+      bg.fillRect(-w / 2 + 2, h / 2 - 1, w - 2, 2);
+    }
+
+    const labels = lines.map((line, i) => scene.add.text(0, -h / 2 + padY + i * lineH, line, {
+      fontFamily: 'VT323, monospace',
+      fontSize,
+      color: ink,
+      align: 'center',
+    }).setOrigin(0.5, 0));
+
+    note.add([bg, ...labels]);
+    labels.forEach((t) => { if (t.setResolution) t.setResolution(2); });
+    if (opts.scale) note.setScale(opts.scale);
+    return note;
+  }
+
+  /** Login terminal — Room B, compact CRT desk. */
   function createLoginTerminal(scene, c, r) {
-    const x = c * TILE - 4;
-    const y = r * TILE - 10;
-    const root = scene.add.container(x, y).setDepth(2);
+    const center = tilePx(c, r);
+    const wx = center.x - 30;
+    const wy = center.y - 32;
+    const root = scene.add.container(wx, wy).setDepth(2);
     const body = scene.add.graphics();
     const screen = scene.add.graphics();
     const scan = scene.add.graphics();
 
     function drawBody() {
       body.clear();
-      // Desk
-      body.fillStyle(0x141820, 1);
-      body.fillRect(-4, 44, 60, 10);
-      body.lineStyle(1, 0x223344, 0.5);
-      body.strokeRect(-4, 44, 60, 10);
-      // CRT monitor
+      body.fillStyle(0x121820, 1);
+      body.fillRect(0, 32, 68, 10);
+      body.lineStyle(1, 0x2a3544, 0.65);
+      body.strokeRect(0, 32, 68, 10);
       body.fillStyle(0x1a2230, 1);
-      body.fillRect(0, 18, 52, 34);
+      body.fillRect(6, 4, 44, 30);
       body.fillStyle(0x2a3344, 1);
-      body.fillRect(4, 22, 44, 26);
+      body.fillRect(9, 8, 38, 22);
+      body.lineStyle(2, CH1.login, 0.75);
+      body.strokeRect(6, 4, 44, 30);
       body.fillStyle(0x111820, 1);
-      body.fillRect(18, 48, 16, 6);
-      body.lineStyle(1, CH1.login, 0.6);
-      body.strokeRect(0, 18, 52, 34);
-      // Keyboard
-      body.fillStyle(0x0c1018, 1);
-      body.fillRect(8, 46, 36, 8);
-      body.lineStyle(1, 0x334455, 0.4);
-      for (let k = 0; k < 8; k++) body.strokeRect(10 + k * 4, 48, 3, 4);
+      body.fillRect(24, 32, 10, 4);
+      body.fillStyle(0x2a2830, 1);
+      body.fillRect(26, 44, 16, 10);
+      body.fillStyle(0x3a3440, 1);
+      body.fillRect(28, 38, 12, 8);
     }
 
-    let flicker = 1;
+    // 581 — tiny note taped to upper-right bezel (not on the glass)
+    const sticky581 = addStickyNote(scene, 47, 6, ['581'], {
+      w: 18, h: 13, fontSize: '10px', angle: -14, tape: true,
+      paper: 0xf0e0b8, ink: '#3a2818',
+    });
+    // DON'T ANSWER IT — folded note on the desk in front of the keyboard
+    const stickyWarn = addStickyNote(scene, 14, 46, ["DON'T", 'ANSWER IT'], {
+      w: 30, h: 20, fontSize: '8px', lineH: 7, angle: -5, deskShadow: true,
+      paper: 0xffeedd, ink: '#882222',
+    }).setVisible(false);
+
+    let nearActive = false;
+    let frozen = false;
+    let screenOn = 0.35;
     let scanY = 0;
+    let flickerT = 0;
+    let nextFlicker = 0;
 
     function drawScreen() {
       screen.clear();
-      screen.fillStyle(CH1.login, 0.15 + flicker * 0.12);
-      screen.fillRect(6, 24, 40, 20);
-      screen.fillStyle(CH1.loginGlow, 0.35 + flicker * 0.25);
-      screen.fillRect(8, 26, 36, 16);
-      // Fake terminal text lines
-      screen.fillStyle(0x001122, 0.8);
-      for (let i = 0; i < 3; i++) {
-        screen.fillRect(10, 28 + i * 5, 20 + (i * 4), 2);
-      }
+      if (screenOn < 0.08) return;
+      const flick = 0.82 + Math.sin(flickerT / 140) * 0.1;
+      screen.fillStyle(CH1.login, (0.1 + screenOn * 0.18) * flick);
+      screen.fillRect(13, 14, 38, 20);
+      screen.fillStyle(CH1.loginGlow, (0.22 + screenOn * 0.42) * flick);
+      screen.fillRect(15, 16, 34, 16);
+      screen.fillStyle(0x001122, 0.75);
+      for (let i = 0; i < 3; i++) screen.fillRect(17, 18 + i * 4, 14 + i * 3, 2);
     }
 
     drawBody();
     drawScreen();
-    root.add([body, screen, scan]);
-
-    const light = tilePx(c, r);
-    light.radius = 56;
-    light.color = CH1.loginGlow;
+    root.add([body, screen, scan, sticky581, stickyWarn]);
 
     return {
-      root,
-      light,
+      root, screen, sticky581, stickyWarn,
       update(time) {
-        if (time % 180 < 16) flicker = Math.random() * 0.5;
-        else if (time % 900 < 40) flicker = 0.15;
-        else flicker = 0.85 + Math.sin(time / 320) * 0.1;
+        if (frozen) return;
+        flickerT = time;
+        if (time > nextFlicker) {
+          nextFlicker = time + 800 + Math.random() * 2200;
+          if (Math.random() < 0.35) {
+            screen.setAlpha(0.15);
+            scene.time.delayedCall(40 + Math.random() * 60, () => screen.setAlpha(1));
+          }
+        }
+        if (nearActive) screenOn = Math.min(1, screenOn + 0.08);
+        else screenOn = Math.max(0.22, screenOn - 0.015);
         drawScreen();
-
-        scanY = (scanY + 0.6) % 18;
-        scan.clear();
-        scan.fillStyle(0x44ccff, 0.12);
-        scan.fillRect(8, 26 + scanY, 36, 1);
-
-        // glow removed — fillCircle lighting caused white/circle artifacts in-browser
+        if (screenOn > 0.1) {
+          scanY = (scanY + 0.55) % 16;
+          scan.clear();
+          scan.fillStyle(0x44ccff, nearActive ? 0.18 : 0.07);
+          scan.fillRect(15, 16 + scanY, 34, 1);
+        } else scan.clear();
+      },
+      setNearActive(on) { nearActive = !!on; },
+      setFrozen(on) { frozen = !!on; if (frozen) scan.clear(); },
+      setScreenOff() { screenOn = 0; nearActive = false; scan.clear(); },
+      revealStickyWarning() {
+        stickyWarn.setVisible(true);
+        scene.tweens.add({ targets: stickyWarn, alpha: { from: 0, to: 1 }, duration: 600 });
       },
       pulse() {
-        flicker = 1;
         scene.tweens.add({ targets: screen, alpha: 0.2, duration: 60, yoyo: true, repeat: 3 });
       },
     };
   }
 
-  /** Archive — cabinet rows, purple glow, scattered papers. */
+  /** Records cabinet — Room C, west alcove. */
   function createArchive(scene, c, r) {
-    const x = c * TILE - 8;
-    const y = r * TILE - 12;
-    const root = scene.add.container(x, y).setDepth(2);
+    const center = tilePx(c, r);
+    const wx = center.x - 18;
+    const wy = center.y - 26;
+    const root = scene.add.container(wx, wy).setDepth(2);
     const g = scene.add.graphics();
 
-    g.fillStyle(0x1a1020, 1);
-    // Two cabinet columns
-    g.fillRect(0, 8, 22, 44);
-    g.fillRect(26, 4, 22, 48);
-    g.lineStyle(1, CH1.archive, 0.55);
-    g.strokeRect(0, 8, 22, 44);
-    g.strokeRect(26, 4, 22, 48);
-    // Drawer handles
-    for (let i = 0; i < 3; i++) {
-      g.fillStyle(CH1.archive, 0.5);
-      g.fillRect(4, 14 + i * 12, 14, 2);
-      g.fillRect(30, 12 + i * 12, 14, 2);
-    }
-    // Scattered papers
-    const papers = [];
-    for (let i = 0; i < 4; i++) {
-      const p = scene.add.rectangle(8 + i * 10, 52 + (i % 2) * 3, 10, 7, 0xccc5aa, 0.75)
-        .setAngle(-12 + i * 8).setDepth(2);
-      papers.push(p);
-      root.add(p);
-    }
+    g.fillStyle(0x1a1820, 1);
+    g.fillRect(0, 8, 34, 44);
+    g.lineStyle(1, 0x3a3544, 0.7);
+    g.strokeRect(0, 8, 34, 44);
+    g.fillStyle(0xccc5aa, 0.85);
+    g.fillRect(4, 0, 26, 10);
+    g.fillStyle(0xddd8c8, 0.7);
+    g.fillRect(6, -2, 10, 8);
+    const folderColors = [0xd4a855, 0x88aa66, 0x6688aa];
+    folderColors.forEach((col, i) => {
+      g.fillStyle(col, 0.9);
+      g.fillRect(5 + i * 9, 12, 7, 14);
+      g.fillStyle(0x000000, 0.15);
+      g.fillRect(5 + i * 9, 12, 7, 2);
+    });
+    g.fillStyle(0x0e1018, 1);
+    g.fillRect(2, 38, 30, 8);
+    g.fillStyle(0x161820, 1);
+    g.fillRect(2, 42, 30, 10);
+    g.lineStyle(1, CH1.archive, 0.5);
+    g.strokeRect(2, 42, 30, 10);
+    g.fillStyle(0xccc5aa, 0.6);
+    g.fillRect(6, 44, 8, 5);
+
     root.add(g);
 
-    const light = tilePx(c, r);
-    light.radius = 48;
-    light.color = CH1.archiveGlow;
+    let nearActive = false;
 
     return {
-      root,
-      light,
-      papers,
-      update(time) {
-        papers.forEach((p, i) => {
-          p.y = 52 + (i % 2) * 3 + Math.sin(time / 800 + i) * 0.4;
-        });
+      root, gfx: g,
+      update() {
+        root.setAlpha(nearActive ? 1 : 0.92);
       },
+      setNearActive(on) { nearActive = !!on; },
       pulse() {
-        scene.tweens.add({ targets: g, alpha: 0.3, duration: 50, yoyo: true, repeat: 4 });
+        scene.tweens.add({ targets: g, alpha: 0.35, duration: 50, yoyo: true, repeat: 4 });
       },
     };
   }
 
-  /** Server rack — humming machine, blinking LEDs, rotating fan. */
+  /** Server corner — SW alcove: rack, power box, loose cables. */
   function createServerRack(scene, c, r) {
-    const x = c * TILE - 6;
-    const y = r * TILE - 14;
-    const root = scene.add.container(x, y).setDepth(2);
+    const wx = mapC(0) * TILE + 6;
+    const wy = r * TILE - 50;
+    const root = scene.add.container(wx, wy).setDepth(2);
     const g = scene.add.graphics();
     const leds = scene.add.graphics();
-    const fan = scene.add.graphics();
+    const cables = scene.add.graphics();
 
     g.fillStyle(0x120a20, 1);
-    g.fillRect(0, 0, 56, 58);
+    g.fillRect(0, 4, 46, 48);
     g.lineStyle(2, CH1.server, 0.6);
-    g.strokeRect(0, 0, 56, 58);
-    // Rack units
+    g.strokeRect(0, 4, 46, 48);
     for (let i = 0; i < 4; i++) {
       g.fillStyle(0x0a0614, 1);
-      g.fillRect(4, 6 + i * 12, 48, 10);
-      g.lineStyle(1, CH1.server, 0.35);
-      g.strokeRect(4, 6 + i * 12, 48, 10);
+      g.fillRect(4, 10 + i * 10, 38, 8);
     }
-    // Fan housing
-    g.fillStyle(0x1a1428, 1);
-    g.fillRect(38, 42, 14, 14);
-    root.add([g, leds, fan]);
+    g.fillStyle(0x181410, 1);
+    g.fillRect(48, 14, 20, 36);
+    g.lineStyle(2, 0xffaa44, 0.4);
+    g.strokeRect(48, 14, 20, 36);
+    g.fillStyle(0xff6600, 0.75);
+    g.fillRect(54, 18, 8, 4);
 
-    let fanAngle = 0;
+    cables.lineStyle(2, 0x222830, 0.9);
+    cables.lineBetween(8, 50, 8, 58);
+    cables.lineBetween(8, 58, 72, 58);
+    cables.lineBetween(72, 58, 72, 52);
+    cables.lineStyle(1, 0x6644aa, 0.45);
+    cables.lineBetween(10, 56, 70, 56);
+    cables.lineBetween(24, 58, 22, 62);
+    cables.lineBetween(48, 58, 50, 63);
+
+    root.add([g, leds, cables]);
+
     const ledStates = [1, 0, 1, 1, 0, 1, 0, 0];
-
-    const light = tilePx(c, r);
-    light.radius = 52;
-    light.color = CH1.serverGlow;
+    let ledsFrozen = false;
+    let freezeUntil = 0;
+    let humPulse = 0;
 
     return {
-      root,
-      light,
+      root, leds,
       update(time) {
-        // Blinking LEDs
+        humPulse = 0.5 + Math.sin(time / 380) * 0.5;
+        if (ledsFrozen && time < freezeUntil) {
+          leds.clear();
+          return;
+        }
+        ledsFrozen = false;
         leds.clear();
         const blink = Math.floor(time / 280) % 2;
         for (let i = 0; i < 8; i++) {
-          const on = (ledStates[i] + blink + Math.floor(time / (400 + i * 60))) % 2 === 0;
-          leds.fillStyle(on ? CH1.green : 0x220022, on ? 0.95 : 0.4);
-          leds.fillRect(8 + (i % 4) * 10, 10 + Math.floor(i / 4) * 22, 4, 4);
+          const on = (ledStates[i] + blink) % 2 === 0;
+          leds.fillStyle(on ? 0xaa66ff : 0x220033, on ? 0.85 + humPulse * 0.1 : 0.3);
+          leds.fillRect(8 + (i % 4) * 9, 16 + Math.floor(i / 4) * 18, 3, 3);
         }
-
-        // Rotating fan
-        fanAngle += 0.12;
-        fan.clear();
-        fan.lineStyle(1, 0x556677, 0.7);
-        for (let b = 0; b < 3; b++) {
-          const a = fanAngle + (b * Math.PI * 2) / 3;
-          fan.lineBetween(45, 49, 45 + Math.cos(a) * 5, 49 + Math.sin(a) * 5);
-        }
+      },
+      freezeLeds(ms) {
+        ledsFrozen = true;
+        freezeUntil = scene.time.now + (ms || 900);
       },
       pulse() {
         scene.tweens.add({ targets: leds, alpha: 0.2, duration: 40, yoyo: true, repeat: 5 });
@@ -444,87 +519,361 @@
     };
   }
 
-  /** Blast door with status banner — replaces flat DOOR label. */
-  function createBlastDoor(scene, doorPos, opts) {
+  /** Blast door — east wall variant (Sectors 2+). */
+  function createBlastDoorEast(scene, doorPos, opts) {
     opts = opts || {};
-    const doorCell = opts.doorCell || HUB_POSITIONS.door;
     const pal = opts.palette || CH1;
     const gfx = scene.add.graphics().setDepth(3);
-    const banner = scene.add.text(doorPos.x, doorPos.y - 46, '', {
-      fontFamily: 'Press Start 2P, monospace',
-      fontSize: '6px',
-      color: '#00ff66',
-      align: 'center',
-    }).setOrigin(0.5).setDepth(4).setAlpha(0);
+    const beacon = scene.add.graphics().setDepth(5);
+    const panelGfx = scene.add.graphics().setDepth(4);
+    const doorLabel = scene.add.text(0, 0, 'LOCKED', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '11px', color: '#ff2244', align: 'center',
+    }).setOrigin(0.5).setDepth(6);
+    const banner = scene.add.text(doorPos.x, doorPos.y - 20, 'LOCKED', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#ff3366', align: 'center',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.85);
+
+    const ry = HUB_POSITIONS.roomY;
+    const eastWallX = mapC(HUB_LAYOUT[0].length - 1) * TILE;
+    const topY = (ry + 1) * TILE;
+    const botY = (ry + HUB_LAYOUT.length - 2) * TILE + TILE;
+    const doorH = botY - topY - 8;
+    const doorW = TILE * 2.45;
+    const doorX = eastWallX - doorW + 4;
+    const doorY = topY + 4;
+    const labelX = doorX + doorW / 2;
+    const labelY = doorY + doorH / 2;
+    const lockdownBanner = scene.add.text(labelX, doorY - 22, '\u26A0 LOCKDOWN \u26A0', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '6px', color: '#ff3344', align: 'center',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.9);
+
+    let warningFlash = 0;
+    let locked = true;
+    let beaconEnabled = true;
+
+    function drawSecurityPanel(time) {
+      panelGfx.clear();
+      const px = doorX - 34;
+      const py = doorY + doorH * 0.38;
+      panelGfx.fillStyle(0x0a1018, 1);
+      panelGfx.fillRect(px, py, 26, 34);
+      panelGfx.lineStyle(2, 0xff4455, 0.65);
+      panelGfx.strokeRect(px, py, 26, 34);
+      const keyBlink = Math.sin((time || 0) / 160) > 0.2;
+      panelGfx.fillStyle(keyBlink ? 0xff2233 : 0x441122, keyBlink ? 0.85 : 0.35);
+      panelGfx.fillRect(px + 5, py + 5, 16, 3);
+      panelGfx.fillStyle(0x223344, 0.9);
+      panelGfx.fillRect(px + 4, py + 12, 18, 14);
+      for (let i = 0; i < 3; i++) {
+        const on = keyBlink && i === Math.floor((time || 0) / 320) % 3;
+        panelGfx.fillStyle(on ? 0xff3344 : 0x334455, on ? 0.95 : 0.5);
+        panelGfx.fillCircle(px + 7 + i * 6, py + 30, 2);
+      }
+    }
 
     return {
-      gfx,
-      banner,
+      gfx, banner, beacon, panelGfx, lockdownBanner, doorLight: null,
+      setBeaconEnabled(on) { beaconEnabled = !!on; },
+      update(time) {
+        drawSecurityPanel(time);
+        beacon.clear();
+        if (!beaconEnabled || (!locked && warningFlash <= time)) return;
+        const flash = warningFlash > time && Math.sin(time / 40) > 0;
+        const pulse = 0.5 + Math.sin(time / 320) * 0.35;
+        const a = flash ? 0.85 : 0.35 + pulse * 0.25;
+        beacon.fillStyle(0xff2233, a);
+        beacon.fillCircle(labelX, doorY + 10, 3);
+      },
+      flashWarning(ms) { warningFlash = scene.time.now + (ms || 1200); },
       draw(state) {
         const { open, inboxDone, allMissionsDone, hasKey, pulsing } = state;
-        const c = doorCell.c;
-        const r = doorCell.r;
-        const x = (c - 1) * TILE - 4;
-        const y = (r - 1) * TILE - 2;
-        const w = TILE * 2.6;
-        const h = TILE * 2.2;
+        gfx.clear();
+        const isBoss = allMissionsDone && !state.bossDone;
+        const panelsOpen = pulsing ? !!open : (isBoss && !!hasKey);
+        locked = !panelsOpen && !isBoss;
+        const col = isBoss ? pal.doorBoss : (panelsOpen ? pal.doorOpen : pal.doorLocked);
+        gfx.fillStyle(0x030508, 1);
+        gfx.fillRect(eastWallX - 5, topY, 6, botY - topY);
+        gfx.fillStyle(0x040608, 1);
+        gfx.fillRect(doorX - 10, doorY - 8, doorW + 14, doorH + 16);
+        const gap = panelsOpen ? Math.min(22, doorW * 0.18) : 0;
+        const halfW = doorW / 2 - gap / 2;
+        gfx.fillStyle(col, panelsOpen ? 0.22 : 0.62);
+        gfx.fillRect(doorX, doorY, halfW, doorH);
+        gfx.fillRect(doorX + doorW / 2 + gap / 2, doorY, halfW, doorH);
+        doorLabel.setPosition(labelX, labelY).setFontSize('7px').setLineSpacing(4);
+        doorLabel.setText(panelsOpen ? 'OPEN' : 'SEALED').setColor(panelsOpen ? '#00ff66' : '#ff2244');
+        lockdownBanner.setPosition(labelX, doorY - 22);
+        banner.setPosition(labelX, doorY - 14);
+      },
+      pulseGrant() {
+        this.flashWarning(800);
+        scene.tweens.add({ targets: banner, alpha: { from: 1, to: 0.3 }, duration: 100, yoyo: true, repeat: 6 });
+      },
+    };
+  }
+
+  /** Blast door — north wall variant (Sectors 2+ corridor layout). */
+  function createBlastDoorNorth(scene, doorPos, opts) {
+    opts = opts || {};
+    const pal = opts.palette || CH1;
+    const doorCell = opts.doorCell || { c: 0, r: 0 };
+    const gfx = scene.add.graphics().setDepth(3);
+    const beacon = scene.add.graphics().setDepth(5);
+    const panelGfx = scene.add.graphics().setDepth(4);
+    const doorLabel = scene.add.text(0, 0, 'LOCKED', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '11px', color: '#ff2244', align: 'center',
+    }).setOrigin(0.5).setDepth(6);
+    const northRowY = doorCell.r * TILE;
+    const doorW = TILE * 2.6;
+    const doorH = TILE * 1.65;
+    const doorX = doorPos.x - doorW / 2;
+    const doorY = northRowY + 4;
+    const labelX = doorPos.x;
+    const labelY = doorY + doorH / 2;
+    const banner = scene.add.text(labelX, doorY - 14, 'LOCKED', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#ff3366', align: 'center',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.85);
+    const lockdownBanner = scene.add.text(labelX, doorY - 12, '\u26A0 LOCKDOWN \u26A0', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '6px', color: '#ff3344', align: 'center',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.9);
+
+    let warningFlash = 0;
+    let locked = true;
+    let beaconEnabled = true;
+
+    function drawSecurityPanel(time) {
+      panelGfx.clear();
+      const px = doorX + doorW + 8;
+      const py = doorY + doorH * 0.25;
+      panelGfx.fillStyle(0x0a1018, 1);
+      panelGfx.fillRect(px, py, 24, 32);
+      panelGfx.lineStyle(2, 0xff4455, 0.65);
+      panelGfx.strokeRect(px, py, 24, 32);
+      const keyBlink = Math.sin((time || 0) / 160) > 0.2;
+      panelGfx.fillStyle(keyBlink ? 0xff2233 : 0x441122, keyBlink ? 0.85 : 0.35);
+      panelGfx.fillRect(px + 4, py + 4, 16, 3);
+      panelGfx.fillStyle(0x223344, 0.9);
+      panelGfx.fillRect(px + 3, py + 11, 18, 13);
+      for (let i = 0; i < 3; i++) {
+        const on = keyBlink && i === Math.floor((time || 0) / 320) % 3;
+        panelGfx.fillStyle(on ? 0xff3344 : 0x334455, on ? 0.95 : 0.5);
+        panelGfx.fillCircle(px + 6 + i * 6, py + 28, 2);
+      }
+    }
+
+    return {
+      gfx, banner, beacon, panelGfx, lockdownBanner, doorLight: null,
+      setBeaconEnabled(on) { beaconEnabled = !!on; },
+      update(time) {
+        drawSecurityPanel(time);
+        beacon.clear();
+        if (!beaconEnabled) return;
+        if (!locked && warningFlash <= time) return;
+        const flash = warningFlash > time && Math.sin(time / 40) > 0;
+        const pulse = 0.5 + Math.sin(time / 320) * 0.35;
+        const a = flash ? 0.85 : 0.35 + pulse * 0.25;
+        beacon.fillStyle(0xff2233, a);
+        beacon.fillCircle(labelX, doorY + doorH - 8, 3);
+      },
+      flashWarning(ms) { warningFlash = scene.time.now + (ms || 1200); },
+      draw(state) {
+        const { open, inboxDone, allMissionsDone, hasKey, pulsing } = state;
+        gfx.clear();
+        const isBoss = allMissionsDone && !state.bossDone;
+        const panelsOpen = pulsing ? !!open : (isBoss && !!hasKey);
+        locked = !panelsOpen && !isBoss;
+        const col = isBoss ? pal.doorBoss : (panelsOpen ? pal.doorOpen : pal.doorLocked);
+
+        gfx.fillStyle(0x030508, 1);
+        gfx.fillRect(doorX - 8, northRowY - 2, doorW + 16, 6);
+        gfx.fillStyle(0x040608, 1);
+        gfx.fillRect(doorX - 8, doorY - 4, doorW + 16, doorH + 10);
+        gfx.lineStyle(3, 0x1a2430, 0.9);
+        gfx.strokeRect(doorX - 8, doorY - 4, doorW + 16, doorH + 10);
+
+        const gap = panelsOpen ? Math.min(18, doorW * 0.14) : 0;
+        const halfW = doorW / 2 - gap / 2;
+        gfx.fillStyle(col, panelsOpen ? 0.22 : 0.62);
+        gfx.fillRect(doorX, doorY, halfW, doorH);
+        gfx.fillRect(doorX + doorW / 2 + gap / 2, doorY, halfW, doorH);
+        gfx.lineStyle(3, col, 0.95);
+        gfx.strokeRect(doorX, doorY, halfW, doorH);
+        gfx.strokeRect(doorX + doorW / 2 + gap / 2, doorY, halfW, doorH);
+
+        doorLabel.setPosition(labelX, labelY).setFontSize('7px').setLineSpacing(4);
+        if (isBoss && hasKey) doorLabel.setText('BLAST\nDOOR\nBREACH').setColor('#ffb000');
+        else if (panelsOpen) doorLabel.setText('BLAST\nDOOR\nOPEN').setColor('#00ff66');
+        else if (isBoss) doorLabel.setText('BLAST\nDOOR\nREADY').setColor('#ffb000');
+        else doorLabel.setText('BLAST\nDOOR\nSEALED').setColor('#ff2244');
+
+        let txt = 'LOCKED';
+        let bCol = '#ff3366';
+        if (state.bossDone) { txt = 'CONTAINED'; bCol = '#00ff66'; }
+        else if (isBoss && hasKey) { txt = 'FINAL BREACH'; bCol = '#ffb000'; }
+        else if (isBoss) { txt = 'DOOR READY'; bCol = '#ffb000'; }
+        else if (pulsing && open) { txt = 'ACCESS GRANTED'; bCol = '#00ff66'; }
+        lockdownBanner.setPosition(labelX, doorY - 12);
+        lockdownBanner.setAlpha(locked || (!panelsOpen && !isBoss) ? 0.85 : 0.35);
+        banner.setText(txt).setColor(bCol).setPosition(labelX, doorY - 22);
+      },
+      pulseGrant() {
+        this.flashWarning(800);
+        scene.tweens.add({ targets: banner, alpha: { from: 1, to: 0.3 }, duration: 100, yoyo: true, repeat: 6 });
+      },
+    };
+  }
+
+  /** Blast door — recessed into south wall at corridor end. */
+  function createBlastDoorSouth(scene, doorPos, opts) {
+    opts = opts || {};
+    const pal = opts.palette || CH1;
+    const gfx = scene.add.graphics().setDepth(3);
+    const beacon = scene.add.graphics().setDepth(5);
+    const panelGfx = scene.add.graphics().setDepth(4);
+    const doorLabel = scene.add.text(0, 0, 'LOCKED', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '11px',
+      color: '#ff2244',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(6);
+    const banner = scene.add.text(doorPos.x, doorPos.y - 20, 'LOCKED', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '8px',
+      color: '#ff3366',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.85);
+
+    const ry = HUB_POSITIONS.roomY;
+    const southWallY = (ry + HUB_LAYOUT.length - 1) * TILE;
+    const doorW = TILE * 3.2;
+    const doorH = TILE * 1.75;
+    const doorX = doorPos.x - doorW / 2;
+    const doorY = southWallY - doorH - 2;
+    const labelX = doorPos.x;
+    const labelY = doorY + doorH / 2;
+
+    const lockdownBanner = scene.add.text(labelX, doorY - 12, '\u26A0 LOCKDOWN \u26A0', {
+      fontFamily: 'Press Start 2P, monospace',
+      fontSize: '6px',
+      color: '#ff3344',
+      align: 'center',
+    }).setOrigin(0.5).setDepth(6).setAlpha(0.9);
+
+    let warningFlash = 0;
+    let locked = true;
+    let beaconEnabled = true;
+
+    function drawSecurityPanel(time) {
+      panelGfx.clear();
+      const px = doorX + doorW + 10;
+      const py = doorY + doorH * 0.22;
+      panelGfx.fillStyle(0x0a1018, 1);
+      panelGfx.fillRect(px, py, 24, 32);
+      panelGfx.lineStyle(2, 0xff4455, 0.65);
+      panelGfx.strokeRect(px, py, 24, 32);
+      const keyBlink = Math.sin((time || 0) / 160) > 0.2;
+      panelGfx.fillStyle(keyBlink ? 0xff2233 : 0x441122, keyBlink ? 0.85 : 0.35);
+      panelGfx.fillRect(px + 4, py + 4, 16, 3);
+      panelGfx.fillStyle(0x223344, 0.9);
+      panelGfx.fillRect(px + 3, py + 11, 18, 13);
+      for (let i = 0; i < 3; i++) {
+        const on = keyBlink && i === Math.floor((time || 0) / 320) % 3;
+        panelGfx.fillStyle(on ? 0xff3344 : 0x334455, on ? 0.95 : 0.5);
+        panelGfx.fillCircle(px + 6 + i * 6, py + 28, 2);
+      }
+    }
+
+    return {
+      gfx, banner, beacon, panelGfx, lockdownBanner, doorLight: null,
+      setBeaconEnabled(on) { beaconEnabled = !!on; },
+      update(time) {
+        drawSecurityPanel(time);
+        beacon.clear();
+        if (!beaconEnabled) return;
+        if (!locked && warningFlash <= time) return;
+        const flash = warningFlash > time && Math.sin(time / 40) > 0;
+        const pulse = 0.5 + Math.sin(time / 320) * 0.35;
+        const a = flash ? 0.85 : 0.35 + pulse * 0.25;
+        const bx = labelX + Math.sin(time / 900) * 2;
+        const by = doorY + 6 + Math.cos(time / 700) * 1.5;
+        beacon.fillStyle(0xff2233, a * 0.5);
+        beacon.fillCircle(bx, by, 3);
+        beacon.fillStyle(0xff2233, a);
+        beacon.fillCircle(bx, by, 1.5);
+      },
+      flashWarning(ms) {
+        warningFlash = scene.time.now + (ms || 1200);
+      },
+      draw(state) {
+        const { open, inboxDone, allMissionsDone, hasKey, pulsing } = state;
         gfx.clear();
 
         const isBoss = allMissionsDone && !state.bossDone;
         const panelsOpen = pulsing ? !!open : (isBoss && !!hasKey);
+        locked = !panelsOpen && !isBoss;
         const col = isBoss ? pal.doorBoss : (panelsOpen ? pal.doorOpen : pal.doorLocked);
 
-        // Door frame
-        gfx.fillStyle(0x0a1018, 1);
-        gfx.fillRect(x - 4, y - 4, w + 8, h + 8);
-        gfx.lineStyle(2, col, 0.7);
-        gfx.strokeRect(x - 4, y - 4, w + 8, h + 8);
+        gfx.fillStyle(0x030508, 1);
+        gfx.fillRect(doorX - 8, southWallY - 4, doorW + 16, 6);
+        gfx.fillStyle(0x040608, 1);
+        gfx.fillRect(doorX - 8, doorY - 6, doorW + 16, doorH + 12);
+        gfx.lineStyle(3, 0x1a2430, 0.9);
+        gfx.strokeRect(doorX - 8, doorY - 6, doorW + 16, doorH + 12);
 
-        // Two blast door panels
-        const gap = panelsOpen ? 10 : 0;
-        gfx.fillStyle(col, panelsOpen ? 0.25 : 0.45);
-        gfx.fillRect(x, y, w / 2 - gap / 2, h);
-        gfx.fillRect(x + w / 2 + gap / 2, y, w / 2 - gap / 2, h);
-        gfx.lineStyle(2, col, 0.9);
-        gfx.strokeRect(x, y, w / 2 - gap / 2, h);
-        gfx.strokeRect(x + w / 2 + gap / 2, y, w / 2 - gap / 2, h);
-
-        // Warning stripes on locked door (integrated — no separate prop)
-        if (!panelsOpen && !isBoss) {
-          gfx.fillStyle(0xff6600, 0.35);
-          for (let i = 0; i < 5; i++) {
-            gfx.fillRect(x + 4 + i * 12, y + 8 + (i % 2) * 10, 8, 4);
-          }
-          gfx.lineStyle(1, pal.doorLocked, 0.6);
-          gfx.strokeRect(x + 2, y + 2, w - 4, h - 4);
+        const gap = panelsOpen ? Math.min(18, doorW * 0.14) : 0;
+        const halfW = doorW / 2 - gap / 2;
+        gfx.fillStyle(col, panelsOpen ? 0.22 : 0.62);
+        gfx.fillRect(doorX, doorY, halfW, doorH);
+        gfx.fillRect(doorX + doorW / 2 + gap / 2, doorY, halfW, doorH);
+        gfx.lineStyle(3, col, 0.95);
+        gfx.strokeRect(doorX, doorY, halfW, doorH);
+        gfx.strokeRect(doorX + doorW / 2 + gap / 2, doorY, halfW, doorH);
+        for (let i = 0; i < 5; i++) {
+          gfx.fillStyle(0x334455, 0.85);
+          gfx.fillCircle(labelX, doorY + 10 + i * ((doorH - 20) / 4), 2.5);
         }
 
-        // Status banner
-        const bossDone = state.bossDone;
-        let txt = '';
-        let bCol = '#ff3366';
-        if (bossDone) { txt = 'CONTAINED'; bCol = '#00ff66'; }
-        else if (isBoss && hasKey) { txt = 'FINAL BREACH'; bCol = '#ffb000'; }
-        else if (isBoss) { txt = 'KEY REQUIRED'; bCol = '#ffb000'; }
-        else if (pulsing && open) { txt = 'ACCESS GRANTED'; bCol = '#00ff66'; }
-        else if (inboxDone && !allMissionsDone) { txt = 'SEALED'; bCol = '#8899aa'; }
-        else { txt = 'LOCKED'; bCol = '#ff3366'; }
+        if (!panelsOpen && !isBoss) {
+          gfx.fillStyle(0xff4400, 0.45);
+          for (let i = 0; i < 5; i++) {
+            gfx.fillRect(doorX + 8 + i * 14, doorY + 12 + (i % 2) * 10, 10, 5);
+          }
+        }
 
-        banner.setText(txt);
-        banner.setColor(bCol);
-        banner.setAlpha(panelsOpen || isBoss ? 0.85 : 0.55);
+        doorLabel.setPosition(labelX, labelY);
+        doorLabel.setFontSize('7px');
+        doorLabel.setLineSpacing(4);
+        if (isBoss && hasKey) doorLabel.setText('BLAST\nDOOR\nBREACH').setColor('#ffb000');
+        else if (panelsOpen) doorLabel.setText('BLAST\nDOOR\nOPEN').setColor('#00ff66');
+        else if (isBoss) doorLabel.setText('BLAST\nDOOR\nREADY').setColor('#ffb000');
+        else if (inboxDone && !allMissionsDone) doorLabel.setText('BLAST\nDOOR\nSEALED').setColor('#8899aa');
+        else doorLabel.setText('BLAST\nDOOR\nSEALED').setColor('#ff2244');
+
+        let txt = 'LOCKED';
+        let bCol = '#ff3366';
+        if (state.bossDone) { txt = 'CONTAINED'; bCol = '#00ff66'; }
+        else if (isBoss && hasKey) { txt = 'FINAL BREACH'; bCol = '#ffb000'; }
+        else if (isBoss) { txt = 'DOOR READY'; bCol = '#ffb000'; }
+        else if (pulsing && open) { txt = 'ACCESS GRANTED'; bCol = '#00ff66'; }
+        else if (inboxDone && !allMissionsDone) { txt = 'SEAL ACTIVE'; bCol = '#8899aa'; }
+        lockdownBanner.setPosition(labelX, doorY - 12);
+        lockdownBanner.setAlpha(locked || (!panelsOpen && !isBoss) ? 0.85 : 0.35);
+        banner.setText(txt).setColor(bCol).setPosition(labelX, doorY - 22);
       },
       pulseGrant() {
-        banner.setAlpha(1);
-        scene.tweens.add({
-          targets: banner,
-          alpha: { from: 1, to: 0.3 },
-          duration: 100,
-          yoyo: true,
-          repeat: 6,
-        });
+        this.flashWarning(800);
+        scene.tweens.add({ targets: banner, alpha: { from: 1, to: 0.3 }, duration: 100, yoyo: true, repeat: 6 });
       },
     };
+  }
+
+  function createBlastDoor(scene, doorPos, opts) {
+    opts = opts || {};
+    const wall = opts.wall || 'south';
+    if (wall === 'east') return createBlastDoorEast(scene, doorPos, opts);
+    if (wall === 'north') return createBlastDoorNorth(scene, doorPos, opts);
+    return createBlastDoorSouth(scene, doorPos, opts);
   }
 
   function createKeycardProp(scene, c, r) {
@@ -533,114 +882,160 @@
     const g = scene.add.graphics().setDepth(2);
     g.fillStyle(0xffb000, 1);
     g.fillRect(x, y + 6, 24, 14);
-    g.fillStyle(0xffffff, 0.55);
-    g.fillRect(x + 3, y + 9, 8, 7);
     g.lineStyle(1, 0xffdd88, 0.8);
     g.strokeRect(x, y + 6, 24, 14);
-    const pos = tilePx(c, r);
-    scene.tweens.add({ targets: g, alpha: { from: 0.65, to: 1 }, duration: 900, yoyo: true, repeat: -1 });
-    return { gfx: g, pos };
+    return { gfx: g, pos: tilePx(c, r) };
   }
 
-  /** Dim overlay + flickering overhead fixtures + terminal proximity brighten. */
+  /** Barely-visible emissive points — CRT / server / door / flashlight. */
   function createLighting(scene) {
     const gw = scene.game.config.width;
     const gh = scene.game.config.height;
+    const cx = gw / 2;
+    const cy = gh / 2;
 
-    const dark = scene.add.rectangle(gw / 2, gh / 2, gw, gh, 0x020408, 0.52)
-      .setDepth(48);
-    let dimLevel = 0.52;
+    const ambient = scene.add.rectangle(cx, cy, gw, gh, 0x020408, 0.58).setDepth(48);
+    const glow = scene.add.graphics().setDepth(49).setBlendMode(Phaser.BlendModes.ADD);
+    const vignette = scene.add.graphics().setDepth(50);
+
+    let dimLevel = 0.58;
     let chimeraDim = 0;
     let flickerOffset = 0;
-    let nextFlicker = 0;
+    let blackout = false;
+    let zoneEnabled = { crt: true, archive: true, door: true };
 
-    const fixtureGfx = scene.add.graphics().setDepth(47);
-    const specs = scene._lightFixtures || [];
-    const fixtureState = specs.map(() => ({ alpha: 0.35, target: 0.35 }));
+    const loginPx = tilePx(HUB_POSITIONS.pc.c, HUB_POSITIONS.pc.r);
+    const archivePx = tilePx(HUB_POSITIONS.archive.c, HUB_POSITIONS.archive.r);
+    const doorPx = tilePx(HUB_POSITIONS.door.c, HUB_POSITIONS.door.r);
 
-    function drawFixtures() {
-      fixtureGfx.clear();
-      specs.forEach((f, i) => {
-        const a = fixtureState[i].alpha;
-        fixtureGfx.fillStyle(0xcceeff, a);
-        fixtureGfx.fillRect(f.x, f.y, f.w, f.h);
-        fixtureGfx.fillStyle(0xffffff, a * 0.4);
-        fixtureGfx.fillRect(f.x + 4, f.y + 1, f.w - 8, 2);
-      });
+    function emitPoint(x, y, color, coreR, haloR, haloA) {
+      glow.fillStyle(color, haloA);
+      glow.fillCircle(x, y, haloR);
+      glow.fillStyle(color, Math.min(1, haloA * 2.8));
+      glow.fillCircle(x, y, coreR);
     }
-    drawFixtures();
+
+    function drawVignette() {
+      vignette.clear();
+      const pad = 72;
+      vignette.fillStyle(0x000000, 0.42);
+      vignette.fillRect(0, 0, gw, pad);
+      vignette.fillRect(0, gh - pad, gw, pad);
+      vignette.fillRect(0, 0, pad, gh);
+      vignette.fillRect(gw - pad, 0, pad, gh);
+    }
+    drawVignette();
+
+    function drawGlow(player) {
+      glow.clear();
+      if (blackout) return;
+      if (zoneEnabled.crt) {
+        emitPoint(loginPx.x, loginPx.y - 14, 0x2288ff, 2, 11, 0.028);
+      }
+      if (zoneEnabled.archive) {
+        emitPoint(archivePx.x, archivePx.y - 10, 0x8866ff, 2, 10, 0.03);
+      }
+      if (zoneEnabled.door) {
+        emitPoint(doorPx.x, doorPx.y + 8, 0xff2233, 2, 11, 0.032);
+      }
+      if (player) {
+        emitPoint(player.x, player.y - 4, 0xddeeff, 2, 10, 0.025);
+      }
+    }
 
     return {
-      dark,
-      setDim(v) { dimLevel = v; dark.setAlpha(v); },
+      ambient,
+      glow,
+      vignette,
+      setDim(v) { dimLevel = v; if (!blackout) ambient.setAlpha(v); },
+      setZoneEnabled(which, on) {
+        if (which === 'crt') zoneEnabled.crt = !!on;
+        else if (which === 'archive' || which === 'server') zoneEnabled.archive = !!on;
+        else if (which === 'door') zoneEnabled.door = !!on;
+        else if (which === 'all') {
+          zoneEnabled.crt = !!on;
+          zoneEnabled.archive = !!on;
+          zoneEnabled.door = !!on;
+        }
+      },
+      setBlackout(on) {
+        blackout = !!on;
+        if (blackout) {
+          ambient.setAlpha(0.99);
+          glow.clear();
+        } else {
+          ambient.setAlpha(dimLevel);
+        }
+      },
+      isBlackout() { return blackout; },
       chimeraPulse() {
-        chimeraDim = 0.22;
-        flickerOffset = 0.18;
-        fixtureState.forEach((fs) => { fs.target = 0.08; });
-        dark.setAlpha(Math.min(0.82, dimLevel + chimeraDim));
-        scene.time.delayedCall(400, () => {
+        chimeraDim = 0.14;
+        flickerOffset = 0.1;
+        ambient.setAlpha(Math.min(0.72, dimLevel + chimeraDim));
+        scene.time.delayedCall(900, () => {
           chimeraDim = 0;
           flickerOffset = 0;
-          fixtureState.forEach((fs) => { fs.target = 0.35; });
-          dark.setAlpha(dimLevel);
+          ambient.setAlpha(dimLevel);
         });
       },
-      update(player, lightPoints, time) {
-        if (time > nextFlicker) {
-          nextFlicker = time + 800 + Math.random() * 4000;
-          if (Math.random() < 0.55) {
-            flickerOffset = 0.08 + Math.random() * 0.14;
-            const idx = Math.floor(Math.random() * fixtureState.length);
-            if (fixtureState[idx]) fixtureState[idx].target = 0.05 + Math.random() * 0.1;
-            scene.time.delayedCall(30 + Math.random() * 120, () => {
-              flickerOffset = 0;
-              if (fixtureState[idx]) fixtureState[idx].target = 0.35;
-            });
-          }
+      update(player, _lightPoints, time) {
+        if (blackout) {
+          ambient.setAlpha(0.99);
+          glow.clear();
+          return;
         }
-
-        let dim = dimLevel + Math.sin(time / 2800) * 0.025 + flickerOffset + chimeraDim;
-
-        if (player && lightPoints && lightPoints.length) {
-          let nearest = Infinity;
-          for (const lp of lightPoints) {
-            const d = Phaser.Math.Distance.Between(player.x, player.y, lp.x, lp.y);
-            nearest = Math.min(nearest, d);
-          }
-          if (nearest < 130) dim -= (1 - nearest / 130) * 0.14;
-        }
-
-        dark.setAlpha(Phaser.Math.Clamp(dim, 0.36, 0.78));
-
-        fixtureState.forEach((fs, i) => {
-          fs.alpha += (fs.target - fs.alpha) * 0.12;
-          if (Math.random() < 0.004) fs.target = 0.1 + Math.random() * 0.3;
-        });
-        drawFixtures();
+        const dim = dimLevel + Math.sin(time / 2800) * 0.01 + flickerOffset + chimeraDim;
+        ambient.setAlpha(Phaser.Math.Clamp(dim, 0.48, 0.72));
+        drawGlow(player);
       },
     };
   }
 
-  function createProps(scene) {
+  function createProps(scene, opts = {}) {
+    const decorate = opts.decorative || {};
     const pos = HUB_POSITIONS;
     const login = createLoginTerminal(scene, pos.pc.c, pos.pc.r);
     const archive = createArchive(scene, pos.archive.c, pos.archive.r);
-    const server = createServerRack(scene, pos.server.c, pos.server.r);
-    const props = [login, archive, server];
-    const lightPoints = props.map((p) => p.light);
+    const server = opts.skipServer ? null : createServerRack(scene, pos.server.c, pos.server.r);
+    const props = server ? [login, archive, server] : [login, archive];
+    const graffiti = scene._hubGraffiti || null;
+    let roomFrozen = false;
+
+    if (scene.registry && scene.registry.get('inboxComplete') && login.revealStickyWarning) {
+      login.revealStickyWarning();
+    }
 
     return {
-      props,
-      lightPoints,
-      login,
-      archive,
-      server,
-      update(time) {
-        props.forEach((p) => p.update(time));
+      props, login, archive, server, graffiti,
+      update(time, player, registry) {
+        if (!roomFrozen) props.forEach((p) => p.update(time));
+        if (graffiti && registry) updateDeliberateGraffiti(graffiti, registry, time, player);
       },
-      pulseAll() {
-        props.forEach((p) => p.pulse());
+      freezeRoom() {
+        roomFrozen = true;
+        if (login && login.setFrozen) login.setFrozen(true);
+        if (server && server.freezeLeds) server.freezeLeds(999999);
       },
+      unfreezeRoom() {
+        roomFrozen = false;
+        if (login && login.setFrozen) login.setFrozen(false);
+      },
+      setTerminalNear(terminal, on) {
+        if (decorate[terminal]) return;
+        const p = { pc: login, archive, server }[terminal];
+        if (p && p.setNearActive) p.setNearActive(on);
+      },
+      chimeraFreeze() {
+        if (server && server.freezeLeds) server.freezeLeds(900);
+        if (login && login.setScreenOff) login.setScreenOff();
+        props.forEach((p) => {
+          if (p !== login && p.root) scene.tweens.add({ targets: p.root, alpha: 0.35, duration: 80 });
+        });
+        scene.time.delayedCall(900, () => {
+          props.forEach((p) => { if (p.root) p.root.setAlpha(1); });
+        });
+      },
+      pulseAll() { props.forEach((p) => p.pulse()); },
     };
   }
 
@@ -648,23 +1043,19 @@
     if (!scene || !scene.cameras || !scene.cameras.main) return;
     document.body.classList.add('chimera-speaking');
     scene.time.delayedCall(900, () => document.body.classList.remove('chimera-speaking'));
-
     if (typeof AudioFX !== 'undefined' && AudioFX.error) AudioFX.error();
     if (typeof AudioFX !== 'undefined' && AudioFX.triggerStaticBurst) AudioFX.triggerStaticBurst();
     scene.cameras.main.flash(60, 80, 0, 40);
     scene.cameras.main.shake(120, 0.003);
-
     if (lighting) lighting.chimeraPulse();
-    if (props) props.pulseAll();
-
-    // Red scanline burst
+    if (props) {
+      if (props.chimeraFreeze) props.chimeraFreeze();
+      else props.pulseAll();
+    }
+    if (scene.blastDoor && scene.blastDoor.flashWarning) scene.blastDoor.flashWarning(1200);
     const scan = scene.add.rectangle(
-      scene.game.config.width / 2,
-      scene.game.config.height / 2,
-      scene.game.config.width,
-      4,
-      0xff0033,
-      0.35,
+      scene.game.config.width / 2, scene.game.config.height / 2,
+      scene.game.config.width, 4, 0xff0033, 0.35,
     ).setDepth(55).setScrollFactor(0);
     scene.tweens.add({
       targets: scan,
@@ -687,7 +1078,13 @@
     createBlastDoor,
     createKeycardProp,
     createLighting,
+    addDeliberateGraffiti,
+    updateDeliberateGraffiti,
+    floorZone,
     triggerChimeraEnvironment,
+    addWallGraffiti,
+    wallGraffitiAnchor,
     tilePx,
+    TILE,
   };
 })();

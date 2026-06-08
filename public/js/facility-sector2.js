@@ -23,12 +23,12 @@
   };
 
   const S2_LAYOUT = [
-    'WWWWWWWWWWWWDDWWWWWW',
-    'WPPW....MM....DD...W',
-    'W..WWWW.......WW...W',
-    'W......@.........WW',
-    'W..WWWWW...........W',
-    'WCCW............KKKW',
+    'WWWWWWWWWWWWWWWDDWWW',
+    'WPPW........MM.....W',
+    'W..................W',
+    'W..................W',
+    'W.........@........W',
+    'WCCW.............KKW',
     'WWWWWWWWWWWWWWWWWWWW',
   ];
 
@@ -36,10 +36,10 @@
     roomY: 2,
     roomRows: 7,
     password: { c: 2, r: 3 },
-    mfa: { c: 9, r: 3 },
+    mfa: { c: 12, r: 3 },
     credential: { c: 2, r: 7 },
-    door: { c: 13, r: 2 },
-    player: { c: 7, r: 5 },
+    door: { c: 16, r: 2 },
+    player: { c: 10, r: 6 },
     key: { c: 17, r: 7 },
     relay: { c: 6, r: 4 },
   };
@@ -72,38 +72,22 @@
         const x = c * TILE;
         const y = r * TILE;
         const isWall = S2_LAYOUT[ri][c] === 'W';
-        const isAlt = (c + r) % 2 === 0;
         if (isWall) {
           g.fillStyle(pal.wall, 1);
           g.fillRect(x, y, TILE, TILE);
-          g.lineStyle(1, pal.wallEdgeDim, 0.5);
-          g.strokeRect(x + 1, y + 1, TILE - 2, TILE - 2);
-          if (ri > 0 && S2_LAYOUT[ri - 1][c] === '.') {
-            g.lineStyle(2, pal.wallEdge, 0.3);
-            g.lineBetween(x + 2, y + 1, x + TILE - 2, y + 1);
-          }
         } else {
-          g.fillStyle(isAlt ? pal.floorAlt : pal.floor, 1);
+          g.fillStyle(pal.floor, 1);
           g.fillRect(x, y, TILE, TILE);
         }
       }
     }
 
     const ry = S2_POSITIONS.roomY;
-    scene.add.text(14, (ry + 2) * TILE + 4, 'CREDENTIALS COMPROMISED', {
-      fontFamily: 'VT323, monospace', fontSize: '10px', color: '#334466', angle: -3,
-    }).setDepth(1).setAlpha(0.6);
-
-    scene.add.text(12 * TILE, (ry + 3) * TILE + 8, '581 TRIED TO WARN YOU', {
-      fontFamily: 'VT323, monospace', fontSize: '9px', color: '#443366',
-    }).setDepth(1).setAlpha(0.55);
-
-    // Broken badge reader
-    const badge = scene.add.graphics().setDepth(1);
-    badge.fillStyle(0x221828, 1);
-    badge.fillRect(11 * TILE, (ry + 4) * TILE + 6, 20, 14);
-    badge.lineStyle(1, 0x664488, 0.6);
-    badge.strokeRect(11 * TILE, (ry + 4) * TILE + 6, 20, 14);
+    if (typeof FacilityAtmosphere !== 'undefined' && FacilityAtmosphere.addWallGraffiti) {
+      FacilityAtmosphere.addWallGraffiti(scene, '581 TRIED TO WARN YOU', {
+        col: 19, row: ry + 3, face: 'west', fontSize: '9px', color: '#554466', alpha: 0.48,
+      });
+    }
 
     scene._lightFixtures = [
       { x: 5 * TILE, y: (ry + 1) * TILE + 4, w: 28, h: 6 },

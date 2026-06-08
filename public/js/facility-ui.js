@@ -106,9 +106,9 @@
     const sec = typeof FacilitySectors !== 'undefined' ? FacilitySectors.get(cur) : null;
     if (!sec || sec.legacy) {
       if (!p.inboxComplete) return 'Sector 1: initialize breach at LOGIN terminal';
-      if (!p.attachmentComplete) return 'Sector 1: breach the SERVER';
+      if (!p.attachmentComplete) return 'Sector 1: quarantine attachments at ARCHIVE';
       if (!p.fakeLoginComplete) return 'Sector 1: clear the LOGIN portal';
-      if (!p.ch1BossComplete) return 'Sector 1: final breach at the DOOR';
+      if (!p.ch1BossComplete) return 'Sector 1: final breach at the BLAST DOOR';
       return 'Sector 1 cleared — proceed to Sector 2';
     }
     if (sectorCleared(p, cur)) {
@@ -136,7 +136,7 @@
       const id = sec.core ? 'core' : sec.n;
       if (!sectorUnlocked(p, id)) {
         setCellState(entry, 'locked');
-        if (entry.sub && sec.n === 2) entry.sub.textContent = '???';
+        if (entry.sub) entry.sub.textContent = '???';
         return;
       }
       if (sectorCleared(p, id)) setCellState(entry, 'cleared');

@@ -491,6 +491,12 @@ const AudioFX = (() => {
       arpeggio([220, 277, 330, 440], 0.08, 'square', 0.06);
       setTimeout(() => tone(880, 0.2, 'sine', 0.08), 320);
     },
+    doorHeavy: () => {
+      tone(55, 0.35, 'sawtooth', 0.12);
+      setTimeout(() => tone(82, 0.25, 'sawtooth', 0.1), 120);
+      setTimeout(() => noiseBurst(0.15, 0.08), 200);
+      setTimeout(() => tone(110, 0.4, 'square', 0.07), 380);
+    },
     roomTransition: () => sweep(300, 150, 0.2, 0.04),
     gameOver: () => {
       tone(330, 0.25, 'sawtooth', 0.1);
