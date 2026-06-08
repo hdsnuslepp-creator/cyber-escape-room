@@ -100,7 +100,7 @@
     const obj = document.getElementById('objectiveText');
     if (obj) {
       let text;
-      if (!p.inboxComplete) text = 'Complete the test in Sector 1 (INBOX)';
+      if (!p.inboxComplete) text = 'Initialize breach at the LOGIN terminal (Sector 1 — INBOX)';
       else if (!p.attachmentComplete) text = 'Sector 1: breach the SERVER (Attachment)';
       else if (!p.fakeLoginComplete) text = 'Sector 1: clear the LOGIN portal';
       else if (!p.ch1BossComplete) text = 'Sector 1: final breach at the DOOR';
