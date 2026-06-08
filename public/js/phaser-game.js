@@ -725,13 +725,15 @@
 
     this.keyPos = tilePx(HUB.key.c, HUB.key.r);
     this.hasKey = !!this.registry.get('hasKey');
+    // Key only matters for the final blast-door breach — not for starting Sector 1.
+    this.keyActive = this.allMissionsDone && !this.bossDone;
     if (typeof FacilityAtmosphere !== 'undefined') {
       this.keyObjects = FacilityAtmosphere.createKeycardProp(this, HUB.key.c, HUB.key.r);
     } else {
       const keyXY = tileXY(HUB.key.c - 1, HUB.key.r);
       this.keyObjects = drawKeycardProp(this, keyXY.x, keyXY.y - 6);
     }
-    if (this.hasKey) {
+    if (!this.keyActive || this.hasKey) {
       this.keyObjects.gfx.setVisible(false);
       if (this.keyObjects.label) this.keyObjects.label.setVisible(false);
     } else {
@@ -985,21 +987,19 @@
 
   HubScene.prototype.getDefaultPrompt = function () {
     if (this.allMissionsDone && !this.bossDone) {
-      return '[ E ] at DOOR — confront CHIMERA and escape';
+      if (this.hasKey) return '[ E ] at DOOR — final breach / confront CHIMERA';
+      return 'Pick up the KEY (bottom-right), then breach the DOOR';
     }
     if (this.loginDone) {
-      return 'All missions cleared — head to the DOOR (top-right)';
+      return 'All missions cleared — pick up KEY for the blast door';
     }
     if (this.attachmentDone && !this.loginDone) {
-      return '[ E ] at LOGIN terminal (top-left) — Fake Login Portal';
+      return '[ E ] at LOGIN terminal — Fake Login Portal';
     }
     if (this.inboxDone && !this.attachmentDone) {
-      return '[ E ] at SERVER (bottom-left) — Attachment Sandbox';
+      return '[ E ] at SERVER — Attachment Sandbox';
     }
-    if (this.hasKey) {
-      return '[ E ] at DOOR — enter Inbox Room (Phishing)';
-    }
-    return 'Find the KEY (bottom-right), then unlock the DOOR';
+    return '[ E ] at LOGIN terminal — Initialize Breach (Sector 1 INBOX)';
   };
 
   HubScene.prototype.redrawDoor = function (openOverride) {
@@ -1244,6 +1244,49 @@
     this.tweens.add({ targets: head, alpha: { from: 1, to: 0.55 }, duration: 600, yoyo: true, repeat: -1 });
   };
 
+  HubScene.prototype.showInitializeBreachPanel = function () {
+    if (!this.isNearPc()) {
+      this.flashPrompt('Move closer to the LOGIN terminal (left alcove)', '#ff3366');
+      return;
+    }
+    this.overrideActive = true;
+    sfxClick();
+    if (typeof AudioFX !== 'undefined' && AudioFX.hint) AudioFX.hint();
+
+    const c = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(72).setScrollFactor(0);
+    const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
+    const panel = this.add.rectangle(0, 0, 340, 168, 0x041018, 0.98).setStrokeStyle(3, 0x2288ff);
+    const head = this.add.text(0, -58, 'LOGIN TERMINAL — SECTOR 1', {
+      fontFamily: 'Press Start 2P, monospace', fontSize: '8px', color: '#44ccff',
+    }).setOrigin(0.5);
+    const sub = this.add.text(0, -32, 'INBOX / PHISHING VECTOR', {
+      fontFamily: 'VT323, monospace', fontSize: '16px', color: '#7799aa',
+    }).setOrigin(0.5);
+    const body = this.add.text(0, -2, 'CHIMERA is watching.\nInitialize breach protocol?', {
+      fontFamily: 'VT323, monospace', fontSize: '18px', color: '#cfeeff',
+      align: 'center',
+    }).setOrigin(0.5);
+
+    const close = () => {
+      sfxClick();
+      c.destroy();
+      this.overrideActive = false;
+    };
+    const launch = () => {
+      c.destroy();
+      this.overrideActive = false;
+      this.enteringRoom = true;
+      this.cameras.main.flash(180, 0, 255, 102);
+      if (typeof AudioFX !== 'undefined' && AudioFX.doorUnlock) AudioFX.doorUnlock();
+      switchScene(this, 'PhishingScene');
+    };
+
+    const btnGo = makeButton(this, 0, 36, '[ INITIALIZE BREACH ]', launch, { fontSize: '8px', color: '#00ffcc' });
+    const btnCancel = makeButton(this, 0, 68, '[ CANCEL ]', close, { fontSize: '8px', color: '#8899aa' });
+    c.add([dim, panel, head, sub, body, btnGo.bg, btnGo.text, btnCancel.bg, btnCancel.text]);
+    this.tweens.add({ targets: head, alpha: { from: 1, to: 0.5 }, duration: 520, yoyo: true, repeat: -1 });
+  };
+
   HubScene.prototype.isNear = function (pos, radius) {
     if (!this.player || !pos) return false;
     return Phaser.Math.Distance.Between(this.player.x, this.player.y, pos.x, pos.y) < radius;
@@ -1358,6 +1401,11 @@
     }
 
     if (this.allMissionsDone && !this.bossDone) {
+      if (!this.hasKey) {
+        sfxError();
+        this.flashPrompt('Blast door locked — pick up the KEY (bottom-right) first', '#ff3366');
+        return;
+      }
       sfxClick();
       this.enteringRoom = true;
       this.showChimera(
@@ -1369,23 +1417,16 @@
 
     if (this.inboxDone) {
       if (this.loginDone) {
-        this.flashPrompt('All rooms cleared — use DOOR for final breach', '#ffb000');
+        this.flashPrompt('All rooms cleared — pick up KEY for final breach', '#ffb000');
       } else {
         this.flashPrompt('Inbox cleared — use SERVER or LOGIN terminals', '#00ff66');
       }
       return;
     }
 
-    if (!this.hasKey) {
-      sfxError();
-      this.cameras.main.flash(100, 255, 51, 102);
-      this.flashPrompt('DOOR LOCKED — pick up the KEY (bottom-right) first', '#ff3366');
-      return;
-    }
-
-    sfxClick();
-    this.enteringRoom = true;
-    switchScene(this, 'PhishingScene');
+    sfxError();
+    this.cameras.main.flash(100, 255, 51, 102);
+    this.flashPrompt('DOOR LOCKED — initialize breach at the LOGIN terminal', '#ff3366');
   };
 
   HubScene.prototype.handleServerInteract = function () {
@@ -1394,7 +1435,7 @@
       return;
     }
     if (!this.inboxDone) {
-      this.flashPrompt('Clear the INBOX room at the DOOR first', '#ff3366');
+      this.flashPrompt('Initialize breach at the LOGIN terminal first', '#ff3366');
       return;
     }
     if (this.attachmentDone) {
