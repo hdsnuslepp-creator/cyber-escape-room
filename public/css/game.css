@@ -1,7 +1,19 @@
-/* Cyber Escape: Lockdown Protocol — Phaser game shell */
+/* TRAINEE 1998 — Facility Mode shell (DOM overlay around the Phaser canvas) */
+:root {
+  --neon: #00ff88;
+  --neon-dim: #14392c;
+  --neon-soft: #7fffc4;
+  --amber: #ffb000;
+  --panel-bg: rgba(0, 8, 12, 0.92);
+  --bar-h: 46px;
+  --strip-h: 34px;
+  --right-w: 262px;
+  --canvas-right: 300px;
+}
+
 body.game-body {
   margin: 0;
-  background: #0a0e17;
+  background: #00040a;
   overflow: hidden;
   font-family: 'Press Start 2P', 'VT323', monospace;
 }
@@ -13,8 +25,8 @@ body.game-body .scanlines {
   z-index: 9999;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0, 0, 0, 0.12) 0px,
-    rgba(0, 0, 0, 0.12) 1px,
+    rgba(0, 0, 0, 0.16) 0px,
+    rgba(0, 0, 0, 0.16) 1px,
     transparent 1px,
     transparent 3px
   );
@@ -25,66 +37,347 @@ body.game-body .crt-vignette {
   inset: 0;
   pointer-events: none;
   z-index: 9998;
-  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.85);
+  box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.9);
 }
 
-#phaser-root {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 0.5rem;
-  box-sizing: border-box;
-}
-
+/* ── Main room view (Phaser canvas mounts here) ───────────────────────── */
 #game-canvas-wrap {
-  position: relative;
-  border: 4px solid #00ffcc;
-  box-shadow: 0 0 24px rgba(0, 255, 204, 0.25), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: calc(var(--bar-h) + 8px);
+  left: 14px;
+  right: var(--canvas-right);
+  bottom: calc(var(--strip-h) + 10px);
+  border: 2px solid var(--neon);
+  background: #00060a;
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.35), inset 0 0 50px rgba(0, 0, 0, 0.7);
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   outline: none;
-}
-
-#game-canvas-wrap:focus-within {
-  box-shadow: 0 0 28px rgba(0, 255, 204, 0.45), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
 
 #game-canvas-wrap canvas {
   display: block;
+  margin: 0 auto;
   outline: none;
 }
 
-.game-topbar {
-  width: 100%;
-  max-width: 800px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  margin-bottom: 0.35rem;
+/* ── Overlay root ─────────────────────────────────────────────────────── */
+#facility-ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
   font-family: 'Press Start 2P', monospace;
-  font-size: 0.45rem;
-  color: #00ffcc;
-  letter-spacing: 0.04em;
+  color: var(--neon);
 }
 
-.game-topbar a {
-  color: #ffb000;
+.hud-panel,
+.chimera-dialogue,
+.status-strip,
+.facility-topbar {
+  background: var(--panel-bg);
+  border: 2px solid var(--neon);
+  box-shadow: 0 0 14px rgba(0, 255, 136, 0.35);
+}
+
+/* ── Top title bar ────────────────────────────────────────────────────── */
+.facility-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--bar-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-width: 0 0 2px 0;
+}
+
+.ftb-title {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--neon);
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
+}
+
+.ftb-sim {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--amber);
   text-decoration: none;
+  pointer-events: auto;
 }
 
-.game-topbar a:hover {
-  color: #00ff66;
+.ftb-sim:hover {
+  color: var(--neon);
 }
 
-.game-hint-bar {
-  width: 100%;
-  max-width: 800px;
-  font-family: 'VT323', monospace;
-  font-size: 1.1rem;
-  color: #8899aa;
+/* ── Right HUD column ─────────────────────────────────────────────────── */
+.facility-right {
+  position: absolute;
+  top: calc(var(--bar-h) + 8px);
+  right: 14px;
+  bottom: calc(var(--strip-h) + 10px);
+  width: var(--right-w);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hud-panel {
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.hud-panel h2 {
+  margin: 0 0 10px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--neon);
+}
+
+.hud-map {
+  flex: 0 0 auto;
+}
+
+/* Facility map grid */
+.map-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.map-cell {
+  grid-column: span 1;
+  border: 2px solid var(--neon-dim);
+  background: rgba(0, 20, 14, 0.45);
+  color: #3f6e5c;
+  padding: 7px 4px;
   text-align: center;
-  margin-top: 0.35rem;
+  font-size: 7px;
+  line-height: 1.5;
+  border-radius: 2px;
+  position: relative;
+}
+
+.map-cell.wide {
+  grid-column: 1 / -1;
+}
+
+.map-cell .lock {
+  display: block;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: #2f5a48;
+}
+
+.map-cell .sub {
+  display: block;
+  font-size: 7px;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+.map-cell.active {
+  border-color: var(--neon);
+  color: var(--neon);
+  background: rgba(0, 45, 30, 0.45);
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.45);
+}
+
+.map-cell.active .lock {
+  color: var(--neon);
+}
+
+.map-cell.cleared {
+  border-color: #0a8a58;
+  color: #0ad488;
+}
+
+.map-cell.cleared .lock {
+  color: #0ad488;
+}
+
+/* Objective + hotkeys */
+.hud-objective p {
+  margin: 0;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--neon-soft);
+}
+
+.hud-hotkeys {
+  margin-top: auto;
+}
+
+.hud-hotkeys ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--neon-soft);
+}
+
+.hud-hotkeys b {
+  color: var(--neon);
+  font-weight: normal;
+}
+
+/* ── CHIMERA dialogue ─────────────────────────────────────────────────── */
+.chimera-dialogue {
+  position: absolute;
+  left: 24px;
+  right: var(--canvas-right);
+  bottom: 52px;
+  height: 145px;
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  box-shadow: 0 0 18px rgba(0, 255, 136, 0.4);
+}
+
+.chimera-id {
+  border-right: 1px solid var(--neon);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.chimera-name {
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: var(--neon);
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.6);
+}
+
+.chimera-wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 22px;
+  margin-top: 18px;
+}
+
+.chimera-wave i {
+  width: 3px;
+  height: 100%;
+  background: var(--neon);
+  transform-origin: bottom center;
+  transform: scaleY(0.3);
+  animation: wave 1s infinite ease-in-out;
+}
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(1); }
+}
+
+.chimera-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.chimera-text {
+  flex: 1;
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  line-height: 1.55;
+  color: #aaffdd;
+  overflow: hidden;
+}
+
+.chimera-hint {
+  text-align: right;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #3f6e5c;
+}
+
+/* ── Bottom status strip ──────────────────────────────────────────────── */
+.status-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--strip-h);
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border-width: 2px 0 0 0;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #3f6e5c;
+}
+
+.status-strip b {
+  color: var(--neon);
+  font-weight: normal;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ── Touch controls ───────────────────────────────────────────────────── */
+.touch-dpad {
+  position: fixed;
+  left: 1rem;
+  bottom: calc(var(--strip-h) + 12px);
+  z-index: 10000;
+  display: grid;
+  grid-template-columns: 48px 48px 48px;
+  grid-template-rows: 48px 48px 48px;
+  gap: 4px;
+  touch-action: none;
+  user-select: none;
+}
+
+.touch-dpad button {
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--neon);
+  background: rgba(0, 8, 12, 0.85);
+  color: var(--neon);
+  font-family: 'VT323', monospace;
+  font-size: 1.4rem;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0;
+}
+
+.touch-dpad button:active,
+.touch-dpad button.dpad-active {
+  background: rgba(0, 255, 136, 0.25);
+  color: #aaffdd;
+}
+
+.touch-dpad__up { grid-column: 2; grid-row: 1; }
+.touch-dpad__left { grid-column: 1; grid-row: 2; }
+.touch-dpad__mid { grid-column: 2; grid-row: 2; opacity: 0.35; pointer-events: none; }
+.touch-dpad__right { grid-column: 3; grid-row: 2; }
+.touch-dpad__down { grid-column: 2; grid-row: 3; }
+
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .touch-dpad { display: none; }
+}
+
+/* ── Responsive fallback: stack on narrow screens ─────────────────────── */
+@media (max-width: 860px) {
+  .facility-right { display: none; }
+  #game-canvas-wrap { right: 14px; }
+  .chimera-dialogue { right: 24px; grid-template-columns: 120px 1fr; }
+  .chimera-id { padding: 12px; }
+  .chimera-name { font-size: 14px; }
 }

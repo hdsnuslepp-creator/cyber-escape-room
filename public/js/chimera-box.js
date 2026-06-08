@@ -36,7 +36,7 @@
     clearTyping();
     if (textEl) textEl.textContent = full;
     typing = false;
-    if (hintEl) hintEl.textContent = '\u25B8 continue';
+    if (hintEl) hintEl.textContent = '[ E ] to continue';
   }
 
   function show() {
@@ -54,7 +54,7 @@
     full = String(message == null ? '' : message);
     typing = true;
     if (textEl) textEl.textContent = '';
-    if (hintEl) hintEl.textContent = 'skip \u25B8';
+    if (hintEl) hintEl.textContent = '[ E ] skip';
     let i = 0;
     typingTimer = setInterval(() => {
       if (!textEl) { clearTyping(); return; }

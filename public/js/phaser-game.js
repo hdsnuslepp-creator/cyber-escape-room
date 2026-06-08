@@ -1407,9 +1407,16 @@
   };
 
   HubScene.prototype.clampPlayer = function () {
-    const m = 14;
-    this.player.x = Phaser.Math.Clamp(this.player.x, m, GAME_W - m);
-    this.player.y = Phaser.Math.Clamp(this.player.y, m, GAME_H - m);
+    // Keep the player on the corridor floor (inside the walls), not the whole
+    // canvas — otherwise they wander into the empty void above/below the room
+    // and the door/terminals become hard to reach.
+    const half = 12;
+    const minX = TILE + half;
+    const maxX = (MAP_W - 1) * TILE - half;
+    const minY = (HUB.roomY + 1) * TILE + half;
+    const maxY = (HUB.roomY + HUB.roomRows - 1) * TILE - half;
+    this.player.x = Phaser.Math.Clamp(this.player.x, minX, maxX);
+    this.player.y = Phaser.Math.Clamp(this.player.y, minY, maxY);
   };
 
   HubScene.prototype.update = function (time, delta) {
