@@ -1007,19 +1007,22 @@
     return '[ E ] at LOGIN terminal — Initialize Breach (Sector 1 INBOX)';
   };
 
-  HubScene.prototype.redrawDoor = function (openOverride) {
-    const open = openOverride != null ? openOverride : this.inboxDone;
+  HubScene.prototype.redrawDoor = function (openOverride, pulsing) {
+    const isBossReady = this.allMissionsDone && !this.bossDone && this.hasKey;
+    const visuallyOpen = openOverride != null ? openOverride : isBossReady;
     if (this.blastDoor) {
       this.blastDoor.draw({
-        open,
+        open: visuallyOpen,
+        pulsing: !!pulsing || openOverride != null,
         boss: this.bossDone,
         bossDone: this.bossDone,
         inboxDone: this.inboxDone,
         allMissionsDone: this.allMissionsDone,
+        hasKey: this.hasKey,
       });
       return;
     }
-    this.drawDoor(open);
+    this.drawDoor(visuallyOpen);
   };
 
   HubScene.prototype.drawDoor = function (open) {
@@ -1057,13 +1060,13 @@
       repeat: 10,
       callback: () => {
         step += 1;
-        this.redrawDoor(step % 2 === 0);
+        this.redrawDoor(step % 2 === 0, true);
       },
     });
 
     this.time.delayedCall(1400, () => {
       pulse.destroy();
-      this.redrawDoor(this.inboxDone);
+      this.redrawDoor(false, false);
       if (this.blastDoor) this.blastDoor.pulseGrant();
       this.input.enabled = true;
       if (opts.chimera) this.showChimera(dialogue);
@@ -1129,12 +1132,12 @@
     let step = 0;
     const pulse = this.time.addEvent({
       delay: 120, repeat: 10,
-      callback: () => { step += 1; this.redrawDoor(step % 2 === 0); },
+      callback: () => { step += 1; this.redrawDoor(step % 2 === 0, true); },
     });
 
     this.time.delayedCall(1500, () => {
       pulse.destroy();
-      this.redrawDoor(this.inboxDone);
+      this.redrawDoor(false, false);
       if (this.blastDoor) this.blastDoor.pulseGrant();
       this.input.enabled = true;
       unlockAchievement(this, 'first_breach');
@@ -1444,7 +1447,7 @@
       return;
     }
     if (this.attachmentDone) {
-      this.flashPrompt('Attachment Sandbox already cleared', '#00ff66');
+      this.flashPrompt('Attachment complete — use LOGIN terminal for Fake Login', '#00ff66');
       return;
     }
     sfxClick();
@@ -1466,7 +1469,7 @@
       return;
     }
     if (this.loginDone) {
-      this.flashPrompt('Fake Login Portal already cleared', '#00ff66');
+      this.flashPrompt('LOGIN complete — pick up KEY (bottom-right) for final breach', '#00ff66');
       return;
     }
     sfxClick();

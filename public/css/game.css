@@ -103,6 +103,12 @@ body.game-body .crt-vignette {
   text-shadow: 0 0 8px rgba(0, 255, 136, 0.5);
 }
 
+.ftb-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .ftb-sim {
   font-size: 11px;
   letter-spacing: 1px;

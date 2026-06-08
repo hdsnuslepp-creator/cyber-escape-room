@@ -195,7 +195,6 @@
     const body = scene.add.graphics();
     const screen = scene.add.graphics();
     const scan = scene.add.graphics();
-    const glow = scene.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
 
     function drawBody() {
       body.clear();
@@ -235,7 +234,6 @@
 
     return {
       root,
-      glow,
       light,
       update(time) {
         if (time % 180 < 16) flicker = Math.random() * 0.5;
@@ -245,12 +243,10 @@
 
         scanY = (scanY + 0.6) % 18;
         scan.clear();
-        scan.fillStyle(0xffffff, 0.06);
+        scan.fillStyle(0x44ccff, 0.12);
         scan.fillRect(8, 26 + scanY, 36, 1);
 
-        glow.clear();
-        glow.fillStyle(CH1.loginGlow, 0.02 + flicker * 0.015);
-        glow.fillCircle(light.x, light.y, 40);
+        // glow removed — fillCircle lighting caused white/circle artifacts in-browser
       },
       pulse() {
         flicker = 1;
@@ -265,7 +261,6 @@
     const y = r * TILE - 12;
     const root = scene.add.container(x, y).setDepth(2);
     const g = scene.add.graphics();
-    const glow = scene.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
 
     g.fillStyle(0x1a1020, 1);
     // Two cabinet columns
@@ -296,13 +291,9 @@
 
     return {
       root,
-      glow,
       light,
       papers,
       update(time) {
-        glow.clear();
-        glow.fillStyle(CH1.archiveGlow, 0.018 + Math.sin(time / 500) * 0.008);
-        glow.fillCircle(light.x, light.y, 36);
         papers.forEach((p, i) => {
           p.y = 52 + (i % 2) * 3 + Math.sin(time / 800 + i) * 0.4;
         });
@@ -321,7 +312,6 @@
     const g = scene.add.graphics();
     const leds = scene.add.graphics();
     const fan = scene.add.graphics();
-    const glow = scene.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
 
     g.fillStyle(0x120a20, 1);
     g.fillRect(0, 0, 56, 58);
@@ -348,7 +338,6 @@
 
     return {
       root,
-      glow,
       light,
       update(time) {
         // Blinking LEDs
@@ -368,10 +357,6 @@
           const a = fanAngle + (b * Math.PI * 2) / 3;
           fan.lineBetween(45, 49, 45 + Math.cos(a) * 5, 49 + Math.sin(a) * 5);
         }
-
-        glow.clear();
-        glow.fillStyle(CH1.serverGlow, 0.016 + Math.sin(time / 400) * 0.008);
-        glow.fillCircle(light.x, light.y, 42);
       },
       pulse() {
         scene.tweens.add({ targets: leds, alpha: 0.2, duration: 40, yoyo: true, repeat: 5 });
@@ -393,7 +378,7 @@
       gfx,
       banner,
       draw(state) {
-        const { open, boss, inboxDone, allMissionsDone } = state;
+        const { open, inboxDone, allMissionsDone, hasKey, pulsing } = state;
         const c = HUB_POSITIONS.door.c;
         const r = HUB_POSITIONS.door.r;
         const x = (c - 1) * TILE - 4;
@@ -403,7 +388,8 @@
         gfx.clear();
 
         const isBoss = allMissionsDone && !state.bossDone;
-        const col = isBoss ? CH1.doorBoss : (open ? CH1.doorOpen : CH1.doorLocked);
+        const panelsOpen = pulsing ? !!open : (isBoss && !!hasKey);
+        const col = isBoss ? CH1.doorBoss : (panelsOpen ? CH1.doorOpen : CH1.doorLocked);
 
         // Door frame
         gfx.fillStyle(0x0a1018, 1);
@@ -412,8 +398,8 @@
         gfx.strokeRect(x - 4, y - 4, w + 8, h + 8);
 
         // Two blast door panels
-        const gap = open ? 10 : 0;
-        gfx.fillStyle(col, open ? 0.25 : 0.45);
+        const gap = panelsOpen ? 10 : 0;
+        gfx.fillStyle(col, panelsOpen ? 0.25 : 0.45);
         gfx.fillRect(x, y, w / 2 - gap / 2, h);
         gfx.fillRect(x + w / 2 + gap / 2, y, w / 2 - gap / 2, h);
         gfx.lineStyle(2, col, 0.9);
@@ -421,24 +407,27 @@
         gfx.strokeRect(x + w / 2 + gap / 2, y, w / 2 - gap / 2, h);
 
         // Warning stripes on locked door
-        if (!open && !isBoss) {
+        if (!panelsOpen && !isBoss) {
           gfx.fillStyle(CH1.doorLocked, 0.5);
           for (let i = 0; i < 4; i++) {
             gfx.fillRect(x + 6 + i * 14, y + h / 2 - 2, 8, 4);
           }
         }
 
-        // Status banner
+        // Status banner — "SECTOR CLEARED" only when the whole chapter is done
+        const { hasKey, bossDone, pulsing } = state;
         let txt = '';
         let bCol = '#ff3366';
-        if (isBoss) { txt = 'FINAL BREACH'; bCol = '#ffb000'; }
-        else if (open && inboxDone) { txt = 'SECTOR CLEARED'; bCol = '#00ff66'; }
-        else if (open) { txt = 'ACCESS GRANTED'; bCol = '#00ff66'; }
+        if (bossDone) { txt = 'CONTAINED'; bCol = '#00ff66'; }
+        else if (isBoss && hasKey) { txt = 'FINAL BREACH'; bCol = '#ffb000'; }
+        else if (isBoss) { txt = 'KEY REQUIRED'; bCol = '#ffb000'; }
+        else if (pulsing && open) { txt = 'ACCESS GRANTED'; bCol = '#00ff66'; }
+        else if (inboxDone && !allMissionsDone) { txt = 'SEALED'; bCol = '#8899aa'; }
         else { txt = 'LOCKED'; bCol = '#ff3366'; }
 
         banner.setText(txt);
         banner.setColor(bCol);
-        banner.setAlpha(open || isBoss ? 0.85 : 0.55);
+        banner.setAlpha(panelsOpen || isBoss ? 0.85 : 0.55);
       },
       pulseGrant() {
         banner.setAlpha(1);
@@ -463,67 +452,34 @@
     g.fillRect(x + 3, y + 9, 8, 7);
     g.lineStyle(1, 0xffdd88, 0.8);
     g.strokeRect(x, y + 6, 24, 14);
-    // Keycard reader glow on wall near door
-    const glow = scene.add.graphics().setDepth(1).setBlendMode(Phaser.BlendModes.ADD);
     const pos = tilePx(c, r);
     scene.tweens.add({ targets: g, alpha: { from: 0.65, to: 1 }, duration: 900, yoyo: true, repeat: -1 });
-    return { gfx: g, glow, pos };
+    return { gfx: g, pos };
   }
 
-  /** Soft radial blob for mask stamping (avoids ERASE blend — broken in many browsers). */
-  function stampLightMask(g, x, y, radius) {
-    const steps = 8;
-    for (let i = steps; i >= 1; i--) {
-      const t = i / steps;
-      g.fillStyle(0xffffff, t * t * 0.95);
-      g.fillCircle(x, y, radius * t);
-    }
-  }
-
-  /** Darkness overlay + player flashlight via inverted geometry mask. */
+  /** Uniform dim overlay — no masks, no fillCircle (avoids white-circle GPU bugs). */
   function createLighting(scene) {
     const gw = scene.game.config.width;
     const gh = scene.game.config.height;
 
-    // Mask: white = lit (darkness hidden). invertAlpha hides the overlay where mask is opaque.
-    const maskGfx = scene.add.graphics().setVisible(false).setDepth(47);
-    const mask = maskGfx.createGeometryMask();
-    mask.invertAlpha = true;
-
-    const dark = scene.add.rectangle(gw / 2, gh / 2, gw, gh, 0x020408, 0.88)
+    const dark = scene.add.rectangle(gw / 2, gh / 2, gw, gh, 0x020408, 0.52)
       .setDepth(48);
-    dark.setMask(mask);
-
-    // Subtle coloured terminal halos (ADD, low alpha — not the main light source)
-    const neon = scene.add.graphics().setDepth(44).setBlendMode(Phaser.BlendModes.ADD);
-    let dimLevel = 0.82;
+    let dimLevel = 0.52;
     let chimeraDim = 0;
 
     return {
       dark,
-      maskGfx,
-      neon,
-      setDim(v) { dimLevel = v; },
+      setDim(v) { dimLevel = v; dark.setAlpha(v); },
       chimeraPulse() {
-        chimeraDim = 0.15;
-        scene.time.delayedCall(400, () => { chimeraDim = 0; });
+        chimeraDim = 0.22;
+        dark.setAlpha(Math.min(0.82, dimLevel + chimeraDim));
+        scene.time.delayedCall(400, () => {
+          chimeraDim = 0;
+          dark.setAlpha(dimLevel);
+        });
       },
-      update(player, lightPoints, time) {
-        const alpha = Math.min(0.92, dimLevel + chimeraDim);
-        dark.setFillStyle(0x020408, alpha);
-
-        neon.clear();
-        lightPoints.forEach((lp) => {
-          const pulse = 0.018 + Math.sin(time / 420 + lp.x) * 0.008;
-          neon.fillStyle(lp.color || CH1.accent, pulse);
-          neon.fillCircle(lp.x, lp.y, (lp.radius || 40) * 0.45);
-        });
-
-        maskGfx.clear();
-        if (player) stampLightMask(maskGfx, player.x, player.y, 82);
-        lightPoints.forEach((lp) => {
-          stampLightMask(maskGfx, lp.x, lp.y, (lp.radius || 40) * 0.65);
-        });
+      update(_player, _lightPoints, _time) {
+        dark.setAlpha(Math.min(0.75, dimLevel + chimeraDim));
       },
     };
   }

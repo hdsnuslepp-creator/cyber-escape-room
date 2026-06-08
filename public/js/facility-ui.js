@@ -164,6 +164,17 @@
     setInterval(refresh, 1000);
     // Stats (lives/score/key) change mid-action, so poll them quickly.
     setInterval(syncStats, 250);
+
+    const newRun = document.getElementById('btnNewRun');
+    if (newRun) {
+      newRun.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof ProfileSave !== 'undefined' && typeof ProfileSave.resetPhaserRun === 'function') {
+          ProfileSave.resetPhaserRun();
+        }
+        window.location.href = 'game.html';
+      });
+    }
   }
 
   if (document.readyState === 'loading') {

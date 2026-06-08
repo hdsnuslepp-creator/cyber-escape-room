@@ -76,6 +76,25 @@ const ProfileSave = (() => {
     return next;
   }
 
+  /** Wipe Sector 1 mission flags so the facility run starts fresh at LOGIN terminal. */
+  function resetPhaserRun() {
+    const cur = getPhaserProgress();
+    const fresh = {
+      agentName: cur.agentName || 'TRAINEE 1998',
+      inboxComplete: false,
+      attachmentComplete: false,
+      fakeLoginComplete: false,
+      ch1BossComplete: false,
+      hasKey: false,
+      lives: 3,
+      score: 1000,
+      chimeraActive: true,
+      savedAt: Date.now(),
+    };
+    writeJson(PHASER_KEY, fresh);
+    return fresh;
+  }
+
   function syncPhaserFromTraining(completedRooms) {
     const set = new Set(completedRooms || []);
     const cur = getPhaserProgress();
@@ -130,6 +149,7 @@ const ProfileSave = (() => {
     clearCampaign,
     getPhaserProgress,
     savePhaserProgress,
+    resetPhaserRun,
     syncPhaserFromTraining,
     syncTrainingRoomClear,
     exportCampaignCsv,
